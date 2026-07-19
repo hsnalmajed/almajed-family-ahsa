@@ -794,9 +794,27 @@ function escapeHtml(str) {
 function enforceArabicOnly(el) {
   if (!el) return;
   el.setAttribute('lang', 'ar');
+
+  // رسالة تنبيه تظهر أسفل الحقل عند محاولة إدخال حروف غير عربية
+  const warn = document.createElement('div');
+  warn.className = 'arabic-warning';
+  warn.textContent = '⚠️ الرجاء إدخال الاسم بالحروف العربية فقط';
+  warn.style.display = 'none';
+  el.insertAdjacentElement('afterend', warn);
+
+  let warnTimer = null;
   el.addEventListener('input', () => {
     const cleaned = el.value.replace(/[^؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿\s]/g, '');
-    if (cleaned !== el.value) el.value = cleaned;
+    if (cleaned !== el.value) {
+      el.value = cleaned;
+      warn.style.display = 'block';
+      el.classList.add('input-invalid');
+      clearTimeout(warnTimer);
+      warnTimer = setTimeout(() => {
+        warn.style.display = 'none';
+        el.classList.remove('input-invalid');
+      }, 3000);
+    }
   });
 }
 

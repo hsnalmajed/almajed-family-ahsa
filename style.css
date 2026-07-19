@@ -584,6 +584,22 @@ ul.tree-list:not(.root-list)::before {
 .relation-choices button.selected,
 .relation-choices button:hover { border-color: var(--primary); background: #eef6f0; }
 
+/* تنبيه "عربي فقط" أسفل حقل الاسم */
+.arabic-warning {
+  margin-top: 6px;
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--danger);
+  background: #fbeaea;
+  border: 1px solid #f0c9c9;
+  border-radius: 6px;
+  padding: 6px 9px;
+}
+input.input-invalid {
+  border-color: var(--danger) !important;
+  background: #fffafa;
+}
+
 .form-group { margin-bottom: 14px; }
 .form-group label { display: block; margin-bottom: 5px; font-size: .88rem; font-weight: 600; }
 .form-group input[type=text],
