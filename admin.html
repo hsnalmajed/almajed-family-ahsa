@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة تحكم المدير - عائلة الماجد</title>
+<link rel="stylesheet" href="style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- شاشة تسجيل الدخول -->
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <h2>🔒 دخول المدير</h2>
+    <form id="login-form">
+      <div class="error-text" id="login-error">كلمة السر غير صحيحة</div>
+      <input type="password" id="admin-password" placeholder="كلمة السر" inputmode="numeric" required autofocus>
+      <button type="submit" class="btn btn-primary" id="login-btn" style="width:100%;">دخول</button>
+    </form>
+    <a class="back-link" href="index.html">⟵ العودة إلى الشجرة</a>
+  </div>
+</div>
+
+<!-- لوحة التحكم -->
+<div id="admin-panel" style="display:none;">
+  <div class="admin-header">
+    <h1 style="margin:0; font-size:1.3rem;">لوحة تحكم المدير</h1>
+    <div style="display:flex; gap:12px; align-items:center;">
+      <a class="admin-link" href="index.html">عرض الشجرة</a>
+      <button class="btn btn-secondary btn-sm" id="logout-btn">تسجيل الخروج</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-btn-requests">الطلبات المعلقة (<span id="requests-count">0</span>)</button>
+      <button class="tab-btn" id="tab-btn-persons">كل الأشخاص</button>
+      <button class="tab-btn" id="tab-btn-tree">🌳 شجرة العائلة</button>
+    </div>
+
+    <!-- تبويب الطلبات -->
+    <div class="tab-panel active" id="tab-panel-requests">
+      <div id="requests-list"></div>
+    </div>
+
+    <!-- تبويب كل الأشخاص -->
+    <div class="tab-panel" id="tab-panel-persons">
+      <div class="panel-toolbar">
+        <form id="search-id-form" class="search-bar">
+          <input type="number" id="search-id-input" placeholder="ابحث بالمعرّف (ID)" min="1">
+          <button type="submit" class="btn btn-secondary btn-sm">بحث</button>
+        </form>
+        <button class="btn btn-primary btn-sm" id="open-root-modal-btn">+ إضافة شخص مباشرة</button>
+      </div>
+      <div id="persons-list"></div>
+    </div>
+
+    <!-- تبويب شجرة العائلة (تعديل/إضافة/حذف مباشر) -->
+    <div class="tab-panel" id="tab-panel-tree">
+      <div class="panel-toolbar">
+        <form id="admin-tree-search-form" class="search-bar" style="margin:0;">
+          <input type="number" id="admin-tree-search-input" placeholder="ابحث في الشجرة بالمعرّف (ID)" min="1">
+          <button type="submit" class="btn btn-secondary btn-sm">🔍 بحث</button>
+        </form>
+        <button class="btn btn-primary btn-sm" id="save-tree-pdf-btn">📄 حفظ الشجرة كاملة PDF</button>
+      </div>
+      <p style="font-size:.82rem; color:var(--muted); margin:6px 0 12px;">اضغط على أي شخص في الشجرة لتعديل بياناته، إضافة قريب له مباشرة، أو حذفه — كل هذا يُطبَّق فوراً بدون الحاجة لمراجعة طلب.</p>
+      <div class="tree-section" style="padding:16px; overflow:auto;">
+        <div class="tree-forest" id="admin-tree-forest"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- نافذة اختيار إجراء لشخص في شجرة المدير -->
+<div class="modal-overlay" id="admin-node-modal">
+  <div class="modal-box">
+    <button class="close-x" id="close-admin-node-modal-btn">✕</button>
+    <h3 id="admin-node-modal-title">ماذا تريد أن تفعل؟</h3>
+    <div class="choice-buttons" id="admin-node-choice-buttons">
+      <button type="button" class="btn btn-primary choice-btn" id="admin-node-edit-btn">✏️ تعديل المعلومات</button>
+      <button type="button" class="btn btn-primary choice-btn" id="admin-node-add-btn">➕ إضافة قريب</button>
+      <button type="button" class="btn btn-danger choice-btn" id="admin-node-delete-btn">🗑 حذف هذا الشخص</button>
+    </div>
+    <div id="admin-delete-confirm" style="display:none;">
+      <p style="font-weight:600; color:var(--danger);">⚠️ هل أنت متأكد من حذف هذا الشخص نهائياً؟ لا يمكن التراجع عن هذا الإجراء.</p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="admin-delete-confirm-no">تراجع</button>
+        <button type="button" class="btn btn-danger" id="admin-delete-confirm-yes">نعم، احذف نهائياً</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- نافذة تعديل مباشر (فوري بدون مراجعة) -->
+<div class="modal-overlay" id="admin-edit-modal">
+  <div class="modal-box">
+    <button class="close-x" id="close-admin-edit-modal-btn">✕</button>
+    <h3 id="admin-edit-modal-title">تعديل معلومات</h3>
+    <form id="admin-edit-form">
+      <div class="form-group">
+        <label for="admin-edit-name">الاسم الأول *</label>
+        <input type="text" id="admin-edit-name" required>
+      </div>
+
+      <div class="form-group">
+        <label>الجنس *</label>
+        <div class="status-toggle">
+          <label><input type="radio" name="admin-edit-gender" value="male" required><span>ذكر</span></label>
+          <label><input type="radio" name="admin-edit-gender" value="female"><span>أنثى</span></label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="admin-edit-photo-input">الصورة (اختياري)</label>
+        <input type="file" id="admin-edit-photo-input" accept="image/*">
+        <img id="admin-edit-photo-preview" style="display:none; width:70px; height:70px; border-radius:50%; object-fit:cover; margin-top:8px;">
+      </div>
+
+      <div class="form-group">
+        <label for="admin-edit-phone">رقم التواصل</label>
+        <input type="tel" id="admin-edit-phone" placeholder="05xxxxxxxx">
+      </div>
+
+      <div class="form-group">
+        <label>الحالة *</label>
+        <div class="status-toggle">
+          <label><input type="radio" name="admin-edit-status" value="alive" required><span>على قيد الحياة</span></label>
+          <label><input type="radio" name="admin-edit-status" value="death"><span>متوفى</span></label>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="cancel-admin-edit-modal-btn">إلغاء</button>
+        <button type="submit" class="btn btn-primary" id="admin-edit-submit-btn">حفظ التعديلات</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- نافذة إضافة قريب مباشرة من الشجرة (فورية بدون مراجعة) -->
+<div class="modal-overlay" id="admin-quick-add-modal">
+  <div class="modal-box">
+    <button class="close-x" id="close-admin-quick-add-modal-btn">✕</button>
+    <h3 id="admin-quick-add-title">إضافة قريب</h3>
+
+    <div class="relation-choices">
+      <button type="button" data-admin-relation="son">ابن</button>
+      <button type="button" data-admin-relation="daughter">ابنة</button>
+      <button type="button" data-admin-relation="brother">أخ</button>
+      <button type="button" data-admin-relation="sister">أخت</button>
+    </div>
+
+    <div id="admin-added-members-list" class="added-members-list" style="display:none;"></div>
+
+    <form id="admin-quick-add-form" style="display:none;">
+      <div class="form-group">
+        <label for="admin-add-name">الاسم الأول *</label>
+        <input type="text" id="admin-add-name" required>
+      </div>
+
+      <div class="form-group">
+        <label for="admin-add-photo-input">الصورة (اختياري)</label>
+        <input type="file" id="admin-add-photo-input" accept="image/*">
+        <img id="admin-add-photo-preview" style="display:none; width:70px; height:70px; border-radius:50%; object-fit:cover; margin-top:8px;">
+      </div>
+
+      <div class="form-group">
+        <label for="admin-add-phone">رقم التواصل (اختياري)</label>
+        <input type="tel" id="admin-add-phone" placeholder="05xxxxxxxx">
+      </div>
+
+      <div class="form-group">
+        <label>الحالة *</label>
+        <div class="status-toggle">
+          <label><input type="radio" name="admin-add-status" value="alive" checked required><span>على قيد الحياة</span></label>
+          <label><input type="radio" name="admin-add-status" value="death"><span>متوفى</span></label>
+        </div>
+      </div>
+
+      <p class="hint-text">✅ يمكنك إضافة أكثر من فرد في نفس الوقت: كل إضافة تُحفظ فوراً وتبقى النافذة مفتوحة لإضافة التالي.</p>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="admin-finish-add-btn">تم، إغلاق</button>
+        <button type="submit" class="btn btn-primary" id="admin-quick-add-submit-btn">➕ حفظ وإضافة التالي</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- نافذة إضافة شخص مباشرة -->
+<div class="modal-overlay" id="root-modal">
+  <div class="modal-box">
+    <button class="close-x" id="close-root-modal-btn">✕</button>
+    <h3>إضافة شخص مباشرة (بدون مراجعة)</h3>
+    <p style="font-size:.82rem; color:var(--muted);">استخدم هذا لإضافة أول فرد في الشجرة، أو لإضافة فرع عائلة مستقل جديد، أو للربط بمعرّف والد محدد.</p>
+
+    <form id="root-add-form">
+      <div class="form-group">
+        <label for="root-first-name">الاسم الأول *</label>
+        <input type="text" id="root-first-name" required>
+      </div>
+
+      <div class="form-group">
+        <label>الجنس *</label>
+        <div class="status-toggle">
+          <label><input type="radio" name="root-gender" value="male" required><span>ذكر</span></label>
+          <label><input type="radio" name="root-gender" value="female"><span>أنثى</span></label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="root-photo-input">الصورة (اختياري)</label>
+        <input type="file" id="root-photo-input" accept="image/*">
+        <img id="root-photo-preview" style="display:none; width:70px; height:70px; border-radius:50%; object-fit:cover; margin-top:8px;">
+      </div>
+
+      <div class="form-group">
+        <label for="root-phone">رقم التواصل (اختياري)</label>
+        <input type="tel" id="root-phone" placeholder="05xxxxxxxx">
+      </div>
+
+      <div class="form-group">
+        <label>الحالة *</label>
+        <div class="status-toggle">
+          <label><input type="radio" name="root-status" value="alive" required><span>على قيد الحياة</span></label>
+          <label><input type="radio" name="root-status" value="death"><span>متوفى</span></label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="root-parent-id">معرّف الوالد/الوالدة (اختياري — اتركه فارغاً لإنشاء جذر جديد)</label>
+        <input type="number" id="root-parent-id" min="1" placeholder="مثال: 5">
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="cancel-root-modal-btn">إلغاء</button>
+        <button type="submit" class="btn btn-primary" id="root-submit-btn">حفظ</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+<script src="firebase-config.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>
