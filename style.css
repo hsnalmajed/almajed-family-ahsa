@@ -195,6 +195,47 @@ header.site-header .admin-link:hover { border-color: var(--accent); }
   padding: 20px;
 }
 
+/* ===== لافتة تثبيت التطبيق ===== */
+.install-banner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: linear-gradient(135deg, #eef6f0, #ffffff);
+  border: 1px solid var(--primary);
+  border-right: 5px solid var(--primary);
+  border-radius: 14px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 16px rgba(23,89,57,.14);
+}
+.install-ico { font-size: 1.7rem; line-height: 1; flex-shrink: 0; }
+.install-text { flex: 1; min-width: 0; }
+.install-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--primary-dark);
+  margin-bottom: 2px;
+}
+.install-sub { font-size: .84rem; color: var(--muted); line-height: 1.5; }
+.install-banner .btn { flex-shrink: 0; }
+.install-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.install-close:hover { color: var(--danger); }
+
+@media (max-width: 700px) {
+  .install-banner { flex-wrap: wrap; }
+  .install-banner .btn { width: 100%; }
+}
+
 /* ===== شريط التنبيه: تعليمات الاستخدام الرئيسية ===== */
 .cta-banner {
   position: relative;

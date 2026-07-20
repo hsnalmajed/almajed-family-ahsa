@@ -4,7 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>عائلة الماجد</title>
-<link rel="stylesheet" href="style.css?v=42">
+
+<!-- تطبيق ويب مثبّت (PWA) -->
+<link rel="manifest" href="manifest.json?v=1">
+<meta name="theme-color" content="#175939">
+<meta name="description" content="شجرة عائلة الماجد بالأحساء — تصفّح الشجرة، ابحث عن أي فرد، واعرف صلة القرابة.">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="عائلة الماجد">
+
+<link rel="stylesheet" href="style.css?v=44">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -40,6 +52,16 @@
 </header>
 
 <div class="container">
+
+  <section class="install-banner" id="install-banner" style="display:none;">
+    <span class="install-ico" aria-hidden="true">📲</span>
+    <div class="install-text">
+      <div class="install-title">ثبّت «عائلة الماجد» على جوالك</div>
+      <div class="install-sub" id="install-sub">يفتح كتطبيق مستقل بأيقونة على الشاشة الرئيسية — بدون متجر ولا تحميل.</div>
+    </div>
+    <button type="button" class="btn btn-primary" id="install-btn">تثبيت التطبيق</button>
+    <button type="button" class="install-close" id="install-close" aria-label="إغلاق">✕</button>
+  </section>
 
   <section class="cta-banner" role="note">
     <span class="cta-icon" aria-hidden="true">👆</span>
@@ -274,5 +296,83 @@
 <script src="firebase-config.js"></script>
 <script src="relationship.js"></script>
 <script src="app.js?v=41"></script>
+
+<!-- زر تثبيت التطبيق -->
+<script>
+(function () {
+  var banner = document.getElementById('install-banner');
+  var btn = document.getElementById('install-btn');
+  var sub = document.getElementById('install-sub');
+  var closeBtn = document.getElementById('install-close');
+  if (!banner) return;
+
+  // إذا كان يعمل مثبّتاً أصلاً فلا داعي للافتة
+  var standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  if (standalone || localStorage.getItem('installBannerHidden') === '1') return;
+
+  closeBtn.addEventListener('click', function () {
+    banner.style.display = 'none';
+    try { localStorage.setItem('installBannerHidden', '1'); } catch (e) {}
+  });
+
+  var deferred = null;
+
+  // أندرويد وسطح المكتب: المتصفح يعطينا حدث التثبيت
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    deferred = e;
+    banner.style.display = 'flex';
+  });
+
+  btn.addEventListener('click', function () {
+    if (!deferred) return;
+    deferred.prompt();
+    deferred.userChoice.then(function () {
+      deferred = null;
+      banner.style.display = 'none';
+    });
+  });
+
+  window.addEventListener('appinstalled', function () {
+    banner.style.display = 'none';
+    try { localStorage.setItem('installBannerHidden', '1'); } catch (e) {}
+  });
+
+  // آيفون/آيباد لا يدعم حدث التثبيت، فنعرض الخطوات يدوياً
+  var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  if (isIOS) {
+    sub.textContent = 'من متصفح Safari: اضغط زر المشاركة ⬆️ ثم «إضافة إلى الشاشة الرئيسية».';
+    btn.style.display = 'none';
+    banner.style.display = 'flex';
+  }
+})();
+</script>
+
+<!-- تسجيل الـ Service Worker: يجعل الموقع قابلاً للتثبيت ويعمل بلا إنترنت -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').then(function (reg) {
+      // عند نزول تحديث جديد نفعّله فوراً بدل انتظار إغلاق كل النوافذ
+      reg.addEventListener('updatefound', function () {
+        var nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener('statechange', function () {
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+            nw.postMessage('SKIP_WAITING');
+          }
+        });
+      });
+    }).catch(function (e) { console.warn('SW registration failed:', e); });
+
+    var refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
+  });
+}
+</script>
 </body>
 </html>

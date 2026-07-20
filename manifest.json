@@ -1,0 +1,43 @@
+{
+  "name": "عائلة الماجد",
+  "short_name": "عائلة الماجد",
+  "description": "شجرة عائلة الماجد بالأحساء — تصفّح الشجرة، ابحث عن أي فرد، واعرف صلة القرابة.",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f6f4ef",
+  "theme_color": "#175939",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "الشجرة",
+      "url": "./index.html"
+    },
+    {
+      "name": "لوحة المدير",
+      "url": "./admin.html"
+    }
+  ]
+}
