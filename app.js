@@ -603,12 +603,27 @@ function scrollToPerson(displayId) {
     showToast('تعذر إيجاد هذا الشخص في الشجرة المعروضة', true);
     return;
   }
-  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
   el.classList.add('highlighted');
   setTimeout(() => el.classList.remove('highlighted'), 2200);
 
-  document.getElementById('search-results').style.display = 'none';
-  document.getElementById('search-input').value = '';
+  const results = document.getElementById('search-results');
+  if (results) results.style.display = 'none';
+  const input = document.getElementById('search-input');
+  if (input) input.value = '';
+}
+
+// الانتقال إلى موقع مُعِدّ الشجرة (المعرّف 147) من بطاقة "إعداد"
+const PREPARED_BY_ID = 147;
+function gotoPreparedByPerson() {
+  const el = document.getElementById('person-node-' + PREPARED_BY_ID);
+  if (!el) {
+    showToast('لم يتم العثور على المعرّف ' + PREPARED_BY_ID + ' في الشجرة بعد', true);
+    return;
+  }
+  // نكبّر قليلاً إن كانت الشجرة مصغّرة جداً حتى تظهر البطاقة بوضوح
+  if (treeZoom < 0.5) setTreeZoom(0.6);
+  setTimeout(() => scrollToPerson(PREPARED_BY_ID), 60);
 }
 
 // ---------------------------------------------------------------------
@@ -820,6 +835,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // تفعيل السحب باليد والتكبير باللمس داخل إطار الشجرة
   enableTreePan(document.getElementById('tree-viewport'));
   applyTreeZoom();
+
+  // بطاقة "إعداد": الضغط على المعرّف ينقل إلى موقعه في الشجرة
+  const gotoMeBtn = document.getElementById('pb-goto-me');
+  if (gotoMeBtn) gotoMeBtn.addEventListener('click', gotoPreparedByPerson);
 
   // حاسبة القرابة
   document.getElementById('relation-finder-form').addEventListener('submit', handleRelationFinder);

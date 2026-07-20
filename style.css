@@ -90,36 +90,82 @@ header.site-header .admin-link:hover { border-color: var(--accent); }
 
 /* بطاقة "إعداد" مع صورة ورقم واتساب */
 .prepared-by {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: #fff;
+  gap: 12px;
+  background: linear-gradient(180deg, #ffffff, #fdfbf6);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 8px 12px 8px 8px;
-  box-shadow: var(--shadow);
-  max-width: 250px;
+  border-radius: 16px;
+  padding: 12px 14px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.09);
+  max-width: 290px;
+  overflow: hidden;
+  transition: box-shadow .2s ease, transform .2s ease;
 }
-.prepared-by .pb-id { font-size: .74rem; color: var(--muted); margin-bottom: 4px; }
-.prepared-by .pb-id::before { content: ''; }
-.prepared-by .pb-contact { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.prepared-by .pb-contact-label { font-size: .72rem; color: var(--muted); }
+/* شريط ذهبي علوي يعطي البطاقة طابع الشعار */
+.prepared-by::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--gold-dark), var(--accent), var(--gold-light), var(--accent), var(--gold-dark));
+}
+.prepared-by:hover { box-shadow: 0 6px 22px rgba(0,0,0,.14); transform: translateY(-1px); }
+
+.prepared-by .pb-photo-wrap {
+  flex-shrink: 0;
+  padding: 2px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--gold-light), var(--gold-dark));
+}
 .prepared-by .pb-photo {
-  width: 46px;
-  height: 46px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid var(--accent);
+  border: 2px solid #fff;
   background: #eee;
-  flex-shrink: 0;
+  display: block;
 }
-.prepared-by .pb-info { text-align: right; }
-.prepared-by .pb-name {
-  font-size: .78rem;
+
+.prepared-by .pb-info { text-align: right; min-width: 0; }
+.prepared-by .pb-label {
+  font-size: .64rem;
   font-weight: 700;
-  color: var(--primary-dark);
-  margin-bottom: 3px;
+  letter-spacing: .08em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 1px;
 }
+.prepared-by .pb-name {
+  font-size: .84rem;
+  font-weight: 800;
+  color: var(--primary-dark);
+  margin-bottom: 7px;
+  line-height: 1.25;
+}
+.prepared-by .pb-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+/* زر المعرّف: ينقل المستخدم إلى موقع صاحب البطاقة في الشجرة */
+.prepared-by .pb-id-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: inherit;
+  font-size: .76rem;
+  font-weight: 800;
+  color: var(--primary-dark);
+  background: var(--gold-light);
+  border: 1px solid var(--accent);
+  border-radius: 14px;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.prepared-by .pb-id-btn:hover { background: var(--accent); color: #fff; }
+.prepared-by .pb-id-btn:active { transform: scale(.97); }
+
 .prepared-by .pb-wa {
   display: inline-flex;
   align-items: center;
@@ -128,17 +174,18 @@ header.site-header .admin-link:hover { border-color: var(--accent); }
   background: #eafaf0;
   border: 1px solid #b7e6c8;
   border-radius: 14px;
-  padding: 2px 9px;
-  font-size: .8rem;
-  font-weight: 700;
+  padding: 3px 10px;
+  font-size: .78rem;
+  font-weight: 800;
   text-decoration: none;
+  transition: background .15s ease;
 }
 .prepared-by .pb-wa:hover { background: #d6f5e2; }
 .prepared-by .pb-wa svg { color: #25D366; }
 
 @media (max-width: 640px) {
   .header-topleft { position: static; align-items: center; margin: 0 auto 12px; }
-  .prepared-by { max-width: 260px; }
+  .prepared-by { max-width: 290px; }
 }
 
 .container {
