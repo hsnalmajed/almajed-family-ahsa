@@ -49,9 +49,6 @@ header.site-header {
   max-width: 430px;
   height: auto;
   display: block;
-  border-radius: 18px;
-  border: 1px solid rgba(0,0,0,.10);
-  box-shadow: 0 6px 20px rgba(0,0,0,.16);
 }
 
 header.site-header h1 {
