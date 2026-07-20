@@ -643,7 +643,13 @@ function fitTreeToViewport() {
   const contentH = forest.scrollHeight;
   forest.style.zoom = prev;
   if (!contentW || !contentH) return;
-  const z = Math.min(vp.clientWidth / contentW, vp.clientHeight / contentH) * 0.97;
+
+  // إن لم يكن للإطار مقاس بعد (تبويب مخفي مثلاً) نرجع لمقاس النافذة
+  const vpW = vp.clientWidth || window.innerWidth || 0;
+  const vpH = vp.clientHeight || Math.round((window.innerHeight || 0) * 0.78);
+  if (vpW < 50 || vpH < 50) return;
+
+  const z = Math.min(vpW / contentW, vpH / contentH) * 0.97;
   setTreeZoom(z);
   vp.scrollLeft = 0;
   vp.scrollTop = 0;
