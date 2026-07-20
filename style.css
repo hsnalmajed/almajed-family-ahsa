@@ -194,6 +194,82 @@ header.site-header .admin-link:hover { border-color: var(--accent); }
   padding: 20px;
 }
 
+/* ===== شريط التنبيه: تعليمات الاستخدام الرئيسية ===== */
+.cta-banner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: linear-gradient(135deg, #fff8e4 0%, #fffdf8 60%);
+  border: 1px solid var(--accent);
+  border-right: 5px solid var(--accent);
+  border-radius: 14px;
+  padding: 15px 18px;
+  margin-bottom: 22px;
+  box-shadow: 0 4px 16px rgba(207, 154, 46, .20);
+  overflow: hidden;
+}
+
+/* لمعة خفيفة تمرّ مرّة واحدة عند فتح الصفحة لجذب الانتباه */
+.cta-banner::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 45%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.75), transparent);
+  transform: translateX(-120%);
+  animation: ctaShine 1.5s ease-out .5s 2;
+  pointer-events: none;
+}
+@keyframes ctaShine {
+  to { transform: translateX(320%); }
+}
+
+.cta-icon {
+  font-size: 1.7rem;
+  line-height: 1;
+  flex-shrink: 0;
+  animation: ctaTap 2.4s ease-in-out infinite;
+}
+@keyframes ctaTap {
+  0%, 68%, 100% { transform: translateY(0); }
+  78%           { transform: translateY(-6px); }
+  88%           { transform: translateY(0); }
+}
+
+.cta-text { flex: 1; min-width: 0; }
+.cta-title {
+  font-size: 1.02rem;
+  font-weight: 800;
+  color: var(--primary-dark);
+  margin-bottom: 3px;
+}
+.cta-sub { font-size: .87rem; color: #6d5c33; line-height: 1.5; }
+
+.cta-note {
+  flex-shrink: 0;
+  font-size: .75rem;
+  font-weight: 700;
+  color: var(--gold-dark);
+  background: var(--gold-light);
+  border: 1px solid var(--accent);
+  border-radius: 20px;
+  padding: 6px 12px;
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .cta-banner { flex-direction: column; text-align: center; gap: 10px; }
+  .cta-note { white-space: normal; }
+}
+
+/* احترام تفضيل تقليل الحركة */
+@media (prefers-reduced-motion: reduce) {
+  .cta-icon { animation: none; }
+  .cta-banner::after { animation: none; display: none; }
+}
+
 /* ===== Stats bar ===== */
 .stats-bar {
   display: grid;
