@@ -96,6 +96,11 @@ function switchTab(tabName) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('tab-btn-' + tabName).classList.add('active');
   document.getElementById('tab-panel-' + tabName).classList.add('active');
+
+  // إطار الشجرة يكون بلا مقاس وهو مخفي، لذا نوسّط المعرّف 1 بعد ظهوره
+  if (tabName === 'tree') {
+    setTimeout(() => { adminTreeCenteredOnce = false; centerAdminTreeOnRoot(); }, 80);
+  }
 }
 
 // ---------------------------------------------------------------------
@@ -386,6 +391,9 @@ function renderAdminTree() {
 
   applyAdminTreeZoom();
   enableAdminTreePan(document.getElementById('admin-tree-viewport'));
+
+  // عند أول عرض: توسيط صاحب المعرّف 1 في منتصف الشاشة
+  if (!adminTreeCenteredOnce) setTimeout(centerAdminTreeOnRoot, 120);
 }
 
 function buildAdminPersonNode(person, childrenByParentKey) {
@@ -914,6 +922,21 @@ function fitAdminTreeToViewport() {
   vp.scrollLeft = 0; vp.scrollTop = 0;
 }
 
+// توسيط صاحب المعرّف 1 أفقياً داخل إطار شجرة المدير
+let adminTreeCenteredOnce = false;
+function centerAdminTreeOnRoot() {
+  const vp = document.getElementById('admin-tree-viewport');
+  if (!vp || !vp.clientWidth) return;
+  const root = document.getElementById('admin-person-node-1') || vp.querySelector('.person-node');
+  if (!root) return;
+  const vpRect = vp.getBoundingClientRect();
+  const rootRect = root.getBoundingClientRect();
+  const rootCenter = (rootRect.left - vpRect.left) + vp.scrollLeft + rootRect.width / 2;
+  vp.scrollLeft = rootCenter - vp.clientWidth / 2;
+  vp.scrollTop = 0;
+  adminTreeCenteredOnce = true;
+}
+
 let adminTreeJustDragged = false;
 function enableAdminTreePan(vp) {
   if (!vp || vp.dataset.panReady === '1') return;
@@ -1043,6 +1066,20 @@ async function renumberAllIds(btnEl) {
   }
 }
 
+// نضمن اكتمال تحميل كل صور الأفراد قبل الالتقاط حتى تظهر في ملف PDF
+function waitForTreeImages(container) {
+  const imgs = Array.from(container.querySelectorAll('img'));
+  return Promise.all(imgs.map(img => {
+    if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+    return new Promise(resolve => {
+      const done = () => resolve();
+      img.addEventListener('load', done, { once: true });
+      img.addEventListener('error', done, { once: true });
+      setTimeout(done, 8000); // لا نعلّق التصدير بسبب صورة واحدة
+    });
+  }));
+}
+
 async function saveTreeAsPdf(btnEl) {
   const el = document.getElementById('admin-tree-forest');
   if (!el || allPersonsAdmin.length === 0) { alert('لا توجد شجرة لحفظها بعد.'); return; }
@@ -1057,41 +1094,65 @@ async function saveTreeAsPdf(btnEl) {
     el.style.zoom = 1;
     await new Promise(r => setTimeout(r, 120));
 
+    // ننتظر تحميل كل صور الأفراد فعلياً حتى تظهر في الـ PDF وليس كمربعات فارغة
+    await waitForTreeImages(el);
+
     const fullW = el.scrollWidth, fullH = el.scrollHeight;
 
-    // أعلى دقة ممكنة ضمن حدود المتصفح: أقصى بُعد ~32767 بكسل ومساحة ~250 مليون بكسل
-    const MAX_DIM = 30000;
-    const MAX_AREA = 240e6;
-    const scale = Math.max(1, Math.min(
-      4,
-      MAX_DIM / Math.max(fullW, fullH),
-      Math.sqrt(MAX_AREA / (fullW * fullH))
-    ));
+    // الدقة: عدد بكسلات الصورة مقابل مقاس صفحة الـ PDF.
+    // scale = 3 يعني ~216 نقطة/بوصة، وهو ما يجعل النص والصور حادّة عند التكبير.
+    const TARGET_SCALE = 3;
+    const MAX_PX = 12000;   // حد آمن لكل بُعد في رسم المتصفح
 
-    const canvas = await html2canvas(el, {
-      backgroundColor: '#ffffff',
-      scale: scale,
-      width: fullW,
-      height: fullH,
-      windowWidth: fullW,
-      windowHeight: fullH,
-      useCORS: true,
-      imageTimeout: 0,
-      logging: false
-    });
+    // إن كان ارتفاع الشجرة كبيراً نخفض الدقة بما يكفي فقط
+    const scale = Math.max(1, Math.min(TARGET_SCALE, MAX_PX / fullH));
 
-    // PNG بدل JPEG: النصوص والخطوط تبقى حادّة بلا تشويش ضغط
-    const imgData = canvas.toDataURL('image/png');
+    // نقسّم الشجرة العريضة إلى صفحات رأسية حتى تبقى كل صفحة عالية الدقة
+    const tileW = Math.max(600, Math.floor(MAX_PX / scale));
+    const tiles = Math.max(1, Math.ceil(fullW / tileW));
+
     const { jsPDF } = window.jspdf;
+    let pdf = null;
 
-    // نجعل صفحة PDF بأبعاد التخطيط الأصلي، والصورة عالية الدقة تُرسم فوقها
-    const pdf = new jsPDF({
-      orientation: fullW >= fullH ? 'landscape' : 'portrait',
-      unit: 'pt',
-      format: [fullW, fullH],
-      compress: true
-    });
-    pdf.addImage(imgData, 'PNG', 0, 0, fullW, fullH, undefined, 'FAST');
+    for (let i = 0; i < tiles; i++) {
+      if (btnEl) btnEl.textContent = `جارٍ التجهيز... ${i + 1}/${tiles}`;
+
+      const x = i * tileW;
+      const w = Math.min(tileW, fullW - x);
+
+      const canvas = await html2canvas(el, {
+        backgroundColor: '#ffffff',
+        scale: scale,
+        x: x,
+        y: 0,
+        width: w,
+        height: fullH,
+        windowWidth: fullW,
+        windowHeight: fullH,
+        scrollX: 0,
+        scrollY: 0,
+        useCORS: true,
+        allowTaint: true,
+        imageTimeout: 0,
+        logging: false
+      });
+
+      // PNG: النصوص والخطوط تبقى حادّة بلا تشويش ضغط
+      const imgData = canvas.toDataURL('image/png');
+
+      if (!pdf) {
+        pdf = new jsPDF({
+          orientation: w >= fullH ? 'landscape' : 'portrait',
+          unit: 'pt',
+          format: [w, fullH],
+          compress: true
+        });
+      } else {
+        pdf.addPage([w, fullH], w >= fullH ? 'landscape' : 'portrait');
+      }
+      pdf.addImage(imgData, 'PNG', 0, 0, w, fullH, undefined, 'FAST');
+    }
+
     pdf.save('شجرة_عائلة_الماجد.pdf');
   } catch (err) {
     console.error(err);
@@ -1130,6 +1191,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (azOut) azOut.addEventListener('click', () => setAdminTreeZoom(adminTreeZoom - 0.1));
   if (azReset) azReset.addEventListener('click', () => setAdminTreeZoom(0.5));
   if (azFit) azFit.addEventListener('click', fitAdminTreeToViewport);
+  const centerBtn = document.getElementById('admin-center-root-btn');
+  if (centerBtn) centerBtn.addEventListener('click', () => { adminTreeCenteredOnce = false; centerAdminTreeOnRoot(); });
   enableAdminTreePan(document.getElementById('admin-tree-viewport'));
   applyAdminTreeZoom();
 

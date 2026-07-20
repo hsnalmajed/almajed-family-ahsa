@@ -739,6 +739,9 @@ footer.site-footer {
   padding: 24px 10px;
 }
 
+a.back-to-site { text-decoration: none; white-space: nowrap; display: inline-flex; align-items: center; }
+.panel-toolbar a.btn { text-decoration: none; display: inline-flex; align-items: center; }
+
 a.admin-link { color: var(--primary-dark); opacity: .85; font-size: .82rem; text-decoration: none; }
 a.admin-link:hover { opacity: 1; text-decoration: underline; }
 
