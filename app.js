@@ -61,6 +61,58 @@ function renderStats() {
   document.getElementById('stat-female').textContent = female;
   document.getElementById('stat-alive').textContent = alive;
   document.getElementById('stat-dead').textContent = dead;
+
+  renderRelatedFamilies();
+}
+
+/**
+ * مفتاح موحّد لمقارنة أسماء العوائل حتى لا تتكرر بسبب اختلاف
+ * الهمزات أو التشكيل أو المسافات أو بادئة "آل".
+ */
+function familyKey(name) {
+  return String(name)
+    .replace(/[ً-ْٰـ]/g, '') // تشكيل وتطويل
+    .replace(/[أإآٱ]/g, 'ا')
+    .replace(/ى/g, 'ي')
+    .replace(/ؤ/g, 'و')
+    .replace(/ئ/g, 'ي')
+    .replace(/ة/g, 'ه')
+    .replace(/^(ال|آل)\s*/, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+// عوائل الأزواج والزوجات بدون تكرار
+function renderRelatedFamilies() {
+  const seen = new Map(); // المفتاح الموحّد -> الاسم كما كُتب أول مرة
+  allPersons.forEach(p => {
+    const raw = String(p.spouseFamily || '').trim();
+    if (!raw) return;
+    const key = familyKey(raw);
+    if (key && !seen.has(key)) seen.set(key, raw.replace(/\s+/g, ' '));
+  });
+
+  const families = Array.from(seen.values()).sort((a, b) => a.localeCompare(b, 'ar'));
+
+  const countEl = document.getElementById('stat-families');
+  if (countEl) countEl.textContent = families.length;
+
+  const box = document.getElementById('families-chips');
+  if (!box) return;
+  box.innerHTML = '';
+
+  if (families.length === 0) {
+    box.innerHTML = '<div class="families-empty">لم تُسجَّل أي عائلة بعد — تُضاف تلقائياً عند تحديد «متزوج/متزوجة» وكتابة اسم عائلة الزوج أو الزوجة.</div>';
+    return;
+  }
+
+  families.forEach(name => {
+    const chip = document.createElement('span');
+    chip.className = 'family-chip';
+    chip.textContent = name;
+    box.appendChild(chip);
+  });
 }
 
 // ---------------------------------------------------------------------

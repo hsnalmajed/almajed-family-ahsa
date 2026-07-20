@@ -273,9 +273,69 @@ header.site-header .admin-link:hover { border-color: var(--accent); }
 /* ===== Stats bar ===== */
 .stats-bar {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 12px;
   margin-bottom: 24px;
+}
+
+/* بطاقة عريضة تعرض أسماء العوائل */
+.families-card {
+  grid-column: 1 / -1;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.05);
+  padding: 16px 18px 18px;
+  position: relative;
+  overflow: hidden;
+}
+.families-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--gold-dark), var(--accent), var(--gold-light), var(--accent));
+}
+.families-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.families-head .stat-icon {
+  width: 42px;
+  height: 42px;
+  margin: 0;
+  box-shadow: none;
+}
+.families-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--primary-dark);
+}
+.families-sub {
+  font-size: .78rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.families-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.family-chip {
+  font-size: .85rem;
+  font-weight: 700;
+  color: var(--gold-dark);
+  background: var(--gold-light);
+  border: 1px solid var(--accent);
+  border-radius: 20px;
+  padding: 6px 14px;
+}
+.families-empty {
+  font-size: .84rem;
+  color: var(--muted);
+  line-height: 1.6;
 }
 
 .stat-card {
@@ -322,6 +382,7 @@ header.site-header .admin-link:hover { border-color: var(--accent); }
 .stat-card:has(.stat-icon.female) { --stat-color: #b2793b; --stat-soft: rgba(178,121,59,.14); --stat-ring: rgba(178,121,59,.07); }
 .stat-card:has(.stat-icon.alive)  { --stat-color: #2e9d5b; --stat-soft: rgba(46,157,91,.13);  --stat-ring: rgba(46,157,91,.06); }
 .stat-card:has(.stat-icon.dead)   { --stat-color: #7a7a7a; --stat-soft: rgba(122,122,122,.12); --stat-ring: rgba(122,122,122,.06); }
+.stat-card:has(.stat-icon.families) { --stat-color: #8a5c14; --stat-soft: rgba(207,154,46,.16); --stat-ring: rgba(207,154,46,.08); }
 
 /* بديل للمتصفحات التي لا تدعم :has */
 .stat-icon.total  { color: #175939; background: rgba(23,89,57,.12); }
@@ -329,6 +390,7 @@ header.site-header .admin-link:hover { border-color: var(--accent); }
 .stat-icon.female { color: #b2793b; background: rgba(178,121,59,.14); }
 .stat-icon.alive  { color: #2e9d5b; background: rgba(46,157,91,.13); }
 .stat-icon.dead   { color: #7a7a7a; background: rgba(122,122,122,.12); }
+.stat-icon.families { color: #8a5c14; background: rgba(207,154,46,.16); }
 
 .stat-card .num {
   font-size: 2rem;
@@ -342,6 +404,10 @@ header.site-header .admin-link:hover { border-color: var(--accent); }
   font-weight: 600;
   color: var(--muted);
   margin-top: 4px;
+}
+
+@media (max-width: 1000px) {
+  .stats-bar { grid-template-columns: repeat(3, 1fr); }
 }
 
 @media (max-width: 700px) {
