@@ -798,3 +798,5 @@ a.admin-link:hover { opacity: 1; text-decoration: underline; }
 }
 
 .panel-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+
+/* v25 */
