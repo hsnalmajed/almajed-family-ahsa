@@ -69,6 +69,12 @@ function renderStats() {
  * مفتاح موحّد لمقارنة أسماء العوائل حتى لا تتكرر بسبب اختلاف
  * الهمزات أو التشكيل أو المسافات أو بادئة "آل".
  */
+// أسماء عوائل الشخص: تدعم الحقل الجديد (قائمة) والقديم (نص واحد)
+function personFamilies(p) {
+  if (Array.isArray(p.spouseFamilies)) return p.spouseFamilies.filter(Boolean);
+  return p.spouseFamily ? [p.spouseFamily] : [];
+}
+
 function familyKey(name) {
   return String(name)
     .replace(/[ً-ْٰـ]/g, '') // تشكيل وتطويل
@@ -87,10 +93,12 @@ function familyKey(name) {
 function renderRelatedFamilies() {
   const seen = new Map(); // المفتاح الموحّد -> الاسم كما كُتب أول مرة
   allPersons.forEach(p => {
-    const raw = String(p.spouseFamily || '').trim();
-    if (!raw) return;
-    const key = familyKey(raw);
-    if (key && !seen.has(key)) seen.set(key, raw.replace(/\s+/g, ' '));
+    personFamilies(p).forEach(v => {
+      const raw = String(v).trim();
+      if (!raw) return;
+      const key = familyKey(raw);
+      if (key && !seen.has(key)) seen.set(key, raw.replace(/\s+/g, ' '));
+    });
   });
 
   const families = Array.from(seen.values()).sort((a, b) => a.localeCompare(b, 'ar'));
@@ -284,8 +292,9 @@ function resizeImageToBase64(file, maxSize = 220, quality = 0.7) {
 // ---------------------------------------------------------------------
 function openChoiceModal(person) {
   selectedTargetPerson = person;
-  const spouseNote = person.maritalStatus === 'married' && person.spouseFamily
-    ? ` — ${person.gender === 'female' ? 'عائلة الزوج' : 'عائلة الزوجة'}: ${person.spouseFamily}`
+  const fams = personFamilies(person);
+  const spouseNote = person.maritalStatus === 'married' && fams.length
+    ? ` — ${person.gender === 'female' ? 'عائلة الزوج' : 'عوائل الزوجات'}: ${fams.join('، ')}`
     : '';
   document.getElementById('choice-modal-title').textContent =
     `${person.firstName} (#${person.displayId})${spouseNote} — ماذا تريد أن تفعل؟`;
@@ -314,7 +323,7 @@ function openUpdateModal(person) {
   document.querySelectorAll('input[name="update-marital"]').forEach(r => {
     r.checked = (r.value === currentMarital);
   });
-  document.getElementById('update-spouse-family').value = person.spouseFamily || '';
+  if (updateFamilyList) updateFamilyList.set(personFamilies(person));
   refreshMaritalGroup('update-marital', 'update-spouse-group');
 
   document.getElementById('update-modal').classList.add('open');
@@ -368,9 +377,9 @@ async function submitUpdateInfo(evt) {
       photoURL: photoURL || '',
       status,
       maritalStatus: (document.querySelector('input[name="update-marital"]:checked')?.value) || 'single',
-      spouseFamily: (document.querySelector('input[name="update-marital"]:checked')?.value === 'married')
-        ? document.getElementById('update-spouse-family').value.trim()
-        : '',
+      spouseFamilies: (document.querySelector('input[name="update-marital"]:checked')?.value === 'married' && updateFamilyList)
+        ? updateFamilyList.values()
+        : [],
       requestStatus: 'pending',
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
@@ -476,6 +485,65 @@ function refreshMaritalGroup(radioName, groupId) {
   group.style.display = (checked && checked.value === 'married') ? 'block' : 'none';
 }
 
+
+// ---------------------------------------------------------------------
+// حقل يقبل أكثر من اسم عائلة (للزوجات المتعددات أو تعدد الروابط)
+// ---------------------------------------------------------------------
+function createFamilyList(inputId, addBtnId, chipsId) {
+  const input = document.getElementById(inputId);
+  const addBtn = document.getElementById(addBtnId);
+  const chips = document.getElementById(chipsId);
+  const state = [];
+
+  function render() {
+    if (!chips) return;
+    chips.innerHTML = '';
+    state.forEach((name, i) => {
+      const chip = document.createElement('span');
+      chip.className = 'family-chip-edit';
+      chip.appendChild(document.createTextNode(name));
+      const x = document.createElement('button');
+      x.type = 'button';
+      x.className = 'family-chip-remove';
+      x.textContent = '✕';
+      x.title = 'إزالة';
+      x.addEventListener('click', () => { state.splice(i, 1); render(); });
+      chip.appendChild(x);
+      chips.appendChild(chip);
+    });
+  }
+
+  function add() {
+    if (!input) return;
+    const v = input.value.trim().replace(/\s+/g, ' ');
+    if (!v) return;
+    // لا نكرّر نفس العائلة حتى لو اختلف الرسم
+    if (!state.some(x => familyKey(x) === familyKey(v))) state.push(v);
+    input.value = '';
+    render();
+  }
+
+  if (addBtn) addBtn.addEventListener('click', add);
+  if (input) input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); add(); }
+  });
+
+  return {
+    // نضيف ما تبقّى مكتوباً في الحقل حتى لو نسي المستخدم الضغط على "إضافة"
+    values() { add(); return state.slice(); },
+    set(list) {
+      state.length = 0;
+      (list || []).forEach(v => { const t = String(v).trim(); if (t) state.push(t); });
+      if (input) input.value = '';
+      render();
+    },
+    clear() { this.set([]); }
+  };
+}
+
+let updateFamilyList = null;
+let addFamilyList = null;
+
 function chooseRelationType(type, btnEl) {
   selectedRelationType = type;
   document.querySelectorAll('.relation-choices button').forEach(b => b.classList.remove('selected'));
@@ -516,20 +584,19 @@ async function stashCurrentMember(showErrors) {
   }
 
   const maritalStatus = document.querySelector('input[name="input-marital"]:checked')?.value || 'single';
-  const spouseFamily = maritalStatus === 'married'
-    ? document.getElementById('input-spouse-family').value.trim()
-    : '';
+  const spouseFamilies = (maritalStatus === 'married' && addFamilyList) ? addFamilyList.values() : [];
 
   pendingMembers.push({
     firstName, gender, phone, photoURL,
     relationType: selectedRelationType, parentKey,
-    maritalStatus, spouseFamily
+    maritalStatus, spouseFamilies
   });
   renderPendingMembers();
 
   // تفريغ النموذج استعداداً للفرد التالي
   document.getElementById('add-member-form').reset();
   document.getElementById('photo-preview').style.display = 'none';
+  if (addFamilyList) addFamilyList.clear();
   refreshMaritalGroup('input-marital', 'input-spouse-group');
   selectedPhotoFile = null;
   return true;
@@ -1002,6 +1069,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // إظهار خانة عائلة الزوج/الزوجة عند اختيار "متزوج"
   bindMaritalToggle('update-marital', 'update-spouse-group');
   bindMaritalToggle('input-marital', 'input-spouse-group');
+  updateFamilyList = createFamilyList('update-spouse-family', 'update-spouse-add', 'update-spouse-chips');
+  addFamilyList = createFamilyList('input-spouse-family', 'input-spouse-add', 'input-spouse-chips');
 
   // بطاقة "إعداد": الضغط على المعرّف ينقل إلى موقعه في الشجرة
   const gotoMeBtn = document.getElementById('pb-goto-me');

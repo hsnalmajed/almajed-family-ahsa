@@ -129,11 +129,12 @@ const STATUS_LABELS_AR = { alive: 'على قيد الحياة', death: 'متوف
 const GENDER_LABELS_AR = { male: 'ذكر', female: 'أنثى' };
 
 // وصف الحالة الاجتماعية بصيغة تناسب جنس الشخص
-function maritalLabel(maritalStatus, gender, spouseFamily) {
+function maritalLabel(maritalStatus, gender, families) {
   const female = gender === 'female';
+  const list = Array.isArray(families) ? families.filter(Boolean) : (families ? [families] : []);
   if (maritalStatus === 'married') {
-    const who = female ? 'عائلة الزوج' : 'عائلة الزوجة';
-    return (female ? 'متزوجة' : 'متزوج') + (spouseFamily ? ` — ${who}: ${spouseFamily}` : '');
+    const who = female ? 'عائلة الزوج' : (list.length > 1 ? 'عوائل الزوجات' : 'عائلة الزوجة');
+    return (female ? 'متزوجة' : 'متزوج') + (list.length ? ` — ${who}: ${list.join('، ')}` : '');
   }
   return female ? 'غير متزوجة' : 'غير متزوج';
 }
@@ -159,7 +160,7 @@ function renderRequests() {
           <div class="req-name">✏️ طلب تحديث بيانات: <b>${escapeHtml(r.targetPersonName || '')}</b> (#${r.targetPersonId})</div>
           <div class="req-meta">الهاتف الجديد: ${r.phone ? escapeHtml(r.phone) : 'بدون تغيير'} | الصورة: ${r.photoURL ? 'محدَّثة' : 'بدون تغيير'}</div>
           <div class="req-meta">الحالة الجديدة: ${STATUS_LABELS_AR[r.status] || r.status}</div>
-          <div class="req-meta">الحالة الاجتماعية: ${escapeHtml(maritalLabel(r.maritalStatus, (allPersonsAdmin.find(p => p.displayId === r.targetPersonId) || {}).gender, r.spouseFamily))}</div>
+          <div class="req-meta">الحالة الاجتماعية: ${escapeHtml(maritalLabel(r.maritalStatus, (allPersonsAdmin.find(p => p.displayId === r.targetPersonId) || {}).gender, r.spouseFamilies || r.spouseFamily))}</div>
         </div>
         <div class="req-actions">
           <button class="btn btn-primary btn-sm" data-approve-update="${r.id}">قبول</button>
@@ -169,7 +170,7 @@ function renderRequests() {
     } else if (r.requestType === 'addBatch') {
       const members = r.members || [];
       const membersHtml = members.map(m =>
-        `<div class="req-meta">• ${escapeHtml(m.firstName)} — ${RELATION_LABELS_AR[m.relationType] || m.relationType} (${GENDER_LABELS_AR[m.gender] || ''})${m.phone ? ' — ' + escapeHtml(m.phone) : ''} — ${escapeHtml(maritalLabel(m.maritalStatus, m.gender, m.spouseFamily))}</div>`
+        `<div class="req-meta">• ${escapeHtml(m.firstName)} — ${RELATION_LABELS_AR[m.relationType] || m.relationType} (${GENDER_LABELS_AR[m.gender] || ''})${m.phone ? ' — ' + escapeHtml(m.phone) : ''} — ${escapeHtml(maritalLabel(m.maritalStatus, m.gender, m.spouseFamilies || m.spouseFamily))}</div>`
       ).join('');
       row.innerHTML = `
         <div class="req-info">
@@ -237,7 +238,7 @@ async function approveRequest(requestId, btnEl) {
         phone: reqData.phone || '',
         status: reqData.status,
         maritalStatus: reqData.maritalStatus || 'single',
-        spouseFamily: reqData.spouseFamily || '',
+        spouseFamilies: reqData.spouseFamilies || (reqData.spouseFamily ? [reqData.spouseFamily] : []),
         parentKey: reqData.parentKey,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
@@ -283,7 +284,7 @@ async function approveBatchRequest(requestId, btnEl) {
           phone: m.phone || '',
           status: 'alive',
           maritalStatus: m.maritalStatus || 'single',
-          spouseFamily: m.spouseFamily || '',
+          spouseFamilies: m.spouseFamilies || (m.spouseFamily ? [m.spouseFamily] : []),
           parentKey: m.parentKey,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
@@ -324,7 +325,9 @@ async function approveUpdateRequest(requestId, btnEl) {
       if (reqData.status) updates.status = reqData.status;
       if (reqData.maritalStatus) {
         updates.maritalStatus = reqData.maritalStatus;
-        updates.spouseFamily = reqData.maritalStatus === 'married' ? (reqData.spouseFamily || '') : '';
+        updates.spouseFamilies = reqData.maritalStatus === 'married'
+          ? (reqData.spouseFamilies || (reqData.spouseFamily ? [reqData.spouseFamily] : []))
+          : [];
       }
 
       tx.update(personRef, updates);
@@ -480,6 +483,82 @@ function showAdminDeleteConfirm() {
 }
 
 // --- نافذة تعديل مباشر ---
+
+// ---------------------------------------------------------------------
+// حقل يقبل أكثر من اسم عائلة
+// ---------------------------------------------------------------------
+function familyKeyAdmin(name) {
+  return String(name)
+    .replace(/[\u064B-\u0652\u0670\u0640]/g, '')
+    .replace(/[\u0623\u0625\u0622\u0671]/g, '\u0627')
+    .replace(/\u0649/g, '\u064A')
+    .replace(/\u0624/g, '\u0648')
+    .replace(/\u0626/g, '\u064A')
+    .replace(/\u0629/g, '\u0647')
+    .replace(/^(\u0627\u0644|\u0622\u0644)\s*/, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function personFamiliesAdmin(p) {
+  if (Array.isArray(p.spouseFamilies)) return p.spouseFamilies.filter(Boolean);
+  return p.spouseFamily ? [p.spouseFamily] : [];
+}
+
+function createFamilyListAdmin(inputId, addBtnId, chipsId) {
+  const input = document.getElementById(inputId);
+  const addBtn = document.getElementById(addBtnId);
+  const chips = document.getElementById(chipsId);
+  const state = [];
+
+  function render() {
+    if (!chips) return;
+    chips.innerHTML = '';
+    state.forEach((name, i) => {
+      const chip = document.createElement('span');
+      chip.className = 'family-chip-edit';
+      chip.appendChild(document.createTextNode(name));
+      const x = document.createElement('button');
+      x.type = 'button';
+      x.className = 'family-chip-remove';
+      x.textContent = '\u2715';
+      x.addEventListener('click', () => { state.splice(i, 1); render(); });
+      chip.appendChild(x);
+      chips.appendChild(chip);
+    });
+  }
+
+  function add() {
+    if (!input) return;
+    const v = input.value.trim().replace(/\s+/g, ' ');
+    if (!v) return;
+    if (!state.some(x => familyKeyAdmin(x) === familyKeyAdmin(v))) state.push(v);
+    input.value = '';
+    render();
+  }
+
+  if (addBtn) addBtn.addEventListener('click', add);
+  if (input) input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); add(); }
+  });
+
+  return {
+    values() { add(); return state.slice(); },
+    set(list) {
+      state.length = 0;
+      (list || []).forEach(v => { const t = String(v).trim(); if (t) state.push(t); });
+      if (input) input.value = '';
+      render();
+    },
+    clear() { this.set([]); }
+  };
+}
+
+let adminEditFamilyList = null;
+let adminAddFamilyList = null;
+let rootFamilyList = null;
+
 function applyMaritalLabelsAdmin(scopeEl, gender) {
   if (!scopeEl) return;
   const female = gender === 'female';
@@ -503,10 +582,12 @@ function refreshMaritalGroupAdmin(radioName, groupId) {
   const checked = document.querySelector(`input[name="${radioName}"]:checked`);
   group.style.display = (checked && checked.value === 'married') ? 'block' : 'none';
 }
-function readMarital(radioName, inputId) {
+function readMarital(radioName, listObj) {
   const m = document.querySelector(`input[name="${radioName}"]:checked`)?.value || 'single';
-  const el = document.getElementById(inputId);
-  return { maritalStatus: m, spouseFamily: m === 'married' && el ? el.value.trim() : '' };
+  return {
+    maritalStatus: m,
+    spouseFamilies: (m === 'married' && listObj) ? listObj.values() : []
+  };
 }
 
 function openAdminEditModal(person) {
@@ -522,7 +603,7 @@ function openAdminEditModal(person) {
   applyMaritalLabelsAdmin(document.getElementById('admin-edit-modal'), person.gender);
   const curM = person.maritalStatus === 'married' ? 'married' : 'single';
   document.querySelectorAll('input[name="admin-edit-marital"]').forEach(r => { r.checked = (r.value === curM); });
-  document.getElementById('admin-edit-spouse-family').value = person.spouseFamily || '';
+  if (adminEditFamilyList) adminEditFamilyList.set(personFamiliesAdmin(person));
   refreshMaritalGroupAdmin('admin-edit-marital', 'admin-edit-spouse-group');
 
   document.getElementById('admin-edit-modal').classList.add('open');
@@ -559,7 +640,7 @@ async function submitAdminEdit(evt) {
   btn.textContent = 'جارٍ الحفظ...';
 
   try {
-    const updates = { firstName, gender, phone, status, ...readMarital('admin-edit-marital', 'admin-edit-spouse-family') };
+    const updates = { firstName, gender, phone, status, ...readMarital('admin-edit-marital', adminEditFamilyList) };
     if (selectedAdminEditPhotoFile) {
       updates.photoURL = await resizeImageToBase64Admin(selectedAdminEditPhotoFile);
     }
@@ -678,7 +759,7 @@ async function submitAdminQuickAdd(evt) {
       tx.set(personRef, {
         displayId: newId,
         firstName, gender, phone, status, photoURL,
-        ...readMarital('admin-add-marital', 'admin-add-spouse-family'),
+        ...readMarital('admin-add-marital', adminAddFamilyList),
         parentKey,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
@@ -881,7 +962,7 @@ async function submitRootPerson(evt) {
       tx.set(personRef, {
         displayId: newId,
         firstName, gender, phone, status, photoURL, parentKey,
-        ...readMarital('root-marital', 'root-spouse-family'),
+        ...readMarital('root-marital', rootFamilyList),
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       tx.set(counterRef, { lastId: newId }, { merge: true });
@@ -1271,6 +1352,9 @@ document.addEventListener('DOMContentLoaded', () => {
   bindMaritalToggleAdmin('admin-edit-marital', 'admin-edit-spouse-group');
   bindMaritalToggleAdmin('admin-add-marital', 'admin-add-spouse-group');
   bindMaritalToggleAdmin('root-marital', 'root-spouse-group');
+  adminEditFamilyList = createFamilyListAdmin('admin-edit-spouse-family', 'admin-edit-spouse-family-add', 'admin-edit-spouse-family-chips');
+  adminAddFamilyList = createFamilyListAdmin('admin-add-spouse-family', 'admin-add-spouse-family-add', 'admin-add-spouse-family-chips');
+  rootFamilyList = createFamilyListAdmin('root-spouse-family', 'root-spouse-family-add', 'root-spouse-family-chips');
   // في نافذة الإضافة المباشرة تتغيّر الصيغة بحسب الجنس المختار
   document.querySelectorAll('input[name="root-gender"]').forEach(r => {
     r.addEventListener('change', () => {

@@ -332,6 +332,50 @@ header.site-header .admin-link:hover { border-color: var(--accent); }
   border-radius: 20px;
   padding: 6px 14px;
 }
+/* حقل إدخال عدة أسماء عوائل داخل النوافذ */
+.family-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.family-input-row input { flex: 1; min-width: 0; }
+.family-input-row .btn { flex-shrink: 0; white-space: nowrap; }
+
+.family-chips-edit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.family-chip-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .84rem;
+  font-weight: 700;
+  color: var(--gold-dark);
+  background: var(--gold-light);
+  border: 1px solid var(--accent);
+  border-radius: 18px;
+  padding: 4px 10px;
+}
+.family-chip-remove {
+  background: none;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  font-size: .8rem;
+  line-height: 1;
+  padding: 0;
+}
+.family-chip-remove:hover { color: #7a1e1e; }
+
+.family-hint {
+  margin: 6px 0 0;
+  font-size: .76rem;
+  color: var(--muted);
+}
+
 .families-empty {
   font-size: .84rem;
   color: var(--muted);

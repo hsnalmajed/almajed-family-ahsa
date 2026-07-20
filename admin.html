@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>لوحة تحكم المدير - عائلة الماجد</title>
-<link rel="stylesheet" href="style.css?v=38">
+<link rel="stylesheet" href="style.css?v=39">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -158,7 +158,12 @@
 
       <div class="form-group spouse-group" id="admin-edit-spouse-group" style="display:none;">
         <label for="admin-edit-spouse-family" class="spouse-label">عائلة الزوجة</label>
-        <input type="text" id="admin-edit-spouse-family" placeholder="اسم عائلة الزوجة">
+        <div class="family-input-row">
+          <input type="text" id="admin-edit-spouse-family" placeholder="اسم عائلة الزوجة">
+          <button type="button" class="btn btn-secondary btn-sm" id="admin-edit-spouse-family-add">➕ إضافة</button>
+        </div>
+        <div class="family-chips-edit" id="admin-edit-spouse-family-chips"></div>
+        <p class="family-hint">يمكنك إضافة أكثر من عائلة: اكتب الاسم ثم اضغط «إضافة» أو Enter.</p>
       </div>
 
       <div class="modal-actions">
@@ -219,7 +224,12 @@
 
       <div class="form-group spouse-group" id="admin-add-spouse-group" style="display:none;">
         <label for="admin-add-spouse-family" class="spouse-label">عائلة الزوجة</label>
-        <input type="text" id="admin-add-spouse-family" placeholder="اسم عائلة الزوجة">
+        <div class="family-input-row">
+          <input type="text" id="admin-add-spouse-family" placeholder="اسم عائلة الزوجة">
+          <button type="button" class="btn btn-secondary btn-sm" id="admin-add-spouse-family-add">➕ إضافة</button>
+        </div>
+        <div class="family-chips-edit" id="admin-add-spouse-family-chips"></div>
+        <p class="family-hint">يمكنك إضافة أكثر من عائلة: اكتب الاسم ثم اضغط «إضافة» أو Enter.</p>
       </div>
 
       <p class="hint-text">✅ يمكنك إضافة أكثر من فرد في نفس الوقت: كل إضافة تُحفظ فوراً وتبقى النافذة مفتوحة لإضافة التالي.</p>
@@ -282,7 +292,12 @@
 
       <div class="form-group spouse-group" id="root-spouse-group" style="display:none;">
         <label for="root-spouse-family" class="spouse-label">عائلة الزوجة</label>
-        <input type="text" id="root-spouse-family" placeholder="اسم عائلة الزوجة">
+        <div class="family-input-row">
+          <input type="text" id="root-spouse-family" placeholder="اسم عائلة الزوجة">
+          <button type="button" class="btn btn-secondary btn-sm" id="root-spouse-family-add">➕ إضافة</button>
+        </div>
+        <div class="family-chips-edit" id="root-spouse-family-chips"></div>
+        <p class="family-hint">يمكنك إضافة أكثر من عائلة: اكتب الاسم ثم اضغط «إضافة» أو Enter.</p>
       </div>
 
       <div class="form-group">
@@ -304,6 +319,6 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
 <script src="firebase-config.js"></script>
-<script src="admin.js?v=37"></script>
+<script src="admin.js?v=39"></script>
 </body>
 </html>
