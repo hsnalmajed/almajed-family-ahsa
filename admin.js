@@ -128,6 +128,16 @@ const RELATION_LABELS_AR = { son: 'ابن', daughter: 'ابنة', brother: 'أخ
 const STATUS_LABELS_AR = { alive: 'على قيد الحياة', death: 'متوفى' };
 const GENDER_LABELS_AR = { male: 'ذكر', female: 'أنثى' };
 
+// وصف الحالة الاجتماعية بصيغة تناسب جنس الشخص
+function maritalLabel(maritalStatus, gender, spouseFamily) {
+  const female = gender === 'female';
+  if (maritalStatus === 'married') {
+    const who = female ? 'عائلة الزوج' : 'عائلة الزوجة';
+    return (female ? 'متزوجة' : 'متزوج') + (spouseFamily ? ` — ${who}: ${spouseFamily}` : '');
+  }
+  return female ? 'غير متزوجة' : 'غير متزوج';
+}
+
 function renderRequests() {
   const list = document.getElementById('requests-list');
   document.getElementById('requests-count').textContent = pendingRequests.length;
@@ -149,6 +159,7 @@ function renderRequests() {
           <div class="req-name">✏️ طلب تحديث بيانات: <b>${escapeHtml(r.targetPersonName || '')}</b> (#${r.targetPersonId})</div>
           <div class="req-meta">الهاتف الجديد: ${r.phone ? escapeHtml(r.phone) : 'بدون تغيير'} | الصورة: ${r.photoURL ? 'محدَّثة' : 'بدون تغيير'}</div>
           <div class="req-meta">الحالة الجديدة: ${STATUS_LABELS_AR[r.status] || r.status}</div>
+          <div class="req-meta">الحالة الاجتماعية: ${escapeHtml(maritalLabel(r.maritalStatus, (allPersonsAdmin.find(p => p.displayId === r.targetPersonId) || {}).gender, r.spouseFamily))}</div>
         </div>
         <div class="req-actions">
           <button class="btn btn-primary btn-sm" data-approve-update="${r.id}">قبول</button>
@@ -158,7 +169,7 @@ function renderRequests() {
     } else if (r.requestType === 'addBatch') {
       const members = r.members || [];
       const membersHtml = members.map(m =>
-        `<div class="req-meta">• ${escapeHtml(m.firstName)} — ${RELATION_LABELS_AR[m.relationType] || m.relationType} (${GENDER_LABELS_AR[m.gender] || ''})${m.phone ? ' — ' + escapeHtml(m.phone) : ''}</div>`
+        `<div class="req-meta">• ${escapeHtml(m.firstName)} — ${RELATION_LABELS_AR[m.relationType] || m.relationType} (${GENDER_LABELS_AR[m.gender] || ''})${m.phone ? ' — ' + escapeHtml(m.phone) : ''} — ${escapeHtml(maritalLabel(m.maritalStatus, m.gender, m.spouseFamily))}</div>`
       ).join('');
       row.innerHTML = `
         <div class="req-info">
@@ -225,6 +236,8 @@ async function approveRequest(requestId, btnEl) {
         photoURL: reqData.photoURL || '',
         phone: reqData.phone || '',
         status: reqData.status,
+        maritalStatus: reqData.maritalStatus || 'single',
+        spouseFamily: reqData.spouseFamily || '',
         parentKey: reqData.parentKey,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
@@ -269,6 +282,8 @@ async function approveBatchRequest(requestId, btnEl) {
           photoURL: m.photoURL || '',
           phone: m.phone || '',
           status: 'alive',
+          maritalStatus: m.maritalStatus || 'single',
+          spouseFamily: m.spouseFamily || '',
           parentKey: m.parentKey,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
@@ -307,6 +322,10 @@ async function approveUpdateRequest(requestId, btnEl) {
       if (reqData.phone) updates.phone = reqData.phone;
       if (reqData.photoURL) updates.photoURL = reqData.photoURL;
       if (reqData.status) updates.status = reqData.status;
+      if (reqData.maritalStatus) {
+        updates.maritalStatus = reqData.maritalStatus;
+        updates.spouseFamily = reqData.maritalStatus === 'married' ? (reqData.spouseFamily || '') : '';
+      }
 
       tx.update(personRef, updates);
       tx.update(reqRef, { requestStatus: 'approved', approvedAt: firebase.firestore.FieldValue.serverTimestamp() });
@@ -461,6 +480,35 @@ function showAdminDeleteConfirm() {
 }
 
 // --- نافذة تعديل مباشر ---
+function applyMaritalLabelsAdmin(scopeEl, gender) {
+  if (!scopeEl) return;
+  const female = gender === 'female';
+  scopeEl.querySelectorAll('.marital-single-lbl').forEach(el => { el.textContent = female ? 'غير متزوجة' : 'غير متزوج'; });
+  scopeEl.querySelectorAll('.marital-married-lbl').forEach(el => { el.textContent = female ? 'متزوجة' : 'متزوج'; });
+  scopeEl.querySelectorAll('.spouse-label').forEach(el => { el.textContent = female ? 'عائلة الزوج' : 'عائلة الزوجة'; });
+  scopeEl.querySelectorAll('.spouse-group input').forEach(el => { el.placeholder = female ? 'اسم عائلة الزوج' : 'اسم عائلة الزوجة'; });
+}
+function bindMaritalToggleAdmin(radioName, groupId) {
+  const group = document.getElementById(groupId);
+  if (!group) return;
+  document.querySelectorAll(`input[name="${radioName}"]`).forEach(r => {
+    r.addEventListener('change', () => {
+      group.style.display = (r.checked && r.value === 'married') ? 'block' : 'none';
+    });
+  });
+}
+function refreshMaritalGroupAdmin(radioName, groupId) {
+  const group = document.getElementById(groupId);
+  if (!group) return;
+  const checked = document.querySelector(`input[name="${radioName}"]:checked`);
+  group.style.display = (checked && checked.value === 'married') ? 'block' : 'none';
+}
+function readMarital(radioName, inputId) {
+  const m = document.querySelector(`input[name="${radioName}"]:checked`)?.value || 'single';
+  const el = document.getElementById(inputId);
+  return { maritalStatus: m, spouseFamily: m === 'married' && el ? el.value.trim() : '' };
+}
+
 function openAdminEditModal(person) {
   selectedAdminTargetPerson = person;
   selectedAdminEditPhotoFile = null;
@@ -470,6 +518,13 @@ function openAdminEditModal(person) {
   document.getElementById('admin-edit-photo-preview').style.display = 'none';
   document.querySelectorAll('input[name="admin-edit-gender"]').forEach(r => { r.checked = (r.value === person.gender); });
   document.querySelectorAll('input[name="admin-edit-status"]').forEach(r => { r.checked = (r.value === person.status); });
+
+  applyMaritalLabelsAdmin(document.getElementById('admin-edit-modal'), person.gender);
+  const curM = person.maritalStatus === 'married' ? 'married' : 'single';
+  document.querySelectorAll('input[name="admin-edit-marital"]').forEach(r => { r.checked = (r.value === curM); });
+  document.getElementById('admin-edit-spouse-family').value = person.spouseFamily || '';
+  refreshMaritalGroupAdmin('admin-edit-marital', 'admin-edit-spouse-group');
+
   document.getElementById('admin-edit-modal').classList.add('open');
 }
 function closeAdminEditModal() {
@@ -504,7 +559,7 @@ async function submitAdminEdit(evt) {
   btn.textContent = 'جارٍ الحفظ...';
 
   try {
-    const updates = { firstName, gender, phone, status };
+    const updates = { firstName, gender, phone, status, ...readMarital('admin-edit-marital', 'admin-edit-spouse-family') };
     if (selectedAdminEditPhotoFile) {
       updates.photoURL = await resizeImageToBase64Admin(selectedAdminEditPhotoFile);
     }
@@ -558,6 +613,7 @@ function chooseAdminRelationType(type, btnEl) {
   document.querySelectorAll('#admin-quick-add-modal .relation-choices button').forEach(b => b.classList.remove('selected'));
   btnEl.classList.add('selected');
   document.getElementById('admin-quick-add-form').style.display = 'block';
+  applyMaritalLabelsAdmin(document.getElementById('admin-quick-add-modal'), RELATION_TO_GENDER_ADMIN[type]);
 }
 function handleAdminAddPhotoSelect(evt) {
   const file = evt.target.files[0];
@@ -622,6 +678,7 @@ async function submitAdminQuickAdd(evt) {
       tx.set(personRef, {
         displayId: newId,
         firstName, gender, phone, status, photoURL,
+        ...readMarital('admin-add-marital', 'admin-add-spouse-family'),
         parentKey,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
@@ -824,6 +881,7 @@ async function submitRootPerson(evt) {
       tx.set(personRef, {
         displayId: newId,
         firstName, gender, phone, status, photoURL, parentKey,
+        ...readMarital('root-marital', 'root-spouse-family'),
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       tx.set(counterRef, { lastId: newId }, { merge: true });
@@ -1208,6 +1266,22 @@ document.addEventListener('DOMContentLoaded', () => {
   if (centerBtn) centerBtn.addEventListener("click", () => { adminTreeCenteredOnce = false; centerAdminTreeOnRootSoon(); });
   enableAdminTreePan(document.getElementById('admin-tree-viewport'));
   applyAdminTreeZoom();
+
+  // الحالة الاجتماعية: إظهار خانة عائلة الزوج/الزوجة عند اختيار "متزوج"
+  bindMaritalToggleAdmin('admin-edit-marital', 'admin-edit-spouse-group');
+  bindMaritalToggleAdmin('admin-add-marital', 'admin-add-spouse-group');
+  bindMaritalToggleAdmin('root-marital', 'root-spouse-group');
+  // في نافذة الإضافة المباشرة تتغيّر الصيغة بحسب الجنس المختار
+  document.querySelectorAll('input[name="root-gender"]').forEach(r => {
+    r.addEventListener('change', () => {
+      applyMaritalLabelsAdmin(document.getElementById('root-modal'), r.value);
+    });
+  });
+  document.querySelectorAll('input[name="admin-edit-gender"]').forEach(r => {
+    r.addEventListener('change', () => {
+      applyMaritalLabelsAdmin(document.getElementById('admin-edit-modal'), r.value);
+    });
+  });
 
   // البحث داخل الشجرة بالمعرّف
   document.getElementById('admin-tree-search-form').addEventListener('submit', handleAdminTreeSearch);
