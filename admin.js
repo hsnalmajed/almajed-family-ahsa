@@ -1242,35 +1242,61 @@ async function saveTreeAsPdf(btnEl) {
     await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
     await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
 
-    // نلتقط الشجرة بحجمها الطبيعي (100%) وليس بحجم العرض المصغّر، حتى تكون واضحة
+    // نلتقط الشجرة بحجمها الطبيعي (100%) وليس بحجم العرض المصغّر
     el.style.zoom = 1;
-    await new Promise(r => setTimeout(r, 120));
+    await new Promise(r => setTimeout(r, 150));
 
-    // ننتظر تحميل كل صور الأفراد فعلياً حتى تظهر في الـ PDF وليس كمربعات فارغة
+    // ننتظر تحميل كل صور الأفراد فعلياً حتى تظهر في الملف
     await waitForTreeImages(el);
 
     const fullW = el.scrollWidth, fullH = el.scrollHeight;
 
-    // الدقة: عدد بكسلات الصورة مقابل مقاس صفحة الـ PDF.
-    // scale = 3 يعني ~216 نقطة/بوصة، وهو ما يجعل النص والصور حادّة عند التكبير.
-    const TARGET_SCALE = 3;
-    const MAX_PX = 12000;   // حد آمن لكل بُعد في رسم المتصفح
+    // ===== حدود المتصفح للرسم (canvas) =====
+    // لا يمكن إنشاء رسم واحد ضخم، لذلك نلتقط الشجرة على شرائح عمودية
+    // عالية الدقة ثم نضعها كلها جنباً إلى جنب في *صفحة واحدة*.
+    // المساحة محدودة أيضاً بالذاكرة: كل بكسل يستهلك 4 بايت، فرسم بمساحة
+    // 45 مليون بكسل يحجز ~180 ميجابايت — وهو الحد الآمن قبل أن ينهار المتصفح.
+    const MAX_DIM  = 30000;    // أقصى بُعد آمن للرسم الواحد
+    const MAX_AREA = 45e6;     // أقصى مساحة آمنة للرسم الواحد (~180MB)
 
-    // إن كان ارتفاع الشجرة كبيراً نخفض الدقة بما يكفي فقط
-    const scale = Math.max(1, Math.min(TARGET_SCALE, MAX_PX / fullH));
+    // ملاحظة مهمة: الوضوح لا يأتي من هذا الرقم وحده بل من نسبة البكسلات
+    // إلى مقاس الصفحة. مع تثبيت الصفحة على 14400 نقطة، فإن ضِعفين
+    // يعطيان أكثر من 500 نقطة/بوصة وهو أعلى من جودة الطباعة (300).
+    const scale = Math.max(1, Math.min(2, MAX_DIM / fullH));
 
-    // نقسّم الشجرة العريضة إلى صفحات رأسية حتى تبقى كل صفحة عالية الدقة
-    const tileW = Math.max(600, Math.floor(MAX_PX / scale));
-    const tiles = Math.max(1, Math.ceil(fullW / tileW));
+    // أقصى عرض شريحة يبقى ضمن حدود المساحة والأبعاد
+    const stripPxW  = Math.min(MAX_DIM, Math.floor(MAX_AREA / (fullH * scale)));
+    const stripCssW = Math.max(400, Math.floor(stripPxW / scale));
+    const strips    = Math.max(1, Math.ceil(fullW / stripCssW));
+
+    // ===== مقاس الصفحة =====
+    // معيار PDF لا يسمح بصفحة أكبر من 14400 نقطة (200 بوصة) في أي اتجاه.
+    // نُصغّر التخطيط ليناسبها، لكن الصور المدمجة تبقى بدقتها العالية،
+    // فتكون النتيجة صفحة واحدة بدقة تفوق 500 نقطة/بوصة.
+    const MAX_PT = 14400;
+    const k = Math.min(1, MAX_PT / fullW, MAX_PT / fullH);
+    const pageW = fullW * k;
+    const pageH = fullH * k;
 
     const { jsPDF } = window.jspdf;
-    let pdf = null;
+    const pdf = new jsPDF({
+      orientation: pageW >= pageH ? 'landscape' : 'portrait',
+      unit: 'pt',
+      format: [pageW, pageH],
+      compress: true
+    });
 
-    for (let i = 0; i < tiles; i++) {
-      if (btnEl) btnEl.textContent = `جارٍ التجهيز... ${i + 1}/${tiles}`;
+    // خلفية بيضاء للصفحة كاملة
+    pdf.setFillColor(255, 255, 255);
+    pdf.rect(0, 0, pageW, pageH, 'F');
 
-      const x = i * tileW;
-      const w = Math.min(tileW, fullW - x);
+    for (let i = 0; i < strips; i++) {
+      if (btnEl) btnEl.textContent = `جارٍ التجهيز... ${i + 1}/${strips}`;
+      // نترك المتصفح يتنفّس بين الشرائح حتى لا تتجمد الصفحة
+      await new Promise(r => setTimeout(r, 0));
+
+      const x = i * stripCssW;
+      const w = Math.min(stripCssW, fullW - x);
 
       const canvas = await html2canvas(el, {
         backgroundColor: '#ffffff',
@@ -1289,22 +1315,18 @@ async function saveTreeAsPdf(btnEl) {
         logging: false
       });
 
-      // PNG: النصوص والخطوط تبقى حادّة بلا تشويش ضغط
+      // PNG يحافظ على حدّة النص والخطوط بلا تشويش ضغط
       const imgData = canvas.toDataURL('image/png');
 
-      if (!pdf) {
-        pdf = new jsPDF({
-          orientation: w >= fullH ? 'landscape' : 'portrait',
-          unit: 'pt',
-          format: [w, fullH],
-          compress: true
-        });
-      } else {
-        pdf.addPage([w, fullH], w >= fullH ? 'landscape' : 'portrait');
-      }
-      pdf.addImage(imgData, 'PNG', 0, 0, w, fullH, undefined, 'FAST');
+      // كل الشرائح تُرسم على نفس الصفحة، كلٌّ في موضعه الصحيح
+      pdf.addImage(imgData, 'PNG', x * k, 0, w * k, fullH * k, undefined, 'FAST');
+
+      // تحرير ذاكرة الشريحة فوراً قبل الانتقال للتالية
+      canvas.width = 0;
+      canvas.height = 0;
     }
 
+    if (btnEl) btnEl.textContent = 'جارٍ الحفظ...';
     pdf.save('شجرة_عائلة_الماجد.pdf');
   } catch (err) {
     console.error(err);
