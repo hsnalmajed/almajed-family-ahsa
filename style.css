@@ -332,6 +332,47 @@ header.site-header .admin-link:hover { border-color: var(--accent); }
   border-radius: 20px;
   padding: 6px 14px;
 }
+/* الاسم الكامل بسلسلة الآباء داخل نافذة اختيار الإجراء */
+.choice-full-name {
+  background: linear-gradient(135deg, #fff8e4, #fffdf8);
+  border: 1px solid var(--accent);
+  border-right: 5px solid var(--accent);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 4px 0 16px;
+}
+.cfn-label {
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+.cfn-value {
+  font-size: 1.02rem;
+  font-weight: 800;
+  color: var(--primary-dark);
+  line-height: 1.6;
+  word-break: break-word;
+}
+.cfn-meta {
+  font-size: .74rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* نتائج البحث: المعرّف ثم الاسم مع الأب والجد */
+.sr-name { flex: 1; min-width: 0; }
+.sr-id {
+  color: var(--gold-dark);
+  background: var(--gold-light);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  padding: 1px 8px;
+  font-size: .78rem;
+  margin-left: 6px;
+}
+
 /* حقل إدخال عدة أسماء عوائل داخل النوافذ */
 .family-input-row {
   display: flex;

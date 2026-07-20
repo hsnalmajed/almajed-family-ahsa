@@ -290,6 +290,42 @@ function resizeImageToBase64(file, maxSize = 220, quality = 0.7) {
 // ---------------------------------------------------------------------
 // نافذة اختيار الإجراء: تحديث المعلومات / إضافة فرد جديد
 // ---------------------------------------------------------------------
+// ---------------------------------------------------------------------
+// سلسلة الآباء: الأب ثم الجد ثم جد الأب... حتى أعلى الشجرة
+// ---------------------------------------------------------------------
+function ancestorsOf(person, limit) {
+  const chain = [];
+  const seen = new Set([String(person.displayId)]);
+  let cur = person;
+  const max = limit || 60;
+
+  while (chain.length < max) {
+    const pk = String(cur.parentKey || '');
+    // الجذر يبدأ مفتاحه بحرف v أي لا والد له
+    if (!pk || pk.startsWith('v')) break;
+    const parent = personsByDisplayId[pk];
+    if (!parent || seen.has(String(parent.displayId))) break;
+    seen.add(String(parent.displayId));
+    chain.push(parent);
+    cur = parent;
+  }
+  return chain;
+}
+
+// الاسم مع عدد محدود من الآباء: "حسن - علي - أحمد"
+function shortLineage(person, depth) {
+  const names = [person.firstName].concat(
+    ancestorsOf(person, depth || 2).map(a => a.firstName)
+  );
+  return names.filter(Boolean).join(' - ');
+}
+
+// الاسم الكامل حتى نهاية الشجرة
+function fullLineage(person) {
+  const names = [person.firstName].concat(ancestorsOf(person).map(a => a.firstName));
+  return names.filter(Boolean).join(' - ');
+}
+
 function openChoiceModal(person) {
   selectedTargetPerson = person;
   const fams = personFamilies(person);
@@ -298,6 +334,17 @@ function openChoiceModal(person) {
     : '';
   document.getElementById('choice-modal-title').textContent =
     `${person.firstName} (#${person.displayId})${spouseNote} — ماذا تريد أن تفعل؟`;
+
+  // الاسم الكامل بسلسلة الآباء حتى أعلى الشجرة
+  const fullBox = document.getElementById('choice-full-name');
+  if (fullBox) {
+    const chainLen = ancestorsOf(person).length;
+    fullBox.querySelector('.cfn-value').textContent = fullLineage(person);
+    fullBox.querySelector('.cfn-meta').textContent =
+      chainLen > 0 ? `المعرّف #${person.displayId} • ${chainLen} جيل حتى الجد الأول` : `المعرّف #${person.displayId}`;
+    fullBox.style.display = 'block';
+  }
+
   document.getElementById('choice-modal').classList.add('open');
 }
 function closeChoiceModal() {
@@ -798,7 +845,7 @@ function handleSearch(evt) {
   box.innerHTML = matches.map(p => `
     <div class="search-result-item" data-goto="${p.displayId}">
       <img src="${p.photoURL || defaultAvatar(p.gender)}" alt="">
-      <span>${escapeHtmlLocal(p.firstName)} (#${p.displayId})</span>
+      <span class="sr-name"><b class="sr-id">(${p.displayId})</b> ${escapeHtmlLocal(shortLineage(p, 2))}</span>
     </div>
   `).join('');
   box.style.display = 'block';
