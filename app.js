@@ -136,11 +136,16 @@ function centerTreeOnRoot() {
 function centerTreeOnRootSoon() {
   let tries = 0;
   const attempt = () => {
-    if (centerTreeOnRoot()) return;
-    if (++tries > 15) return;
+    // ننجح مرة ثم نعيدها مرة أخيرة بعد استقرار التخطيط تماماً
+    if (centerTreeOnRoot()) {
+      setTimeout(centerTreeOnRoot, 200);
+      return;
+    }
+    if (++tries > 25) return;
     setTimeout(attempt, 120);
   };
-  requestAnimationFrame(attempt);
+  // لا نعتمد على rAF وحده لأنه متوقّف في التبويبات الخلفية
+  setTimeout(attempt, 0);
 }
 
 function buildPersonNode(person, childrenByParentKey) {
@@ -661,8 +666,10 @@ function applyTreeZoom() {
 function setTreeZoom(z) {
   treeZoom = Math.min(3, Math.max(0.1, Math.round(z * 100) / 100));
   applyTreeZoom();
-  // بعد أي تغيير في التكبير يبقى المعرّف 1 في منتصف الشاشة
+  // بعد أي تغيير في التكبير يبقى المعرّف 1 في منتصف الشاشة.
+  // نستخدم rAF ومؤقّتاً معاً لأن rAF لا يعمل عندما يكون التبويب في الخلفية.
   requestAnimationFrame(() => centerTreeOnRoot());
+  setTimeout(centerTreeOnRoot, 150);
 }
 
 // عرض الشجرة كاملة: يحسب التصغير المناسب ليظهر كل شيء داخل الإطار
