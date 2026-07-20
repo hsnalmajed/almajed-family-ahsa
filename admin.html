@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>لوحة تحكم المدير - عائلة الماجد</title>
-<link rel="stylesheet" href="style.css?v=26">
+<link rel="stylesheet" href="style.css?v=27">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -61,13 +61,27 @@
     <div class="tab-panel" id="tab-panel-tree">
       <div class="panel-toolbar">
         <form id="admin-tree-search-form" class="search-bar" style="margin:0;">
-          <input type="number" id="admin-tree-search-input" placeholder="ابحث في الشجرة بالمعرّف (ID)" min="1">
+          <input type="text" id="admin-tree-search-input" placeholder="ابحث بالاسم أو بالمعرّف (ID)">
           <button type="submit" class="btn btn-secondary btn-sm">🔍 بحث</button>
         </form>
-        <button class="btn btn-primary btn-sm" id="save-tree-pdf-btn">📄 حفظ الشجرة كاملة PDF</button>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-secondary btn-sm" id="renumber-ids-btn">🔢 إعادة ترقيم المعرّفات من 1</button>
+          <button class="btn btn-primary btn-sm" id="save-tree-pdf-btn">📄 حفظ الشجرة كاملة PDF</button>
+        </div>
       </div>
-      <p style="font-size:.82rem; color:var(--muted); margin:6px 0 12px;">اضغط على أي شخص في الشجرة لتعديل بياناته، إضافة قريب له مباشرة، أو حذفه — كل هذا يُطبَّق فوراً بدون الحاجة لمراجعة طلب.</p>
-      <div class="tree-section" style="padding:16px; overflow:auto;">
+      <div id="admin-tree-search-results" class="search-results"></div>
+      <div class="tree-header">
+        <h2 style="margin:0; font-size:1rem;">الشجرة</h2>
+        <div class="zoom-controls">
+          <button type="button" id="admin-zoom-out" aria-label="تصغير">−</button>
+          <span id="admin-zoom-level">50%</span>
+          <button type="button" id="admin-zoom-in" aria-label="تكبير">+</button>
+          <button type="button" id="admin-zoom-reset" aria-label="إعادة">⟲</button>
+          <button type="button" id="admin-zoom-fit" class="zoom-fit-btn">⛶ الشجرة كاملة</button>
+        </div>
+      </div>
+      <p style="font-size:.82rem; color:var(--muted); margin:6px 0 12px;">اضغط على أي شخص في الشجرة لتعديل بياناته، إضافة قريب له مباشرة، أو حذفه — كل هذا يُطبَّق فوراً بدون الحاجة لمراجعة طلب. يمكنك سحب الشجرة باليد للتنقل، وتكبيرها بـ Ctrl + عجلة الفأرة.</p>
+      <div class="tree-viewport" id="admin-tree-viewport">
         <div class="tree-forest" id="admin-tree-forest"></div>
       </div>
     </div>
@@ -249,6 +263,6 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
 <script src="firebase-config.js"></script>
-<script src="admin.js"></script>
+<script src="admin.js?v=27"></script>
 </body>
 </html>

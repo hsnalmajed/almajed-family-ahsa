@@ -84,10 +84,17 @@ function renderTree() {
   });
 
   // تحديد الجذور الافتراضية (تبدأ بـ v) ثم عرض كل مجموعة كشجرة منفصلة
-  const virtualRootKeys = Object.keys(childrenByParentKey).filter(k => k.startsWith('v'));
+  const virtualRootKeys = Object.keys(childrenByParentKey)
+    .filter(k => k.startsWith('v'))
+    .sort((a, b) => {
+      const minOf = key => Math.min(...(childrenByParentKey[key] || []).map(p => Number(p.displayId) || 1e9));
+      return minOf(a) - minOf(b);
+    });
 
   virtualRootKeys.forEach(vKey => {
-    const rootPersons = childrenByParentKey[vKey] || [];
+    const rootPersons = (childrenByParentKey[vKey] || [])
+      .slice()
+      .sort((a, b) => (Number(a.displayId) || 0) - (Number(b.displayId) || 0));
     const ul = document.createElement('ul');
     ul.className = 'tree-list root-list';
     rootPersons.forEach(p => {
@@ -95,6 +102,9 @@ function renderTree() {
     });
     container.appendChild(ul);
   });
+
+  applyTreeZoom();
+  enableTreePan(document.getElementById('tree-viewport'));
 
   // عند أول تحميل: توسيط الجذر (المعرّف 1) في منتصف الشاشة
   if (!treeCenteredOnce) {
@@ -607,7 +617,7 @@ function scrollToPerson(displayId) {
 // ---------------------------------------------------------------------
 // تكبير/تصغير الشجرة
 // ---------------------------------------------------------------------
-let treeZoom = 1;
+let treeZoom = 0.5;
 function applyTreeZoom() {
   const forest = document.getElementById('tree-forest');
   if (forest) {
@@ -618,8 +628,97 @@ function applyTreeZoom() {
   if (lbl) lbl.textContent = Math.round(treeZoom * 100) + '%';
 }
 function setTreeZoom(z) {
-  treeZoom = Math.min(2, Math.max(0.5, Math.round(z * 100) / 100));
+  treeZoom = Math.min(3, Math.max(0.1, Math.round(z * 100) / 100));
   applyTreeZoom();
+}
+
+// عرض الشجرة كاملة: يحسب التصغير المناسب ليظهر كل شيء داخل الإطار
+function fitTreeToViewport() {
+  const vp = document.getElementById('tree-viewport');
+  const forest = document.getElementById('tree-forest');
+  if (!vp || !forest) return;
+  const prev = forest.style.zoom;
+  forest.style.zoom = 1;
+  const contentW = forest.scrollWidth;
+  const contentH = forest.scrollHeight;
+  forest.style.zoom = prev;
+  if (!contentW || !contentH) return;
+  const z = Math.min(vp.clientWidth / contentW, vp.clientHeight / contentH) * 0.97;
+  setTreeZoom(z);
+  vp.scrollLeft = 0;
+  vp.scrollTop = 0;
+}
+
+// التحريك بالسحب باليد + التكبير بعجلة الفأرة (Ctrl) وبالقرص على الجوال
+let treeJustDragged = false;
+function enableTreePan(vp) {
+  if (!vp || vp.dataset.panReady === '1') return;
+  vp.dataset.panReady = '1';
+
+  let down = false, moved = false;
+  let startX = 0, startY = 0, startLeft = 0, startTop = 0;
+
+  vp.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    down = true; moved = false;
+    startX = e.clientX; startY = e.clientY;
+    startLeft = vp.scrollLeft; startTop = vp.scrollTop;
+    vp.classList.add('panning');
+  });
+
+  vp.addEventListener('pointermove', e => {
+    if (!down) return;
+    const dx = e.clientX - startX, dy = e.clientY - startY;
+    if (!moved && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) moved = true;
+    if (moved) {
+      vp.scrollLeft = startLeft - dx;
+      vp.scrollTop = startTop - dy;
+      e.preventDefault();
+    }
+  });
+
+  const endPan = () => {
+    if (!down) return;
+    down = false;
+    treeJustDragged = moved;
+    vp.classList.remove('panning');
+  };
+  vp.addEventListener('pointerup', endPan);
+  vp.addEventListener('pointercancel', endPan);
+  vp.addEventListener('pointerleave', endPan);
+
+  // لا نفتح نافذة الشخص إذا كان المستخدم يسحب الشجرة
+  vp.addEventListener('click', e => {
+    if (treeJustDragged) {
+      e.stopPropagation();
+      e.preventDefault();
+      treeJustDragged = false;
+    }
+  }, true);
+
+  // Ctrl + عجلة الفأرة = تكبير/تصغير
+  vp.addEventListener('wheel', e => {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    setTreeZoom(treeZoom * (e.deltaY < 0 ? 1.12 : 0.89));
+  }, { passive: false });
+
+  // القرص بإصبعين على الشاشات اللمسية
+  let pinchStartDist = 0, pinchStartZoom = 1;
+  const dist = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  vp.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+      pinchStartDist = dist(e.touches);
+      pinchStartZoom = treeZoom;
+    }
+  }, { passive: true });
+  vp.addEventListener('touchmove', e => {
+    if (e.touches.length === 2 && pinchStartDist > 0) {
+      e.preventDefault();
+      setTreeZoom(pinchStartZoom * (dist(e.touches) / pinchStartDist));
+    }
+  }, { passive: false });
+  vp.addEventListener('touchend', () => { pinchStartDist = 0; }, { passive: true });
 }
 
 // قصر الإدخال على الحروف العربية والمسافات فقط
@@ -706,9 +805,15 @@ document.addEventListener('DOMContentLoaded', () => {
   enforceArabicOnly(document.getElementById('input-first-name'));
 
   // أزرار تكبير/تصغير الشجرة
-  document.getElementById('zoom-in').addEventListener('click', () => setTreeZoom(treeZoom + 0.15));
-  document.getElementById('zoom-out').addEventListener('click', () => setTreeZoom(treeZoom - 0.15));
-  document.getElementById('zoom-reset').addEventListener('click', () => { setTreeZoom(1); setTimeout(centerTreeOnRoot, 50); });
+  document.getElementById('zoom-in').addEventListener('click', () => setTreeZoom(treeZoom + 0.1));
+  document.getElementById('zoom-out').addEventListener('click', () => setTreeZoom(treeZoom - 0.1));
+  document.getElementById('zoom-reset').addEventListener('click', () => { setTreeZoom(0.5); setTimeout(centerTreeOnRoot, 50); });
+  const fitBtn = document.getElementById('zoom-fit');
+  if (fitBtn) fitBtn.addEventListener('click', fitTreeToViewport);
+
+  // تفعيل السحب باليد والتكبير باللمس داخل إطار الشجرة
+  enableTreePan(document.getElementById('tree-viewport'));
+  applyTreeZoom();
 
   // حاسبة القرابة
   document.getElementById('relation-finder-form').addEventListener('submit', handleRelationFinder);

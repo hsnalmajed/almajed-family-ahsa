@@ -359,17 +359,75 @@ header.site-header .admin-link:hover { border-color: var(--accent); }
   justify-content: center;
 }
 .zoom-controls button:hover { border-color: var(--accent); background: #f5f2e9; }
-.zoom-controls #zoom-level { font-size: .82rem; color: var(--muted); min-width: 42px; text-align: center; }
+.zoom-controls #zoom-level,
+.zoom-controls #admin-zoom-level { font-size: .82rem; color: var(--muted); min-width: 42px; text-align: center; }
+
+/* زر عرض الشجرة كاملة */
+.zoom-controls button.zoom-fit-btn {
+  width: auto;
+  padding: 0 12px;
+  font-size: .82rem;
+  font-weight: 700;
+  white-space: nowrap;
+  font-family: inherit;
+}
 
 @media (max-width: 640px) {
   .tree-header { flex-direction: column; gap: 8px; }
   .zoom-controls { position: static; }
 }
 
+.tree-hint {
+  margin: 0 0 10px;
+  font-size: .8rem;
+  color: var(--muted);
+  text-align: center;
+}
+
 .tree-viewport {
   overflow: auto;
   max-height: 78vh;
   -webkit-overflow-scrolling: touch;
+  /* السحب باليد للتنقل داخل الشجرة */
+  cursor: grab;
+  touch-action: pan-x pan-y;
+  overscroll-behavior: contain;
+}
+.tree-viewport.panning {
+  cursor: grabbing;
+  user-select: none;
+}
+.tree-viewport.panning * { user-select: none; }
+
+/* إطار شجرة لوحة التحكم */
+#admin-tree-viewport {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  max-height: 72vh;
+}
+
+#admin-tree-search-results {
+  display: none;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  max-height: 240px;
+  overflow: auto;
+}
+#admin-tree-search-results .search-result-item {
+  width: 100%;
+  text-align: right;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  font-family: inherit;
+  font-size: .9rem;
+  color: var(--text);
 }
 
 .tree-forest {

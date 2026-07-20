@@ -366,14 +366,26 @@ function renderAdminTree() {
     childrenByParentKey[key].push(p);
   });
 
-  const virtualRootKeys = Object.keys(childrenByParentKey).filter(k => k.startsWith('v'));
+  // ترتيب الجذور بحسب أصغر معرّف حتى تبدأ الشجرة دائماً بالمعرّف 1
+  const virtualRootKeys = Object.keys(childrenByParentKey)
+    .filter(k => k.startsWith('v'))
+    .sort((a, b) => {
+      const minOf = key => Math.min(...(childrenByParentKey[key] || []).map(p => Number(p.displayId) || 1e9));
+      return minOf(a) - minOf(b);
+    });
+
   virtualRootKeys.forEach(vKey => {
-    const rootPersons = childrenByParentKey[vKey] || [];
+    const rootPersons = (childrenByParentKey[vKey] || [])
+      .slice()
+      .sort((a, b) => (Number(a.displayId) || 0) - (Number(b.displayId) || 0));
     const ul = document.createElement('ul');
     ul.className = 'tree-list root-list';
     rootPersons.forEach(p => ul.appendChild(buildAdminPersonNode(p, childrenByParentKey)));
     container.appendChild(ul);
   });
+
+  applyAdminTreeZoom();
+  enableAdminTreePan(document.getElementById('admin-tree-viewport'));
 }
 
 function buildAdminPersonNode(person, childrenByParentKey) {
@@ -665,16 +677,53 @@ function handleSearchById(evt) {
   renderPersonsList(filtered);
 }
 
-// البحث داخل شجرة العائلة بالمعرّف: التمرير إلى الشخص وإبرازه
-function handleAdminTreeSearch(evt) {
-  evt.preventDefault();
-  const id = document.getElementById('admin-tree-search-input').value.trim();
-  if (!id) return;
-  const el = document.getElementById('admin-person-node-' + id);
-  if (!el) { alert('لا يوجد شخص بهذا المعرّف في الشجرة'); return; }
+// البحث داخل شجرة العائلة بالاسم أو بالمعرّف: التمرير إلى الشخص وإبرازه
+function focusAdminTreeNode(displayId) {
+  const el = document.getElementById('admin-person-node-' + displayId);
+  if (!el) return false;
   el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
   el.classList.add('highlighted');
   setTimeout(() => el.classList.remove('highlighted'), 2500);
+  return true;
+}
+
+function handleAdminTreeSearch(evt) {
+  evt.preventDefault();
+  const box = document.getElementById('admin-tree-search-results');
+  const term = document.getElementById('admin-tree-search-input').value.trim();
+  if (box) { box.innerHTML = ''; box.style.display = 'none'; }
+  if (!term) return;
+
+  // بحث بالمعرّف عندما يكون المُدخل رقماً
+  if (/^\d+$/.test(term)) {
+    if (!focusAdminTreeNode(term)) alert('لا يوجد شخص بهذا المعرّف في الشجرة');
+    return;
+  }
+
+  // بحث بالاسم (يطابق أي جزء من الاسم)
+  const needle = term.toLowerCase();
+  const matches = allPersonsAdmin.filter(p => String(p.firstName || '').toLowerCase().includes(needle));
+
+  if (matches.length === 0) { alert('لا يوجد شخص بهذا الاسم في الشجرة'); return; }
+  if (matches.length === 1) { focusAdminTreeNode(matches[0].displayId); return; }
+
+  // أكثر من نتيجة: نعرضها ليختار المدير
+  if (!box) { focusAdminTreeNode(matches[0].displayId); return; }
+  box.style.display = 'block';
+  box.innerHTML = '<div style="font-size:.82rem; color:var(--muted); margin-bottom:6px;">'
+    + matches.length + ' نتيجة — اضغط على الاسم للانتقال إليه في الشجرة:</div>';
+  matches.forEach(p => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'search-result-item';
+    item.textContent = p.firstName + '  (#' + p.displayId + ')';
+    item.addEventListener('click', () => {
+      focusAdminTreeNode(p.displayId);
+      box.style.display = 'none';
+      box.innerHTML = '';
+    });
+    box.appendChild(item);
+  });
 }
 
 // ---------------------------------------------------------------------
@@ -832,18 +881,186 @@ function loadScriptOnce(src) {
   });
 }
 
+// ---------------------------------------------------------------------
+// تكبير/تصغير شجرة المدير + السحب باليد
+// ---------------------------------------------------------------------
+let adminTreeZoom = 0.5;
+function applyAdminTreeZoom() {
+  const forest = document.getElementById('admin-tree-forest');
+  if (forest) forest.style.zoom = adminTreeZoom;
+  const lbl = document.getElementById('admin-zoom-level');
+  if (lbl) lbl.textContent = Math.round(adminTreeZoom * 100) + '%';
+}
+function setAdminTreeZoom(z) {
+  adminTreeZoom = Math.min(3, Math.max(0.1, Math.round(z * 100) / 100));
+  applyAdminTreeZoom();
+}
+function fitAdminTreeToViewport() {
+  const vp = document.getElementById('admin-tree-viewport');
+  const forest = document.getElementById('admin-tree-forest');
+  if (!vp || !forest) return;
+  const prev = forest.style.zoom;
+  forest.style.zoom = 1;
+  const contentW = forest.scrollWidth, contentH = forest.scrollHeight;
+  forest.style.zoom = prev;
+  if (!contentW || !contentH) return;
+  setAdminTreeZoom(Math.min(vp.clientWidth / contentW, vp.clientHeight / contentH) * 0.97);
+  vp.scrollLeft = 0; vp.scrollTop = 0;
+}
+
+let adminTreeJustDragged = false;
+function enableAdminTreePan(vp) {
+  if (!vp || vp.dataset.panReady === '1') return;
+  vp.dataset.panReady = '1';
+
+  let down = false, moved = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
+
+  vp.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    down = true; moved = false;
+    startX = e.clientX; startY = e.clientY;
+    startLeft = vp.scrollLeft; startTop = vp.scrollTop;
+    vp.classList.add('panning');
+  });
+  vp.addEventListener('pointermove', e => {
+    if (!down) return;
+    const dx = e.clientX - startX, dy = e.clientY - startY;
+    if (!moved && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) moved = true;
+    if (moved) { vp.scrollLeft = startLeft - dx; vp.scrollTop = startTop - dy; e.preventDefault(); }
+  });
+  const endPan = () => {
+    if (!down) return;
+    down = false;
+    adminTreeJustDragged = moved;
+    vp.classList.remove('panning');
+  };
+  vp.addEventListener('pointerup', endPan);
+  vp.addEventListener('pointercancel', endPan);
+  vp.addEventListener('pointerleave', endPan);
+
+  vp.addEventListener('click', e => {
+    if (adminTreeJustDragged) { e.stopPropagation(); e.preventDefault(); adminTreeJustDragged = false; }
+  }, true);
+
+  vp.addEventListener('wheel', e => {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    setAdminTreeZoom(adminTreeZoom * (e.deltaY < 0 ? 1.12 : 0.89));
+  }, { passive: false });
+
+  let pinchStartDist = 0, pinchStartZoom = 1;
+  const dist = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  vp.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) { pinchStartDist = dist(e.touches); pinchStartZoom = adminTreeZoom; }
+  }, { passive: true });
+  vp.addEventListener('touchmove', e => {
+    if (e.touches.length === 2 && pinchStartDist > 0) {
+      e.preventDefault();
+      setAdminTreeZoom(pinchStartZoom * (dist(e.touches) / pinchStartDist));
+    }
+  }, { passive: false });
+  vp.addEventListener('touchend', () => { pinchStartDist = 0; }, { passive: true });
+}
+
+// ---------------------------------------------------------------------
+// إعادة ترقيم المعرّفات لتبدأ من 1 بدون فجوات
+// ---------------------------------------------------------------------
+async function renumberAllIds(btnEl) {
+  if (allPersonsAdmin.length === 0) { alert('لا يوجد أفراد لإعادة ترقيمهم.'); return; }
+
+  const count = allPersonsAdmin.length;
+  const ok = confirm(
+    'سيتم إعادة ترقيم جميع المعرّفات لتصبح متسلسلة من 1 إلى ' + count + '.\n\n' +
+    'سيتم تحديث روابط الآباء والأبناء تلقائياً حتى لا تتأثر الشجرة.\n' +
+    'لا يمكن التراجع عن هذا الإجراء — يُفضّل تنفيذه بعد الانتهاء من إدخال جميع الأفراد.\n\n' +
+    'هل تريد المتابعة؟'
+  );
+  if (!ok) return;
+
+  const original = btnEl ? btnEl.textContent : '';
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'جارٍ إعادة الترقيم...'; }
+
+  try {
+    // نقرأ نسخة طازجة ومرتبة حتى لا نعتمد على حالة الشاشة
+    const snap = await db.collection('persons').get();
+    const people = [];
+    snap.forEach(doc => people.push({ id: doc.id, ...doc.data() }));
+    people.sort((a, b) => (Number(a.displayId) || 0) - (Number(b.displayId) || 0));
+
+    // خريطة: المعرّف القديم -> المعرّف الجديد
+    const idMap = {};
+    people.forEach((p, i) => { idMap[String(p.displayId)] = i + 1; });
+
+    let orphans = 0;
+    const updates = people.map((p, i) => {
+      const newId = i + 1;
+      const oldKey = String(p.parentKey || '');
+      let newParentKey;
+      if (oldKey.startsWith('v')) {
+        // جذر مستقل: يبقى جذراً بمعرّفه الجديد
+        newParentKey = 'v' + newId;
+      } else if (idMap[oldKey] !== undefined) {
+        newParentKey = String(idMap[oldKey]);
+      } else {
+        // والد محذوف: نحوّله إلى جذر مستقل بدل أن يختفي من الشجرة
+        newParentKey = 'v' + newId;
+        orphans++;
+      }
+      return { docId: p.id, displayId: newId, parentKey: newParentKey };
+    });
+
+    // Firestore يسمح بحد أقصى 500 عملية لكل دفعة
+    const CHUNK = 400;
+    for (let i = 0; i < updates.length; i += CHUNK) {
+      const batch = db.batch();
+      updates.slice(i, i + CHUNK).forEach(u => {
+        batch.update(db.collection('persons').doc(u.docId), {
+          displayId: u.displayId,
+          parentKey: u.parentKey
+        });
+      });
+      await batch.commit();
+    }
+
+    await db.collection('meta').doc('counter').set({ lastId: updates.length }, { merge: true });
+
+    alert(
+      'تمت إعادة الترقيم بنجاح ✅\n' +
+      'عدد الأفراد: ' + updates.length + ' (المعرّفات الآن من 1 إلى ' + updates.length + ')' +
+      (orphans ? '\nتنبيه: ' + orphans + ' فرد كان والدهم محذوفاً فأصبحوا جذوراً مستقلة.' : '')
+    );
+  } catch (err) {
+    console.error(err);
+    alert('حدث خطأ أثناء إعادة الترقيم: ' + err.message);
+  } finally {
+    if (btnEl) { btnEl.disabled = false; btnEl.textContent = original; }
+  }
+}
+
 async function saveTreeAsPdf(btnEl) {
   const el = document.getElementById('admin-tree-forest');
   if (!el || allPersonsAdmin.length === 0) { alert('لا توجد شجرة لحفظها بعد.'); return; }
   const original = btnEl ? btnEl.textContent : '';
   if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'جارٍ التجهيز...'; }
+  const prevZoom = el.style.zoom;
   try {
     await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
     await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
 
-    // مقياس مناسب مع البقاء ضمن حدود المتصفح لأبعاد الرسم (canvas)
+    // نلتقط الشجرة بحجمها الطبيعي (100%) وليس بحجم العرض المصغّر، حتى تكون واضحة
+    el.style.zoom = 1;
+    await new Promise(r => setTimeout(r, 120));
+
     const fullW = el.scrollWidth, fullH = el.scrollHeight;
-    const scale = Math.min(2, 16000 / Math.max(fullW, fullH));
+
+    // أعلى دقة ممكنة ضمن حدود المتصفح: أقصى بُعد ~32767 بكسل ومساحة ~250 مليون بكسل
+    const MAX_DIM = 30000;
+    const MAX_AREA = 240e6;
+    const scale = Math.max(1, Math.min(
+      4,
+      MAX_DIM / Math.max(fullW, fullH),
+      Math.sqrt(MAX_AREA / (fullW * fullH))
+    ));
 
     const canvas = await html2canvas(el, {
       backgroundColor: '#ffffff',
@@ -852,22 +1069,30 @@ async function saveTreeAsPdf(btnEl) {
       height: fullH,
       windowWidth: fullW,
       windowHeight: fullH,
-      useCORS: true
+      useCORS: true,
+      imageTimeout: 0,
+      logging: false
     });
 
-    const imgData = canvas.toDataURL('image/jpeg', 0.9);
+    // PNG بدل JPEG: النصوص والخطوط تبقى حادّة بلا تشويش ضغط
+    const imgData = canvas.toDataURL('image/png');
     const { jsPDF } = window.jspdf;
+
+    // نجعل صفحة PDF بأبعاد التخطيط الأصلي، والصورة عالية الدقة تُرسم فوقها
     const pdf = new jsPDF({
-      orientation: canvas.width >= canvas.height ? 'landscape' : 'portrait',
-      unit: 'px',
-      format: [canvas.width, canvas.height]
+      orientation: fullW >= fullH ? 'landscape' : 'portrait',
+      unit: 'pt',
+      format: [fullW, fullH],
+      compress: true
     });
-    pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
+    pdf.addImage(imgData, 'PNG', 0, 0, fullW, fullH, undefined, 'FAST');
     pdf.save('شجرة_عائلة_الماجد.pdf');
   } catch (err) {
     console.error(err);
     alert('حدث خطأ أثناء إنشاء ملف PDF: ' + err.message);
   } finally {
+    el.style.zoom = prevZoom || adminTreeZoom;
+    applyAdminTreeZoom();
     if (btnEl) { btnEl.disabled = false; btnEl.textContent = original; }
   }
 }
@@ -885,6 +1110,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // حفظ الشجرة كاملة PDF
   document.getElementById('save-tree-pdf-btn').addEventListener('click', (e) => saveTreeAsPdf(e.currentTarget));
+
+  // إعادة ترقيم المعرّفات من 1
+  const renumberBtn = document.getElementById('renumber-ids-btn');
+  if (renumberBtn) renumberBtn.addEventListener('click', (e) => renumberAllIds(e.currentTarget));
+
+  // تكبير/تصغير شجرة المدير
+  const azIn = document.getElementById('admin-zoom-in');
+  const azOut = document.getElementById('admin-zoom-out');
+  const azReset = document.getElementById('admin-zoom-reset');
+  const azFit = document.getElementById('admin-zoom-fit');
+  if (azIn) azIn.addEventListener('click', () => setAdminTreeZoom(adminTreeZoom + 0.1));
+  if (azOut) azOut.addEventListener('click', () => setAdminTreeZoom(adminTreeZoom - 0.1));
+  if (azReset) azReset.addEventListener('click', () => setAdminTreeZoom(0.5));
+  if (azFit) azFit.addEventListener('click', fitAdminTreeToViewport);
+  enableAdminTreePan(document.getElementById('admin-tree-viewport'));
+  applyAdminTreeZoom();
 
   // البحث داخل الشجرة بالمعرّف
   document.getElementById('admin-tree-search-form').addEventListener('submit', handleAdminTreeSearch);
