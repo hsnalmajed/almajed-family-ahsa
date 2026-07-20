@@ -858,6 +858,10 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('orientationchange', scheduleRecenter);
   // بعد اكتمال تحميل الصور والخطوط (الجوال غالباً يتأخر)
   window.addEventListener('load', centerTreeOnRootSoon);
+  // إذا فُتح الموقع في تبويب خلفي فلا مقاسات للصفحة — نوسّط عند ظهورها
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') centerTreeOnRootSoon();
+  });
   const fitBtn = document.getElementById('zoom-fit');
   if (fitBtn) fitBtn.addEventListener('click', fitTreeToViewport);
 
