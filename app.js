@@ -106,25 +106,41 @@ function renderTree() {
   applyTreeZoom();
   enableTreePan(document.getElementById('tree-viewport'));
 
-  // عند أول تحميل: توسيط الجذر (المعرّف 1) في منتصف الشاشة
-  if (!treeCenteredOnce) {
-    setTimeout(centerTreeOnRoot, 80);
-  }
+  // توسيط الجذر (المعرّف 1) في منتصف الشاشة بعد اكتمال الرسم
+  centerTreeOnRootSoon();
 }
 
 // توسيط بطاقة الشخص صاحب المعرّف 1 (أو أول جذر) أفقياً داخل نافذة عرض الشجرة
 let treeCenteredOnce = false;
 function centerTreeOnRoot() {
   const vp = document.getElementById('tree-viewport');
-  if (!vp) return;
-  let root = document.getElementById('person-node-1') || vp.querySelector('.person-node');
-  if (!root) return;
+  // إن لم يكن للإطار مقاس بعد فالتخطيط لم يكتمل — نُعيد false ليُعاد المحاولة
+  if (!vp || !vp.clientWidth) return false;
+
+  const root = document.getElementById('person-node-1') || vp.querySelector('.person-node');
+  if (!root || !root.getBoundingClientRect().width) return false;
+
   const vpRect = vp.getBoundingClientRect();
   const rootRect = root.getBoundingClientRect();
+  // الموضع الحقيقي لمركز البطاقة داخل المحتوى (يعمل مع RTL وقيم التمرير السالبة)
   const rootCenterInContent = (rootRect.left - vpRect.left) + vp.scrollLeft + rootRect.width / 2;
+
   vp.scrollLeft = rootCenterInContent - vp.clientWidth / 2;
   vp.scrollTop = 0;
   treeCenteredOnce = true;
+  return true;
+}
+
+// يحاول التوسيط عدة مرات حتى يكتمل التخطيط والخطوط والصور
+// (مهم على الجوال حيث يتأخر حساب المقاسات بعد تدوير الشاشة أو تحميل الخطوط)
+function centerTreeOnRootSoon() {
+  let tries = 0;
+  const attempt = () => {
+    if (centerTreeOnRoot()) return;
+    if (++tries > 15) return;
+    setTimeout(attempt, 120);
+  };
+  requestAnimationFrame(attempt);
 }
 
 function buildPersonNode(person, childrenByParentKey) {
@@ -645,6 +661,8 @@ function applyTreeZoom() {
 function setTreeZoom(z) {
   treeZoom = Math.min(3, Math.max(0.1, Math.round(z * 100) / 100));
   applyTreeZoom();
+  // بعد أي تغيير في التكبير يبقى المعرّف 1 في منتصف الشاشة
+  requestAnimationFrame(() => centerTreeOnRoot());
 }
 
 // عرض الشجرة كاملة: يحسب التصغير المناسب ليظهر كل شيء داخل الإطار
@@ -666,8 +684,8 @@ function fitTreeToViewport() {
 
   const z = Math.min(vpW / contentW, vpH / contentH) * 0.97;
   setTreeZoom(z);
-  vp.scrollLeft = 0;
-  vp.scrollTop = 0;
+  // حتى في وضع "الشجرة كاملة" يبقى المعرّف 1 في المنتصف
+  centerTreeOnRootSoon();
 }
 
 // التحريك بالسحب باليد + التكبير بعجلة الفأرة (Ctrl) وبالقرص على الجوال
@@ -828,7 +846,18 @@ document.addEventListener('DOMContentLoaded', () => {
   // أزرار تكبير/تصغير الشجرة
   document.getElementById('zoom-in').addEventListener('click', () => setTreeZoom(treeZoom + 0.1));
   document.getElementById('zoom-out').addEventListener('click', () => setTreeZoom(treeZoom - 0.1));
-  document.getElementById('zoom-reset').addEventListener('click', () => { setTreeZoom(0.5); setTimeout(centerTreeOnRoot, 50); });
+  document.getElementById('zoom-reset').addEventListener('click', () => { setTreeZoom(0.5); centerTreeOnRootSoon(); });
+
+  // إعادة التوسيط عند تغيير حجم النافذة أو تدوير شاشة الجوال
+  let recenterTimer = null;
+  const scheduleRecenter = () => {
+    clearTimeout(recenterTimer);
+    recenterTimer = setTimeout(centerTreeOnRootSoon, 180);
+  };
+  window.addEventListener('resize', scheduleRecenter);
+  window.addEventListener('orientationchange', scheduleRecenter);
+  // بعد اكتمال تحميل الصور والخطوط (الجوال غالباً يتأخر)
+  window.addEventListener('load', centerTreeOnRootSoon);
   const fitBtn = document.getElementById('zoom-fit');
   if (fitBtn) fitBtn.addEventListener('click', fitTreeToViewport);
 

@@ -99,7 +99,7 @@ function switchTab(tabName) {
 
   // إطار الشجرة يكون بلا مقاس وهو مخفي، لذا نوسّط المعرّف 1 بعد ظهوره
   if (tabName === 'tree') {
-    setTimeout(() => { adminTreeCenteredOnce = false; centerAdminTreeOnRoot(); }, 80);
+    setTimeout(() => { adminTreeCenteredOnce = false; centerAdminTreeOnRootSoon(); }, 80);
   }
 }
 
@@ -393,7 +393,7 @@ function renderAdminTree() {
   enableAdminTreePan(document.getElementById('admin-tree-viewport'));
 
   // عند أول عرض: توسيط صاحب المعرّف 1 في منتصف الشاشة
-  if (!adminTreeCenteredOnce) setTimeout(centerAdminTreeOnRoot, 120);
+  if (!adminTreeCenteredOnce) centerAdminTreeOnRootSoon();
 }
 
 function buildAdminPersonNode(person, childrenByParentKey) {
@@ -902,6 +902,8 @@ function applyAdminTreeZoom() {
 function setAdminTreeZoom(z) {
   adminTreeZoom = Math.min(3, Math.max(0.1, Math.round(z * 100) / 100));
   applyAdminTreeZoom();
+  // يبقى المعرّف 1 في المنتصف مهما تغيّر التكبير
+  requestAnimationFrame(() => centerAdminTreeOnRoot());
 }
 function fitAdminTreeToViewport() {
   const vp = document.getElementById('admin-tree-viewport');
@@ -926,15 +928,26 @@ function fitAdminTreeToViewport() {
 let adminTreeCenteredOnce = false;
 function centerAdminTreeOnRoot() {
   const vp = document.getElementById('admin-tree-viewport');
-  if (!vp || !vp.clientWidth) return;
+  if (!vp || !vp.clientWidth) return false;
   const root = document.getElementById('admin-person-node-1') || vp.querySelector('.person-node');
-  if (!root) return;
+  if (!root || !root.getBoundingClientRect().width) return false;
   const vpRect = vp.getBoundingClientRect();
   const rootRect = root.getBoundingClientRect();
   const rootCenter = (rootRect.left - vpRect.left) + vp.scrollLeft + rootRect.width / 2;
   vp.scrollLeft = rootCenter - vp.clientWidth / 2;
   vp.scrollTop = 0;
   adminTreeCenteredOnce = true;
+  return true;
+}
+
+function centerAdminTreeOnRootSoon() {
+  let tries = 0;
+  const attempt = () => {
+    if (centerAdminTreeOnRoot()) return;
+    if (++tries > 15) return;
+    setTimeout(attempt, 120);
+  };
+  requestAnimationFrame(attempt);
 }
 
 let adminTreeJustDragged = false;
@@ -1192,7 +1205,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (azReset) azReset.addEventListener('click', () => setAdminTreeZoom(0.5));
   if (azFit) azFit.addEventListener('click', fitAdminTreeToViewport);
   const centerBtn = document.getElementById('admin-center-root-btn');
-  if (centerBtn) centerBtn.addEventListener('click', () => { adminTreeCenteredOnce = false; centerAdminTreeOnRoot(); });
+  if (centerBtn) centerBtn.addEventListener("click", () => { adminTreeCenteredOnce = false; centerAdminTreeOnRootSoon(); });
   enableAdminTreePan(document.getElementById('admin-tree-viewport'));
   applyAdminTreeZoom();
 
