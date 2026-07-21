@@ -1197,6 +1197,63 @@ function enableAdminTreePan(vp) {
 }
 
 // ---------------------------------------------------------------------
+// نسخة احتياطية: تنزيل كل البيانات كملف يمكن الرجوع إليه
+// ---------------------------------------------------------------------
+async function downloadBackup(btnEl) {
+  const original = btnEl ? btnEl.textContent : '';
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'جارٍ التجهيز...'; }
+  try {
+    const snap = await db.collection('persons').get();
+    const people = [];
+    snap.forEach(d => people.push({ docId: d.id, ...d.data() }));
+    people.sort((a, b) => (Number(a.displayId) || 0) - (Number(b.displayId) || 0));
+
+    const counterSnap = await db.collection('meta').doc('counter').get();
+    const stamp = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
+
+    // (1) ملف JSON كامل — يصلح للاسترجاع الكامل لاحقاً
+    const full = {
+      exportedAt: new Date().toISOString(),
+      count: people.length,
+      counter: counterSnap.exists ? counterSnap.data() : null,
+      persons: people
+    };
+    downloadFile(JSON.stringify(full, null, 1),
+      'نسخة_احتياطية_' + stamp + '.json', 'application/json');
+
+    // (2) ملف CSV للقراءة في Excel (بدون الصور حتى يبقى خفيفاً)
+    const esc = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    const head = ['displayId','firstName','gender','status','phone','parentKey','maritalStatus','spouseFamilies'];
+    const rows = [head.join(',')].concat(people.map(p => [
+      p.displayId, p.firstName, p.gender, p.status, p.phone, p.parentKey,
+      p.maritalStatus, (p.spouseFamilies || []).join(' | ')
+    ].map(esc).join(',')));
+    // BOM حتى تظهر العربية صحيحة في Excel
+    downloadFile('\ufeff' + rows.join('\r\n'),
+      'نسخة_احتياطية_' + stamp + '.csv', 'text/csv;charset=utf-8');
+
+    alert('تم تنزيل ملفين:\n• JSON يحتوي كل البيانات والصور (للاسترجاع)\n• CSV لفتحه في Excel\n\nعدد الأفراد: ' + people.length + '\nاحفظهما في مكان آمن.');
+  } catch (err) {
+    console.error(err);
+    alert('تعذر إنشاء النسخة الاحتياطية: ' + err.message);
+  } finally {
+    if (btnEl) { btnEl.disabled = false; btnEl.textContent = original; }
+  }
+}
+
+function downloadFile(content, filename, mime) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+// ---------------------------------------------------------------------
 // إعادة ترقيم المعرّفات لتبدأ من 1 بدون فجوات
 // ---------------------------------------------------------------------
 async function renumberAllIds(btnEl) {
@@ -1406,6 +1463,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('save-tree-pdf-btn').addEventListener('click', (e) => saveTreeAsPdf(e.currentTarget));
 
   // إعادة ترقيم المعرّفات من 1
+  const backupBtn = document.getElementById('backup-btn');
+  if (backupBtn) backupBtn.addEventListener('click', (e) => downloadBackup(e.currentTarget));
+
   const renumberBtn = document.getElementById('renumber-ids-btn');
   if (renumberBtn) renumberBtn.addEventListener('click', (e) => renumberAllIds(e.currentTarget));
 

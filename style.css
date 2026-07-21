@@ -462,6 +462,63 @@ header.site-header .admin-link:hover { border-color: var(--accent); }
   .fb-rank { display: none; }
 }
 
+/* رقم التواصل المسجّل: يظهر مخفياً مع زر للتغيير */
+.phone-current {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f5f2e9;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.pc-mask {
+  flex: 1;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  color: var(--primary-dark);
+}
+
+/* تنقّل الأب والأبناء داخل نافذة الشخص (مهم على الجوال) */
+.person-nav {
+  background: #f7f9f7;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+.pn-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.pn-group:last-child { margin-bottom: 0; }
+.pn-label {
+  font-size: .74rem;
+  font-weight: 800;
+  color: var(--muted);
+  padding-top: 5px;
+  min-width: 40px;
+}
+.pn-items { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+.pn-chip {
+  font-family: inherit;
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--primary-dark);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 4px 11px;
+  cursor: pointer;
+}
+.pn-chip:hover { border-color: var(--primary); background: #eef6f0; }
+
+.copy-link-btn { width: 100%; margin-bottom: 12px; }
+
 /* تلميح أسفل حقل الإدخال */
 .field-hint {
   margin: 6px 0 0;
