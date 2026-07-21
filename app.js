@@ -111,12 +111,32 @@ function renderRelatedFamilies() {
   const countEl = document.getElementById('stat-families');
   if (countEl) countEl.textContent = families.length;
 
-  const box = document.getElementById('families-chips');
-  if (!box) return;
-  box.innerHTML = '';
+  // ===== الصندوق الأول: أسماء العوائل كشارات =====
+  const chipsBox = document.getElementById('families-chips');
+  if (chipsBox) {
+    chipsBox.innerHTML = '';
+    if (families.length === 0) {
+      chipsBox.innerHTML = '<div class="families-empty">لم تُسجَّل أي عائلة بعد — تُضاف تلقائياً عند تحديد «متزوج/متزوجة» وكتابة اسم عائلة الزوج أو الزوجة.</div>';
+    } else {
+      // ترتيب أبجدي في قائمة الأسماء
+      families.slice()
+        .sort((a, b) => a.name.localeCompare(b.name, 'ar'))
+        .forEach(f => {
+          const chip = document.createElement('span');
+          chip.className = 'family-chip';
+          chip.textContent = f.name;
+          chipsBox.appendChild(chip);
+        });
+    }
+  }
+
+  // ===== الصندوق الثاني: رسم بياني بعدد الروابط =====
+  const barsBox = document.getElementById('families-bars');
+  if (!barsBox) return;
+  barsBox.innerHTML = '';
 
   if (families.length === 0) {
-    box.innerHTML = '<div class="families-empty">لم تُسجَّل أي عائلة بعد — تُضاف تلقائياً عند تحديد «متزوج/متزوجة» وكتابة اسم عائلة الزوج أو الزوجة.</div>';
+    barsBox.innerHTML = '<div class="families-empty">لا توجد بيانات لعرضها بعد.</div>';
     return;
   }
 
@@ -140,8 +160,8 @@ function renderRelatedFamilies() {
 
     const fill = document.createElement('div');
     fill.className = 'fb-fill';
-    // أقل عرض 12% حتى يبقى الرقم مقروءاً داخل الشريط
-    fill.style.width = Math.max(12, (f.count / max) * 100) + '%';
+    // أقل عرض 14% حتى يبقى الرقم مقروءاً داخل الشريط
+    fill.style.width = Math.max(14, (f.count / max) * 100) + '%';
 
     const val = document.createElement('span');
     val.className = 'fb-val';
@@ -152,7 +172,7 @@ function renderRelatedFamilies() {
     row.appendChild(rank);
     row.appendChild(name);
     row.appendChild(track);
-    box.appendChild(row);
+    barsBox.appendChild(row);
   });
 }
 

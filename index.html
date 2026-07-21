@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="عائلة الماجد">
 
-<link rel="stylesheet" href="style.css?v=45">
+<link rel="stylesheet" href="style.css?v=46">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -98,15 +98,30 @@
       <div class="num" id="stat-families">0</div><div class="label">مجموع العوائل المنتسبون معهم</div>
     </div>
 
-    <div class="families-card" id="families-card">
-      <div class="families-head">
-        <span class="stat-icon families"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="3.2"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg></span>
-        <div>
-          <div class="families-title">العوائل المنتسبون معهم</div>
-          <div class="families-sub">مرتّبة حسب عدد الروابط — مرّر للأسفل لرؤية البقية</div>
+    <div class="families-row">
+
+      <div class="families-card" id="families-card">
+        <div class="families-head">
+          <span class="stat-icon families"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="3.2"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg></span>
+          <div>
+            <div class="families-title">العوائل المنتسبون معهم</div>
+            <div class="families-sub">قائمة عوائل الأزواج والزوجات بدون تكرار</div>
+          </div>
         </div>
+        <div class="families-chips" id="families-chips"></div>
       </div>
-      <div class="families-chips" id="families-chips"></div>
+
+      <div class="families-card" id="families-chart-card">
+        <div class="families-head">
+          <span class="stat-icon families"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15v3"/><path d="M12 10v8"/><path d="M17 6v12"/></svg></span>
+          <div>
+            <div class="families-title">الأكثر ارتباطاً بالعائلة</div>
+            <div class="families-sub">عدد الروابط لكل عائلة — مرّر للأسفل لرؤية البقية</div>
+          </div>
+        </div>
+        <div class="families-bars" id="families-bars"></div>
+      </div>
+
     </div>
   </section>
 
@@ -296,7 +311,7 @@
 
 <script src="firebase-config.js"></script>
 <script src="relationship.js"></script>
-<script src="app.js?v=45"></script>
+<script src="app.js?v=46"></script>
 
 <!-- زر تثبيت التطبيق -->
 <script>

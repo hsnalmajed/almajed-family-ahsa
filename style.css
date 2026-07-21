@@ -320,9 +320,20 @@ header.site-header .admin-link:hover { border-color: var(--accent); }
   margin-bottom: 24px;
 }
 
-/* بطاقة عريضة تعرض أسماء العوائل */
-.families-card {
+/* صفّ يضم صندوقي العوائل جنباً إلى جنب (الأسماء يميناً والرسم يساراً) */
+.families-row {
   grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .families-row { grid-template-columns: 1fr; }
+}
+
+/* بطاقة عرض العوائل */
+.families-card {
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -360,22 +371,46 @@ header.site-header .admin-link:hover { border-color: var(--accent); }
   color: var(--muted);
   margin-top: 2px;
 }
-/* رسم بياني أفقي: كل عائلة وعدد الروابط معها.
-   الارتفاع يُظهر أول ١٠ عوائل، والباقي بالتمرير. */
+/* صندوق أسماء العوائل (شارات) */
 .families-chips {
   display: flex;
-  flex-direction: column;
-  gap: 7px;
-  max-height: 358px;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-content: flex-start;
+  max-height: 187px;
   overflow-y: auto;
   padding-left: 6px;
 }
-.families-chips::-webkit-scrollbar { width: 8px; }
-.families-chips::-webkit-scrollbar-thumb {
+.family-chip {
+  font-size: .85rem;
+  font-weight: 700;
+  color: var(--gold-dark);
+  background: var(--gold-light);
+  border: 1px solid var(--accent);
+  border-radius: 20px;
+  padding: 6px 14px;
+  height: fit-content;
+}
+
+/* رسم بياني أفقي: أول ٥ عوائل ظاهرة والباقي بالتمرير */
+.families-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  max-height: 187px;
+  overflow-y: auto;
+  padding-left: 6px;
+}
+
+.families-chips::-webkit-scrollbar,
+.families-bars::-webkit-scrollbar { width: 8px; }
+.families-chips::-webkit-scrollbar-thumb,
+.families-bars::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: 8px;
 }
-.families-chips::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+.families-chips::-webkit-scrollbar-thumb:hover,
+.families-bars::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 
 .family-bar-row {
   display: flex;
