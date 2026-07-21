@@ -465,6 +465,19 @@ header.site-header .admin-link:hover { border-color: var(--accent); }
   .fb-name { font-size: .78rem; }
 }
 
+/* تنبيه داخل صندوقي العوائل يشرح أن الأسماء قابلة للضغط */
+.families-hint {
+  margin: 0 0 10px;
+  padding: 7px 11px;
+  font-size: .79rem;
+  font-weight: 700;
+  color: var(--gold-dark);
+  background: var(--gold-light);
+  border: 1px dashed var(--accent);
+  border-radius: 9px;
+  line-height: 1.5;
+}
+
 /* أسماء العوائل قابلة للضغط لعرض الأفراد المرتبطين بها */
 .family-chip {
   font-family: inherit;
