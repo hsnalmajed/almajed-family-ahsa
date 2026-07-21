@@ -426,15 +426,14 @@ header.site-header .admin-link:hover { border-color: var(--accent); }
   color: var(--muted);
   text-align: center;
 }
+/* عرض العمود يُحسب في app.js حسب أطول اسم عائلة، فلا يُقتطع أي اسم */
 .fb-name {
   flex-shrink: 0;
-  width: 128px;
+  width: var(--fb-name-w, 128px);
   font-size: .84rem;
   font-weight: 700;
   color: var(--primary-dark);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .fb-track {
   flex: 1;
@@ -461,7 +460,7 @@ header.site-header .admin-link:hover { border-color: var(--accent); }
 }
 
 @media (max-width: 640px) {
-  .fb-name { width: 88px; font-size: .78rem; }
+  .fb-name { font-size: .78rem; }
   .fb-rank { display: none; }
 }
 

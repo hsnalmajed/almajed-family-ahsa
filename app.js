@@ -177,6 +177,16 @@ function renderRelatedFamilies() {
     row.appendChild(track);
     barsBox.appendChild(row);
   });
+
+  // عرض عمود الأسماء يتحدّد بأطول اسم عائلة حتى لا يُقتطع أي اسم،
+  // مع سقف نصف عرض الصندوق كي تبقى الأشرطة مرئية.
+  const nameEls = barsBox.querySelectorAll('.fb-name');
+  let widest = 0;
+  nameEls.forEach(el => { widest = Math.max(widest, el.scrollWidth); });
+  if (widest > 0) {
+    const cap = Math.max(120, Math.floor(barsBox.clientWidth * 0.5));
+    barsBox.style.setProperty('--fb-name-w', Math.min(widest + 4, cap) + 'px');
+  }
 }
 
 // ---------------------------------------------------------------------
