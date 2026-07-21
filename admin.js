@@ -824,6 +824,35 @@ function handleSearchById(evt) {
   renderPersonsList(filtered);
 }
 
+// سلسلة الآباء في لوحة التحكم (مطابقة لمنطق الصفحة الرئيسية)
+function adminPersonsById() {
+  const map = {};
+  allPersonsAdmin.forEach(p => { map[String(p.displayId)] = p; });
+  return map;
+}
+function ancestorsOfAdmin(person, limit) {
+  const byId = adminPersonsById();
+  const chain = [];
+  const seen = new Set([String(person.displayId)]);
+  let cur = person;
+  const max = limit || 60;
+  while (chain.length < max) {
+    const pk = String(cur.parentKey || '');
+    if (!pk || pk.startsWith('v')) break;
+    const parent = byId[pk];
+    if (!parent || seen.has(String(parent.displayId))) break;
+    seen.add(String(parent.displayId));
+    chain.push(parent);
+    cur = parent;
+  }
+  return chain;
+}
+function shortLineageAdmin(person, depth) {
+  return [person.firstName]
+    .concat(ancestorsOfAdmin(person, depth || 2).map(a => a.firstName))
+    .filter(Boolean).join(' - ');
+}
+
 // البحث داخل شجرة العائلة بالاسم أو بالمعرّف: التمرير إلى الشخص وإبرازه
 function focusAdminTreeNode(displayId) {
   const el = document.getElementById('admin-person-node-' + displayId);
@@ -841,35 +870,40 @@ function handleAdminTreeSearch(evt) {
   if (box) { box.innerHTML = ''; box.style.display = 'none'; }
   if (!term) return;
 
-  // بحث بالمعرّف عندما يكون المُدخل رقماً
+  let matches;
   if (/^\d+$/.test(term)) {
-    if (!focusAdminTreeNode(term)) alert('لا يوجد شخص بهذا المعرّف في الشجرة');
+    matches = allPersonsAdmin.filter(p => String(p.displayId) === term);
+  } else {
+    const needle = term.toLowerCase();
+    matches = allPersonsAdmin.filter(p => String(p.firstName || '').toLowerCase().includes(needle));
+  }
+
+  if (!box) {
+    if (matches.length) focusAdminTreeNode(matches[0].displayId);
     return;
   }
 
-  // بحث بالاسم (يطابق أي جزء من الاسم)
-  const needle = term.toLowerCase();
-  const matches = allPersonsAdmin.filter(p => String(p.firstName || '').toLowerCase().includes(needle));
+  if (matches.length === 0) {
+    box.innerHTML = '<div class="search-no-results">لا توجد نتائج مطابقة</div>';
+    box.style.display = 'block';
+    return;
+  }
 
-  if (matches.length === 0) { alert('لا يوجد شخص بهذا الاسم في الشجرة'); return; }
-  if (matches.length === 1) { focusAdminTreeNode(matches[0].displayId); return; }
-
-  // أكثر من نتيجة: نعرضها ليختار المدير
-  if (!box) { focusAdminTreeNode(matches[0].displayId); return; }
+  // نفس شكل الصفحة الرئيسية: (المعرّف) الاسم - الأب - الجد
+  box.innerHTML = matches.map(p => `
+    <div class="search-result-item" data-goto="${p.displayId}">
+      <img src="${p.photoURL || defaultAvatarAdmin(p.gender)}" alt="">
+      <span class="sr-name"><b class="sr-id">(${p.displayId})</b> ${escapeHtml(shortLineageAdmin(p, 2))}</span>
+    </div>
+  `).join('');
   box.style.display = 'block';
-  box.innerHTML = '<div style="font-size:.82rem; color:var(--muted); margin-bottom:6px;">'
-    + matches.length + ' نتيجة — اضغط على الاسم للانتقال إليه في الشجرة:</div>';
-  matches.forEach(p => {
-    const item = document.createElement('button');
-    item.type = 'button';
-    item.className = 'search-result-item';
-    item.textContent = p.firstName + '  (#' + p.displayId + ')';
-    item.addEventListener('click', () => {
-      focusAdminTreeNode(p.displayId);
+
+  box.querySelectorAll('[data-goto]').forEach(el => {
+    el.addEventListener('click', () => {
+      focusAdminTreeNode(el.dataset.goto);
       box.style.display = 'none';
       box.innerHTML = '';
     });
-    box.appendChild(item);
   });
 }
 
@@ -1040,10 +1074,28 @@ function applyAdminTreeZoom() {
   if (lbl) lbl.textContent = Math.round(adminTreeZoom * 100) + '%';
 }
 function setAdminTreeZoom(z) {
-  adminTreeZoom = Math.min(3, Math.max(0.1, Math.round(z * 100) / 100));
+  const vp = document.getElementById('admin-tree-viewport');
+  const oldZoom = adminTreeZoom;
+  const newZoom = Math.min(3, Math.max(0.1, Math.round(z * 100) / 100));
+  if (newZoom === oldZoom) return;
+
+  // نحفظ النقطة التي ينظر إليها المستخدم حتى لا تقفز الشجرة عند التكبير
+  let cx = null, cy = null;
+  if (vp && vp.clientWidth) {
+    cx = (vp.scrollLeft + vp.clientWidth / 2) / oldZoom;
+    cy = (vp.scrollTop + vp.clientHeight / 2) / oldZoom;
+  }
+
+  adminTreeZoom = newZoom;
   applyAdminTreeZoom();
-  // يبقى المعرّف 1 في المنتصف مهما تغيّر التكبير
-  requestAnimationFrame(() => centerAdminTreeOnRoot());
+
+  if (cx === null) return;
+  const restore = () => {
+    vp.scrollLeft = cx * adminTreeZoom - vp.clientWidth / 2;
+    vp.scrollTop  = cy * adminTreeZoom - vp.clientHeight / 2;
+  };
+  restore();
+  requestAnimationFrame(restore);
 }
 function fitAdminTreeToViewport() {
   const vp = document.getElementById('admin-tree-viewport');
@@ -1364,7 +1416,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const azFit = document.getElementById('admin-zoom-fit');
   if (azIn) azIn.addEventListener('click', () => setAdminTreeZoom(adminTreeZoom + 0.1));
   if (azOut) azOut.addEventListener('click', () => setAdminTreeZoom(adminTreeZoom - 0.1));
-  if (azReset) azReset.addEventListener('click', () => setAdminTreeZoom(0.5));
+  if (azReset) azReset.addEventListener('click', () => { setAdminTreeZoom(0.5); centerAdminTreeOnRootSoon(); });
   if (azFit) azFit.addEventListener('click', fitAdminTreeToViewport);
   const centerBtn = document.getElementById('admin-center-root-btn');
   if (centerBtn) centerBtn.addEventListener("click", () => { adminTreeCenteredOnce = false; centerAdminTreeOnRootSoon(); });

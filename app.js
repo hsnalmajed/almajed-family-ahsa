@@ -89,6 +89,9 @@ function familyKey(name) {
     .toLowerCase();
 }
 
+// عائلتنا نفسها لا تُحسب ضمن "العوائل المنتسبون معهم"
+const OWN_FAMILY_KEYS = new Set([familyKey('الماجد'), familyKey('ماجد')]);
+
 // عوائل الأزواج والزوجات: رسم بياني بعدد الروابط لكل عائلة
 function renderRelatedFamilies() {
   // المفتاح الموحّد -> { name: أول رسم للاسم, count: عدد الروابط }
@@ -98,7 +101,7 @@ function renderRelatedFamilies() {
       const raw = String(v).trim().replace(/\s+/g, ' ');
       if (!raw) return;
       const key = familyKey(raw);
-      if (!key) return;
+      if (!key || OWN_FAMILY_KEYS.has(key)) return; // نتجاهل عائلة الماجد نفسها
       if (!stats.has(key)) stats.set(key, { name: raw, count: 0 });
       stats.get(key).count += 1;
     });
@@ -963,13 +966,33 @@ function applyTreeZoom() {
   const lbl = document.getElementById('zoom-level');
   if (lbl) lbl.textContent = Math.round(treeZoom * 100) + '%';
 }
+/**
+ * تغيير التكبير مع الإبقاء على نفس النقطة التي ينظر إليها المستخدم في المنتصف،
+ * حتى لا تقفز الشجرة إلى مكان آخر عند كل ضغطة تكبير أو تصغير.
+ */
 function setTreeZoom(z) {
-  treeZoom = Math.min(3, Math.max(0.1, Math.round(z * 100) / 100));
+  const vp = document.getElementById('tree-viewport');
+  const oldZoom = treeZoom;
+  const newZoom = Math.min(3, Math.max(0.1, Math.round(z * 100) / 100));
+  if (newZoom === oldZoom) return;
+
+  // إحداثيات نقطة المنتصف الحالية بالنسبة للمحتوى غير المكبَّر
+  let cx = null, cy = null;
+  if (vp && vp.clientWidth) {
+    cx = (vp.scrollLeft + vp.clientWidth / 2) / oldZoom;
+    cy = (vp.scrollTop + vp.clientHeight / 2) / oldZoom;
+  }
+
+  treeZoom = newZoom;
   applyTreeZoom();
-  // بعد أي تغيير في التكبير يبقى المعرّف 1 في منتصف الشاشة.
-  // نستخدم rAF ومؤقّتاً معاً لأن rAF لا يعمل عندما يكون التبويب في الخلفية.
-  requestAnimationFrame(() => centerTreeOnRoot());
-  setTimeout(centerTreeOnRoot, 150);
+
+  if (cx === null) return;
+  const restore = () => {
+    vp.scrollLeft = cx * treeZoom - vp.clientWidth / 2;
+    vp.scrollTop  = cy * treeZoom - vp.clientHeight / 2;
+  };
+  restore();
+  requestAnimationFrame(restore);
 }
 
 // عرض الشجرة كاملة: يحسب التصغير المناسب ليظهر كل شيء داخل الإطار
@@ -991,7 +1014,7 @@ function fitTreeToViewport() {
 
   const z = Math.min(vpW / contentW, vpH / contentH) * 0.97;
   setTreeZoom(z);
-  // حتى في وضع "الشجرة كاملة" يبقى المعرّف 1 في المنتصف
+  // في وضع "الشجرة كاملة" نُعيد التوسيط على المعرّف 1
   centerTreeOnRootSoon();
 }
 
@@ -1154,6 +1177,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('zoom-in').addEventListener('click', () => setTreeZoom(treeZoom + 0.1));
   document.getElementById('zoom-out').addEventListener('click', () => setTreeZoom(treeZoom - 0.1));
   document.getElementById('zoom-reset').addEventListener('click', () => { setTreeZoom(0.5); centerTreeOnRootSoon(); });
+  // ملاحظة: التوسيط على المعرّف 1 يحدث عند الفتح وعند زر الإعادة وزر «الشجرة كاملة» فقط،
+  // أما التكبير والتصغير فيحافظان على موضع المستخدم.
 
   // إعادة التوسيط عند تغيير حجم النافذة أو تدوير شاشة الجوال
   let recenterTimer = null;
