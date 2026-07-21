@@ -392,15 +392,21 @@ header.site-header .admin-link:hover { border-color: var(--accent); }
   height: fit-content;
 }
 
-/* رسم بياني أفقي: أول ٥ عوائل ظاهرة والباقي بالتمرير */
+/* رسم بياني أفقي: أول ٥ عوائل ظاهرة والباقي بالتمرير.
+   شبكة من ٣ أعمدة: الترتيب / الاسم / الشريط.
+   عمود الاسم بعرض max-content أي أنه يتمدّد تلقائياً ليسع أطول اسم
+   في القائمة مهما أُضيف مستقبلاً — بلا أي قياس بالجافاسكربت. */
 .families-bars {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
+  display: grid;
+  grid-template-columns: auto max-content minmax(0, 1fr);
+  gap: 7px 10px;
+  align-items: center;
   max-height: 187px;
   overflow-y: auto;
   padding-left: 6px;
 }
+/* الصف يذوب في الشبكة حتى تتوحّد أعمدة كل الصفوف */
+.family-bar-row { display: contents; }
 
 .families-chips::-webkit-scrollbar,
 .families-bars::-webkit-scrollbar { width: 8px; }
@@ -412,31 +418,23 @@ header.site-header .admin-link:hover { border-color: var(--accent); }
 .families-chips::-webkit-scrollbar-thumb:hover,
 .families-bars::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 
-.family-bar-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 29px;
-}
 .fb-rank {
-  flex-shrink: 0;
   width: 20px;
   font-size: .72rem;
   font-weight: 700;
   color: var(--muted);
   text-align: center;
 }
-/* عرض العمود يُحسب في app.js حسب أطول اسم عائلة، فلا يُقتطع أي اسم */
+/* الاسم كامل دائماً: بلا عرض ثابت وبلا اقتطاع */
 .fb-name {
-  flex-shrink: 0;
-  width: var(--fb-name-w, 128px);
   font-size: .84rem;
   font-weight: 700;
   color: var(--primary-dark);
   white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
 }
 .fb-track {
-  flex: 1;
   min-width: 0;
   background: #f1ede2;
   border-radius: 7px;
