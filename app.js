@@ -94,6 +94,57 @@ function familyKey(name) {
 // عائلتنا نفسها لا تُحسب ضمن "العوائل المنتسبون معهم"
 const OWN_FAMILY_KEYS = new Set([familyKey('الماجد'), familyKey('ماجد')]);
 
+
+// ---------------------------------------------------------------------
+// عند الضغط على اسم عائلة: عرض الأفراد المرتبطين بها
+// ---------------------------------------------------------------------
+function openFamilyMembersModal(displayName, key) {
+  const list = document.getElementById('family-members-list');
+  const title = document.getElementById('family-members-title');
+  const sub = document.getElementById('family-members-sub');
+  if (!list) return;
+
+  const members = allPersons.filter(p =>
+    personFamilies(p).some(v => familyKey(v) === key)
+  ).sort((a, b) => (Number(a.displayId) || 0) - (Number(b.displayId) || 0));
+
+  title.textContent = 'عائلة ' + displayName;
+  sub.textContent = members.length === 1
+    ? 'فرد واحد من عائلتنا مرتبط بها'
+    : members.length + ' أفراد من عائلتنا مرتبطون بها';
+
+  list.innerHTML = members.map(p => {
+    const rel = p.gender === 'female' ? 'عائلة الزوج' : 'عائلة الزوجة';
+    return `
+      <div class="search-result-item" data-goto="${p.displayId}">
+        <img src="${p.photoURL || defaultAvatar(p.gender)}" alt="">
+        <span class="sr-name">
+          <b class="sr-id">(${p.displayId})</b> ${escapeHtmlLocal(shortLineage(p, 2))}
+          <span class="sr-rel">${rel}</span>
+        </span>
+      </div>`;
+  }).join('');
+
+  list.style.display = 'block';
+  list.querySelectorAll('[data-goto]').forEach(el => {
+    el.addEventListener('click', () => {
+      const id = el.dataset.goto;
+      closeFamilyMembersModal();
+      setTimeout(() => {
+        scrollToPerson(id);
+        const p = personsByDisplayId[id];
+        if (p) openChoiceModal(p);
+      }, 150);
+    });
+  });
+
+  document.getElementById('family-members-modal').classList.add('open');
+}
+
+function closeFamilyMembersModal() {
+  document.getElementById('family-members-modal').classList.remove('open');
+}
+
 // عوائل الأزواج والزوجات: رسم بياني بعدد الروابط لكل عائلة
 function renderRelatedFamilies() {
   // المفتاح الموحّد -> { name: أول رسم للاسم, count: عدد الروابط }
@@ -104,7 +155,7 @@ function renderRelatedFamilies() {
       if (!raw) return;
       const key = familyKey(raw);
       if (!key || OWN_FAMILY_KEYS.has(key)) return; // نتجاهل عائلة الماجد نفسها
-      if (!stats.has(key)) stats.set(key, { name: raw, count: 0 });
+      if (!stats.has(key)) stats.set(key, { name: raw, count: 0, key });
       stats.get(key).count += 1;
     });
   });
@@ -127,9 +178,12 @@ function renderRelatedFamilies() {
       families.slice()
         .sort((a, b) => a.name.localeCompare(b.name, 'ar'))
         .forEach(f => {
-          const chip = document.createElement('span');
+          const chip = document.createElement('button');
+          chip.type = 'button';
           chip.className = 'family-chip';
           chip.textContent = f.name;
+          chip.title = 'اعرض الأفراد المرتبطين بعائلة ' + f.name;
+          chip.addEventListener('click', () => openFamilyMembersModal(f.name, f.key));
           chipsBox.appendChild(chip);
         });
     }
@@ -155,10 +209,12 @@ function renderRelatedFamilies() {
     rank.className = 'fb-rank';
     rank.textContent = (i + 1);
 
-    const name = document.createElement('span');
+    const name = document.createElement('button');
+    name.type = 'button';
     name.className = 'fb-name';
     name.textContent = f.name;
-    name.title = f.name;
+    name.title = 'اعرض الأفراد المرتبطين بعائلة ' + f.name;
+    name.addEventListener('click', () => openFamilyMembersModal(f.name, f.key));
 
     const track = document.createElement('div');
     track.className = 'fb-track';
@@ -1290,6 +1346,13 @@ document.addEventListener('DOMContentLoaded', () => {
   bindMaritalToggle('input-marital', 'input-spouse-group');
   updateFamilyList = createFamilyList('update-spouse-family', 'update-spouse-add', 'update-spouse-chips');
   addFamilyList = createFamilyList('input-spouse-family', 'input-spouse-add', 'input-spouse-chips');
+
+  const closeFamBtn = document.getElementById('close-family-members-btn');
+  if (closeFamBtn) closeFamBtn.addEventListener('click', closeFamilyMembersModal);
+  const famModal = document.getElementById('family-members-modal');
+  if (famModal) famModal.addEventListener('click', e => {
+    if (e.target === famModal) closeFamilyMembersModal();
+  });
 
   // زر «تغيير الرقم»: يُظهر حقل إدخال فارغ
   const phoneChangeBtn = document.getElementById('phone-change-btn');

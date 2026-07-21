@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="عائلة الماجد">
 
-<link rel="stylesheet" href="style.css?v=51">
+<link rel="stylesheet" href="style.css?v=52">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -169,6 +169,16 @@
 <footer class="site-footer">
   عائلة الماجد — جميع الإضافات والتحديثات تخضع لمراجعة المدير قبل ظهورها
 </footer>
+
+<!-- نافذة أفراد العائلة المنتسبة -->
+<div class="modal-overlay" id="family-members-modal">
+  <div class="modal-box">
+    <button class="close-x" id="close-family-members-btn">✕</button>
+    <h3 id="family-members-title">أفراد مرتبطون بهذه العائلة</h3>
+    <p class="family-members-sub" id="family-members-sub"></p>
+    <div class="search-results family-members-list" id="family-members-list"></div>
+  </div>
+</div>
 
 <!-- نافذة اختيار الإجراء (تحديث / إضافة) -->
 <div class="modal-overlay" id="choice-modal">
@@ -328,7 +338,7 @@
 
 <script src="firebase-config.js"></script>
 <script src="relationship.js"></script>
-<script src="app.js?v=50"></script>
+<script src="app.js?v=52"></script>
 
 <!-- زر تثبيت التطبيق -->
 <script>
