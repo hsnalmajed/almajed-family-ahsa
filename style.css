@@ -360,19 +360,81 @@ header.site-header .admin-link:hover { border-color: var(--accent); }
   color: var(--muted);
   margin-top: 2px;
 }
+/* رسم بياني أفقي: كل عائلة وعدد الروابط معها.
+   الارتفاع يُظهر أول ١٠ عوائل، والباقي بالتمرير. */
 .families-chips {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-direction: column;
+  gap: 7px;
+  max-height: 358px;
+  overflow-y: auto;
+  padding-left: 6px;
 }
-.family-chip {
-  font-size: .85rem;
+.families-chips::-webkit-scrollbar { width: 8px; }
+.families-chips::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 8px;
+}
+.families-chips::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+.family-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 29px;
+}
+.fb-rank {
+  flex-shrink: 0;
+  width: 20px;
+  font-size: .72rem;
   font-weight: 700;
-  color: var(--gold-dark);
-  background: var(--gold-light);
-  border: 1px solid var(--accent);
-  border-radius: 20px;
-  padding: 6px 14px;
+  color: var(--muted);
+  text-align: center;
+}
+.fb-name {
+  flex-shrink: 0;
+  width: 128px;
+  font-size: .84rem;
+  font-weight: 700;
+  color: var(--primary-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fb-track {
+  flex: 1;
+  min-width: 0;
+  background: #f1ede2;
+  border-radius: 7px;
+  overflow: hidden;
+}
+.fb-fill {
+  height: 26px;
+  border-radius: 7px;
+  background: linear-gradient(90deg, var(--gold-dark), var(--accent));
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 9px;
+  transition: width .35s ease;
+}
+.fb-val {
+  font-size: .8rem;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,.25);
+}
+
+@media (max-width: 640px) {
+  .fb-name { width: 88px; font-size: .78rem; }
+  .fb-rank { display: none; }
+}
+
+/* تلميح أسفل حقل الإدخال */
+.field-hint {
+  margin: 6px 0 0;
+  font-size: .76rem;
+  color: var(--muted);
 }
 /* الاسم الكامل بسلسلة الآباء داخل نافذة اختيار الإجراء */
 .choice-full-name {

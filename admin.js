@@ -320,7 +320,8 @@ async function approveUpdateRequest(requestId, btnEl) {
       const personRef = personQuery.docs[0].ref;
 
       const updates = {};
-      if (reqData.phone) updates.phone = reqData.phone;
+      // نقبل النص الفارغ أيضاً حتى يتمكن المستخدم من حذف رقمه
+      if (typeof reqData.phone === 'string') updates.phone = reqData.phone;
       if (reqData.photoURL) updates.photoURL = reqData.photoURL;
       if (reqData.status) updates.status = reqData.status;
       if (reqData.maritalStatus) {

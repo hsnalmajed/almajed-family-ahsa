@@ -89,19 +89,24 @@ function familyKey(name) {
     .toLowerCase();
 }
 
-// عوائل الأزواج والزوجات بدون تكرار
+// عوائل الأزواج والزوجات: رسم بياني بعدد الروابط لكل عائلة
 function renderRelatedFamilies() {
-  const seen = new Map(); // المفتاح الموحّد -> الاسم كما كُتب أول مرة
+  // المفتاح الموحّد -> { name: أول رسم للاسم, count: عدد الروابط }
+  const stats = new Map();
   allPersons.forEach(p => {
     personFamilies(p).forEach(v => {
-      const raw = String(v).trim();
+      const raw = String(v).trim().replace(/\s+/g, ' ');
       if (!raw) return;
       const key = familyKey(raw);
-      if (key && !seen.has(key)) seen.set(key, raw.replace(/\s+/g, ' '));
+      if (!key) return;
+      if (!stats.has(key)) stats.set(key, { name: raw, count: 0 });
+      stats.get(key).count += 1;
     });
   });
 
-  const families = Array.from(seen.values()).sort((a, b) => a.localeCompare(b, 'ar'));
+  // الأكثر ارتباطاً أولاً، وعند التساوي ترتيب أبجدي
+  const families = Array.from(stats.values())
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'ar'));
 
   const countEl = document.getElementById('stat-families');
   if (countEl) countEl.textContent = families.length;
@@ -115,11 +120,39 @@ function renderRelatedFamilies() {
     return;
   }
 
-  families.forEach(name => {
-    const chip = document.createElement('span');
-    chip.className = 'family-chip';
-    chip.textContent = name;
-    box.appendChild(chip);
+  const max = families[0].count || 1;
+
+  families.forEach((f, i) => {
+    const row = document.createElement('div');
+    row.className = 'family-bar-row';
+
+    const rank = document.createElement('span');
+    rank.className = 'fb-rank';
+    rank.textContent = (i + 1);
+
+    const name = document.createElement('span');
+    name.className = 'fb-name';
+    name.textContent = f.name;
+    name.title = f.name;
+
+    const track = document.createElement('div');
+    track.className = 'fb-track';
+
+    const fill = document.createElement('div');
+    fill.className = 'fb-fill';
+    // أقل عرض 12% حتى يبقى الرقم مقروءاً داخل الشريط
+    fill.style.width = Math.max(12, (f.count / max) * 100) + '%';
+
+    const val = document.createElement('span');
+    val.className = 'fb-val';
+    val.textContent = f.count;
+
+    fill.appendChild(val);
+    track.appendChild(fill);
+    row.appendChild(rank);
+    row.appendChild(name);
+    row.appendChild(track);
+    box.appendChild(row);
   });
 }
 
@@ -363,6 +396,16 @@ function openUpdateModal(person) {
   document.querySelectorAll('input[name="update-status"]').forEach(r => {
     r.checked = (r.value === person.status);
   });
+
+  // رقم التواصل الحالي يظهر في الحقل حتى يعرف المستخدم أنه مسجّل مسبقاً
+  const phoneInput = document.getElementById('update-phone');
+  phoneInput.value = person.phone || '';
+  const phoneHint = document.getElementById('update-phone-hint');
+  if (phoneHint) {
+    phoneHint.textContent = person.phone
+      ? 'الرقم المسجّل حالياً — عدّله إن تغيّر، أو امسحه لحذفه.'
+      : 'لا يوجد رقم مسجّل لهذا الشخص.';
+  }
 
   // الحالة الاجتماعية: النص بحسب جنس الشخص، والقيم الحالية إن وُجدت
   applyMaritalLabels(document.getElementById('update-modal'), person.gender);
