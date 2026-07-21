@@ -458,8 +458,11 @@ header.site-header .admin-link:hover { border-color: var(--accent); }
 }
 
 @media (max-width: 640px) {
-  .fb-name { font-size: .78rem; }
+  /* عند إخفاء عمود الترتيب يجب تقليل أعمدة الشبكة إلى اثنين،
+     وإلا انزاحت العناصر إلى أعمدة خاطئة واختلّ الانتظام. */
+  .families-bars { grid-template-columns: max-content minmax(0, 1fr); }
   .fb-rank { display: none; }
+  .fb-name { font-size: .78rem; }
 }
 
 /* رقم التواصل المسجّل: يظهر مخفياً مع زر للتغيير */
