@@ -140,6 +140,46 @@ function maritalLabel(maritalStatus, gender, families) {
   return female ? 'غير متزوجة' : 'غير متزوج';
 }
 
+// اسم الأم للعرض (من العائلة: معرّف واسم؛ من خارجها: نص؛ أو لا يوجد)
+function motherDisplay(motherId, motherName) {
+  if (motherId) {
+    const p = allPersonsAdmin.find(x => x.displayId === Number(motherId)) || {};
+    return '(' + motherId + ') ' + (p.firstName || '');
+  }
+  return motherName || 'لا يوجد';
+}
+
+// تفصيل التغييرات في طلب التحديث: قبل ← بعد (يعرض المتغيّر فقط)
+function renderUpdateDiff(r) {
+  const person = allPersonsAdmin.find(p => p.displayId === r.targetPersonId) || {};
+  const g = person.gender;
+  const lines = [];
+  const row = (label, before, after) =>
+    `<div class="req-meta">• <b>${label}:</b> <span class="diff-old">${escapeHtml(before)}</span> ← <span class="diff-new">${escapeHtml(after)}</span></div>`;
+
+  // رقم التواصل (يُرسَل فقط إن طُلب تغييره)
+  if (typeof r.phone === 'string' && String(person.phone || '') !== String(r.phone || '')) {
+    lines.push(row('رقم التواصل', person.phone || 'لا يوجد', r.phone || 'حُذف'));
+  }
+  // الحالة
+  if (r.status && r.status !== person.status) {
+    lines.push(row('الحالة', STATUS_LABELS_AR[person.status] || person.status || '—', STATUS_LABELS_AR[r.status] || r.status));
+  }
+  // الحالة الاجتماعية + الأزواج
+  const beforeM = maritalLabel(person.maritalStatus, g, person.spouseFamilies) + spouseLinksLabel(g, person.spouseLinks);
+  const afterM = maritalLabel(r.maritalStatus, g, r.spouseFamilies || r.spouseFamily) + spouseLinksLabel(g, r.spouseLinks);
+  if (beforeM !== afterM) lines.push(row('الحالة الاجتماعية', beforeM, afterM));
+  // الأم
+  const beforeMo = motherDisplay(person.motherId, person.motherName);
+  const afterMo = motherDisplay(r.motherId, r.motherName);
+  if (('motherId' in r || 'motherName' in r) && beforeMo !== afterMo) lines.push(row('الأم', beforeMo, afterMo));
+  // الصورة
+  if (r.photoURL) lines.push(`<div class="req-meta">• <b>الصورة:</b> <span class="diff-new">تم رفع صورة جديدة</span></div>`);
+
+  if (!lines.length) lines.push('<div class="req-meta">لا تغييرات فعلية على البيانات (الطلب مطابق للحالي).</div>');
+  return lines.join('');
+}
+
 // وصف الأزواج المرتبطين من داخل الشجرة
 function spouseLinksLabel(gender, links) {
   const list = Array.isArray(links) ? links.filter(l => l && l.id != null) : [];
@@ -167,10 +207,8 @@ function renderRequests() {
         <img class="req-photo" src="${r.photoURL || ''}" onerror="this.style.visibility='hidden'">
         <div class="req-info">
           <div class="req-name">✏️ طلب تحديث بيانات: <b>${escapeHtml(r.targetPersonName || '')}</b> (#${r.targetPersonId})</div>
-          <div class="req-meta">الهاتف الجديد: ${r.phone ? escapeHtml(r.phone) : 'بدون تغيير'} | الصورة: ${r.photoURL ? 'محدَّثة' : 'بدون تغيير'}</div>
-          <div class="req-meta">الحالة الجديدة: ${STATUS_LABELS_AR[r.status] || r.status}</div>
-          <div class="req-meta">الحالة الاجتماعية: ${escapeHtml(maritalLabel(r.maritalStatus, (allPersonsAdmin.find(p => p.displayId === r.targetPersonId) || {}).gender, r.spouseFamilies || r.spouseFamily) + spouseLinksLabel((allPersonsAdmin.find(p => p.displayId === r.targetPersonId) || {}).gender, r.spouseLinks))}</div>
-          ${(r.motherId || r.motherId === 0) ? `<div class="req-meta">الأم: (${r.motherId}) ${escapeHtml((allPersonsAdmin.find(p => p.displayId === Number(r.motherId)) || {}).firstName || '')}</div>` : (r.motherName ? `<div class="req-meta">الأم: ${escapeHtml(r.motherName)}</div>` : '')}
+          <div class="req-diff-title">تفاصيل التغييرات المطلوبة (قبل ← بعد):</div>
+          ${renderUpdateDiff(r)}
         </div>
         <div class="req-actions">
           <button class="btn btn-primary btn-sm" data-approve-update="${r.id}">قبول</button>
@@ -753,27 +791,26 @@ function bindSpouseOriginToggleAdmin(radioName, linkBlockId, familyBlockId) {
 }
 
 // يملأ قائمة "الأم" من زوجات والد الشخص المسجّلات في الشجرة
-function populateMotherOptionsAdmin(person, selectId, hintId) {
+// يملأ قائمة الأم من زوجات "الأب" المعطى مباشرةً (يُستخدم في جميع نوافذ المدير)
+function fillMotherSelectAdmin(selectId, hintId, father, curMotherId, curMotherName) {
   const sel = document.getElementById(selectId);
   const hint = document.getElementById(hintId);
   if (!sel) return;
   sel.innerHTML = '<option value="">— غير محددة —</option>';
-  const father = (person.parentKey && !String(person.parentKey).startsWith('v'))
-    ? personsByDisplayIdAdmin[String(person.parentKey)] : null;
   if (!father) {
     sel.disabled = true;
-    if (hint) hint.textContent = 'لا يمكن تحديد الأم: لا يوجد أب مسجّل لهذا الشخص في الشجرة.';
+    if (hint) hint.textContent = 'لا يمكن تحديد الأم: لا يوجد أب مسجّل لهذا الفرد في الشجرة.';
     return;
   }
   const links = Array.isArray(father.spouseLinks) ? father.spouseLinks : [];
   const fams = personFamiliesAdmin(father);
   if (!links.length && !fams.length) {
     sel.disabled = true;
-    if (hint) hint.textContent = 'لا توجد زوجات مسجّلات لوالد هذا الشخص. أضِف زوجات الأب أولاً.';
+    if (hint) hint.textContent = 'لا توجد زوجات مسجّلات لوالد هذا الفرد. أضِف زوجات الأب أولاً.';
     return;
   }
   sel.disabled = false;
-  if (hint) hint.textContent = 'تُختار من زوجات والد هذا الشخص (اختيار زوجة من العائلة يُفعّل صلات القرابة تلقائياً).';
+  if (hint) hint.textContent = 'تُختار من زوجات والد هذا الفرد (اختيار زوجة من العائلة يُفعّل صلات القرابة تلقائياً).';
   links.forEach(w => {
     const nm = w.name || (personsByDisplayIdAdmin[String(w.id)] ? shortLineageAdmin(personsByDisplayIdAdmin[String(w.id)], 2) : '');
     const opt = document.createElement('option');
@@ -792,11 +829,101 @@ function populateMotherOptionsAdmin(person, selectId, hintId) {
     opt.textContent = label;
     sel.appendChild(opt);
   });
-  if (person.motherId != null) sel.value = 'id:' + person.motherId;
-  else if (person.motherName) {
-    const match = Array.from(sel.options).find(o => o.dataset && o.dataset.mname === person.motherName);
+  if (curMotherId != null) sel.value = 'id:' + curMotherId;
+  else if (curMotherName) {
+    const match = Array.from(sel.options).find(o => o.dataset && o.dataset.mname === curMotherName);
     if (match) sel.value = match.value;
   }
+}
+
+// نافذة تعديل المدير: الأب من parentKey الخاص بالشخص
+function populateMotherOptionsAdmin(person, selectId, hintId) {
+  const father = (person.parentKey && !String(person.parentKey).startsWith('v'))
+    ? personsByDisplayIdAdmin[String(person.parentKey)] : null;
+  fillMotherSelectAdmin(selectId, hintId, father, person.motherId, person.motherName);
+}
+
+// يقرأ اختيار الأم من قائمة select ({id, name})
+function readMotherSelect(selectId) {
+  const opt = document.getElementById(selectId)?.selectedOptions?.[0];
+  return {
+    motherId: (opt && opt.dataset.mid) ? Number(opt.dataset.mid) : null,
+    motherName: (opt && opt.value) ? (opt.dataset.mname || '') : ''
+  };
+}
+
+// ربط تبادلي: إضافة العضو الجديد كزوج لدى زوجاته المرتبطة من العائلة
+async function applyReciprocalSpouse(memberDisplayId, memberName, spouseLinks) {
+  for (const link of (spouseLinks || [])) {
+    try {
+      const q = await db.collection('persons').where('displayId', '==', Number(link.id)).limit(1).get();
+      if (q.empty) continue;
+      const ref = q.docs[0].ref;
+      const existing = Array.isArray(q.docs[0].data().spouseLinks) ? q.docs[0].data().spouseLinks : [];
+      if (!existing.some(s => Number(s.id) === Number(memberDisplayId))) {
+        existing.push({ id: Number(memberDisplayId), name: memberName || '' });
+        await ref.update({ maritalStatus: 'married', spouseLinks: existing });
+      }
+    } catch (e) { console.error('تعذّر الربط التبادلي مع', link, e); }
+  }
+}
+
+let adminAddSpouseLinkList = null;
+let rootSpouseLinkList = null;
+
+// قيود زوج واحد للإناث في نافذتَي الإضافة
+function adminAddSpouseCanAdd() {
+  if (RELATION_TO_GENDER_ADMIN[selectedAdminRelationType] === 'female') {
+    const total = (adminAddSpouseLinkList ? adminAddSpouseLinkList.size() : 0)
+                + (adminAddFamilyList ? adminAddFamilyList.size() : 0);
+    if (total >= 1) { alert('للإناث يمكن إضافة زوج واحد فقط. احذف الزوج الحالي أولاً.'); return false; }
+  }
+  return true;
+}
+function rootSpouseCanAdd() {
+  const female = document.querySelector('input[name="root-gender"]:checked')?.value === 'female';
+  if (female) {
+    const total = (rootSpouseLinkList ? rootSpouseLinkList.size() : 0)
+                + (rootFamilyList ? rootFamilyList.size() : 0);
+    if (total >= 1) { alert('للإناث يمكن إضافة زوج واحد فقط. احذف الزوج الحالي أولاً.'); return false; }
+  }
+  return true;
+}
+
+// خيارات الأم في نافذة "إضافة قريب": الأب = الشخص المستهدف (ابن/ابنة) أو والده (أخ/أخت)
+function populateAdminAddMotherOptions() {
+  let father = null;
+  if (selectedAdminRelationType === 'son' || selectedAdminRelationType === 'daughter') {
+    father = selectedAdminTargetPerson;
+  } else if (selectedAdminTargetPerson && selectedAdminTargetPerson.parentKey
+             && !String(selectedAdminTargetPerson.parentKey).startsWith('v')) {
+    father = personsByDisplayIdAdmin[String(selectedAdminTargetPerson.parentKey)];
+  }
+  fillMotherSelectAdmin('admin-add-mother', 'admin-add-mother-hint', father, null, null);
+}
+
+// خيارات الأم في نافذة "إضافة شخص مباشرة": الأب = صاحب المعرّف المُدخل في حقل الوالد
+function populateRootMotherOptions() {
+  const pid = document.getElementById('root-parent-id')?.value.trim();
+  const father = pid ? personsByDisplayIdAdmin[String(pid)] : null;
+  const hint = document.getElementById('root-mother-hint');
+  if (!pid && hint) {
+    const sel = document.getElementById('root-mother');
+    if (sel) { sel.innerHTML = '<option value="">— غير محددة —</option>'; sel.disabled = true; }
+    hint.textContent = 'أدخل معرّف الأب أولاً لعرض زوجاته المسجّلات.';
+    return;
+  }
+  fillMotherSelectAdmin('root-mother', 'root-mother-hint', father, null, null);
+}
+
+// ضبط نصوص قسم الأزواج بحسب الجنس (مذكر: تعدد، مؤنث: زوج واحد)
+function setSpouseSectionTexts(sectionLabelId, multiHintId, female) {
+  const secLbl = document.getElementById(sectionLabelId);
+  const multiHint = document.getElementById(multiHintId);
+  if (secLbl) secLbl.textContent = female ? 'الزوج المسجّل' : 'الزوجات المسجّلات';
+  if (multiHint) multiHint.textContent = female
+    ? 'يمكن إضافة زوج واحد فقط: اختر «نعم» للبحث عنه في الشجرة، أو «لا» لكتابة اسم عائلته.'
+    : 'أضِف كل زوجة على حدة: اختر «نعم» للبحث عنها في الشجرة، أو «لا» لكتابة اسم عائلتها.';
 }
 let adminEditSpouseLinkList = null;
 function bindMaritalToggleAdmin(radioName, groupId) {
@@ -959,6 +1086,8 @@ function openAdminQuickAddModal(person) {
   document.getElementById('admin-quick-add-form').reset();
   document.getElementById('admin-quick-add-form').style.display = 'none';
   document.getElementById('admin-add-photo-preview').style.display = 'none';
+  if (adminAddFamilyList) adminAddFamilyList.clear();
+  if (adminAddSpouseLinkList) adminAddSpouseLinkList.clear();
   renderAdminAddedMembersList();
 
   document.getElementById('admin-quick-add-modal').classList.add('open');
@@ -975,7 +1104,13 @@ function chooseAdminRelationType(type, btnEl) {
   document.querySelectorAll('#admin-quick-add-modal .relation-choices button').forEach(b => b.classList.remove('selected'));
   btnEl.classList.add('selected');
   document.getElementById('admin-quick-add-form').style.display = 'block';
+  const female = RELATION_TO_GENDER_ADMIN[type] === 'female';
   applyMaritalLabelsAdmin(document.getElementById('admin-quick-add-modal'), RELATION_TO_GENDER_ADMIN[type]);
+  setSpouseSectionTexts('admin-add-spouse-section-label', 'admin-add-spouse-multi-hint', female);
+  document.querySelectorAll('input[name="admin-add-spouse-in-family"]').forEach(r => { r.checked = (r.value === 'no'); });
+  if (adminAddSpouseLinkList) adminAddSpouseLinkList.clear();
+  refreshSpouseOriginAdmin('admin-add-spouse-in-family', 'admin-add-spouse-link-block', 'admin-add-spouse-family-block');
+  populateAdminAddMotherOptions();
 }
 function handleAdminAddPhotoSelect(evt) {
   const file = evt.target.files[0];
@@ -1030,22 +1165,32 @@ async function submitAdminQuickAdd(evt) {
       parentKey = String(selectedAdminTargetPerson.parentKey);
     }
 
+    const married = document.querySelector('input[name="admin-add-marital"]:checked')?.value === 'married';
+    const spouseFamilies = married && adminAddFamilyList ? adminAddFamilyList.values() : [];
+    const spouseLinks = married && adminAddSpouseLinkList ? adminAddSpouseLinkList.values() : [];
+    const { motherId, motherName } = readMotherSelect('admin-add-mother');
+
+    let createdId = null;
     const counterRef = db.collection('meta').doc('counter');
     await db.runTransaction(async (tx) => {
       const counterSnap = await tx.get(counterRef);
       const lastId = counterSnap.exists ? (counterSnap.data().lastId || 0) : 0;
       const newId = lastId + 1;
+      createdId = newId;
 
       const personRef = db.collection('persons').doc();
       tx.set(personRef, {
         displayId: newId,
         firstName, gender, phone, status, photoURL,
-        ...readMarital('admin-add-marital', adminAddFamilyList),
+        maritalStatus: married ? 'married' : 'single',
+        spouseFamilies, spouseLinks, motherId, motherName,
         parentKey,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       tx.set(counterRef, { lastId: newId }, { merge: true });
     });
+
+    if (married && spouseLinks.length) await applyReciprocalSpouse(createdId, firstName, spouseLinks);
 
     adminAddedMembersThisSession.push({ name: firstName, relation: selectedAdminRelationType });
     renderAdminAddedMembersList();
@@ -1054,6 +1199,12 @@ async function submitAdminQuickAdd(evt) {
     document.getElementById('admin-add-phone').value = '';
     document.getElementById('admin-add-photo-input').value = '';
     document.getElementById('admin-add-photo-preview').style.display = 'none';
+    if (adminAddFamilyList) adminAddFamilyList.clear();
+    if (adminAddSpouseLinkList) adminAddSpouseLinkList.clear();
+    document.querySelectorAll('input[name="admin-add-spouse-in-family"]').forEach(r => { r.checked = (r.value === 'no'); });
+    refreshSpouseOriginAdmin('admin-add-spouse-in-family', 'admin-add-spouse-link-block', 'admin-add-spouse-family-block');
+    refreshMaritalGroupAdmin('admin-add-marital', 'admin-add-spouse-group');
+    populateAdminAddMotherOptions();
     selectedAdminAddPhotoFile = null;
     document.getElementById('admin-add-name').focus();
   } catch (err) {
@@ -1194,6 +1345,14 @@ function openRootModal() {
   document.getElementById('root-add-form').reset();
   document.getElementById('root-photo-preview').style.display = 'none';
   selectedRootPhotoFile = null;
+  // إعادة ضبط قسم الأزواج والأم
+  if (rootFamilyList) rootFamilyList.clear();
+  if (rootSpouseLinkList) rootSpouseLinkList.clear();
+  document.querySelectorAll('input[name="root-spouse-in-family"]').forEach(r => { r.checked = (r.value === 'no'); });
+  refreshSpouseOriginAdmin('root-spouse-in-family', 'root-spouse-link-block', 'root-spouse-family-block');
+  refreshMaritalGroupAdmin('root-marital', 'root-spouse-group');
+  setSpouseSectionTexts('root-spouse-section-label', 'root-spouse-multi-hint', false);
+  populateRootMotherOptions();
   document.getElementById('root-modal').classList.add('open');
 }
 function closeRootModal() {
@@ -1259,12 +1418,19 @@ async function submitRootPerson(evt) {
     }
 
     // إذا حُدد معرّف أب/شخص مستهدف يُربط به مباشرة كابن/ابنة، وإلا يُنشأ كجذر مستقل جديد
+    const married = document.querySelector('input[name="root-marital"]:checked')?.value === 'married';
+    const spouseFamilies = married && rootFamilyList ? rootFamilyList.values() : [];
+    const spouseLinks = married && rootSpouseLinkList ? rootSpouseLinkList.values() : [];
+    const { motherId, motherName } = readMotherSelect('root-mother');
+
+    let createdId = null;
     const counterRef = db.collection('meta').doc('counter');
 
     await db.runTransaction(async (tx) => {
       const counterSnap = await tx.get(counterRef);
       const lastId = counterSnap.exists ? (counterSnap.data().lastId || 0) : 0;
       const newId = lastId + 1;
+      createdId = newId;
 
       let parentKey;
       if (parentIdRaw) {
@@ -1277,11 +1443,14 @@ async function submitRootPerson(evt) {
       tx.set(personRef, {
         displayId: newId,
         firstName, gender, phone, status, photoURL, parentKey,
-        ...readMarital('root-marital', rootFamilyList),
+        maritalStatus: married ? 'married' : 'single',
+        spouseFamilies, spouseLinks, motherId, motherName,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       tx.set(counterRef, { lastId: newId }, { merge: true });
     });
+
+    if (married && spouseLinks.length) await applyReciprocalSpouse(createdId, firstName, spouseLinks);
 
     closeRootModal();
   } catch (err) {
@@ -1783,18 +1952,26 @@ document.addEventListener('DOMContentLoaded', () => {
   bindMaritalToggleAdmin('admin-add-marital', 'admin-add-spouse-group');
   bindMaritalToggleAdmin('root-marital', 'root-spouse-group');
   adminEditFamilyList = createFamilyListAdmin('admin-edit-spouse-family', 'admin-edit-spouse-family-add', 'admin-edit-spouse-family-chips', adminEditSpouseCanAdd);
-  adminAddFamilyList = createFamilyListAdmin('admin-add-spouse-family', 'admin-add-spouse-family-add', 'admin-add-spouse-family-chips');
-  rootFamilyList = createFamilyListAdmin('root-spouse-family', 'root-spouse-family-add', 'root-spouse-family-chips');
+  adminAddFamilyList = createFamilyListAdmin('admin-add-spouse-family', 'admin-add-spouse-family-add', 'admin-add-spouse-family-chips', adminAddSpouseCanAdd);
+  rootFamilyList = createFamilyListAdmin('root-spouse-family', 'root-spouse-family-add', 'root-spouse-family-chips', rootSpouseCanAdd);
 
-  // ربط الزوجة من داخل الشجرة + سؤال "من عائلة الماجد؟" في نافذة تعديل المدير
+  // ربط الزوجة من داخل الشجرة + سؤال "من عائلة الماجد؟"
   adminEditSpouseLinkList = createSpouseLinkListAdmin('admin-edit-spouse-link-input', 'admin-edit-spouse-link-sug', 'admin-edit-spouse-link-chips', adminEditSpouseCanAdd);
   bindSpouseOriginToggleAdmin('admin-edit-spouse-in-family', 'admin-edit-spouse-link-block', 'admin-edit-spouse-family-block');
-  // في نافذة الإضافة المباشرة تتغيّر الصيغة بحسب الجنس المختار
+  adminAddSpouseLinkList = createSpouseLinkListAdmin('admin-add-spouse-link-input', 'admin-add-spouse-link-sug', 'admin-add-spouse-link-chips', adminAddSpouseCanAdd);
+  bindSpouseOriginToggleAdmin('admin-add-spouse-in-family', 'admin-add-spouse-link-block', 'admin-add-spouse-family-block');
+  rootSpouseLinkList = createSpouseLinkListAdmin('root-spouse-link-input', 'root-spouse-link-sug', 'root-spouse-link-chips', rootSpouseCanAdd);
+  bindSpouseOriginToggleAdmin('root-spouse-in-family', 'root-spouse-link-block', 'root-spouse-family-block');
+
+  // نافذة الإضافة المباشرة: تتغيّر الصيغة والحدّ بحسب الجنس، والأم بحسب معرّف الأب
   document.querySelectorAll('input[name="root-gender"]').forEach(r => {
     r.addEventListener('change', () => {
       applyMaritalLabelsAdmin(document.getElementById('root-modal'), r.value);
+      setSpouseSectionTexts('root-spouse-section-label', 'root-spouse-multi-hint', r.value === 'female');
     });
   });
+  const rootParentInput = document.getElementById('root-parent-id');
+  if (rootParentInput) rootParentInput.addEventListener('input', populateRootMotherOptions);
   document.querySelectorAll('input[name="admin-edit-gender"]').forEach(r => {
     r.addEventListener('change', () => {
       applyMaritalLabelsAdmin(document.getElementById('admin-edit-modal'), r.value);
