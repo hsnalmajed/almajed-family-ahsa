@@ -939,16 +939,16 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
   font-family: inherit;
   font-size: .9rem;
   font-weight: 700;
-  color: var(--primary-dark);
-  background: #eef6f0;
-  border: 1px solid var(--primary);
+  color: var(--gold-dark);
+  background: var(--gold-light);
+  border: 1px solid var(--accent);
   border-radius: 7px;
   padding: 1px 8px;
   margin: 0 2px;
   cursor: pointer;
-  transition: background .15s ease;
+  transition: background .15s ease, transform .15s ease;
 }
-.rel-person:hover { background: var(--primary); color: #fff; }
+.rel-person:hover { background: var(--accent); color: #fff; transform: translateY(-1px); }
 
 /* سؤال: هل الزوج/الزوجة من عائلة الماجد؟ */
 .spouse-section-label { display: block; font-weight: 800; color: var(--primary-dark); margin-bottom: 4px; }
