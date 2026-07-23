@@ -491,10 +491,11 @@ function renderPersonNav(person) {
     const showSpouse = person.maritalStatus === 'married' && (fams.length || links.length);
     if (showSpouse) {
       const female = person.gender === 'female';
+      const total = links.length + fams.length;
       // إن كان الزوج/الزوجة من العائلة نعرض الاسم؛ وإلا نعرض اسم العائلة
-      spouseLabel.textContent = links.length
-        ? (female ? 'الزوج' : 'الزوجة')
-        : (female ? 'عائلة الزوج' : 'عائلة الزوجة');
+      spouseLabel.textContent = female
+        ? (links.length ? 'الزوج' : 'عائلة الزوج')
+        : (total > 1 ? 'الزوجات' : (links.length ? 'الزوجة' : 'عائلة الزوجة'));
       // أزواج مرتبطون من داخل الشجرة — قابلون للنقر للانتقال إليهم
       links.forEach(l => {
         const p = personsByDisplayId[l.id];
@@ -650,14 +651,9 @@ async function submitUpdateInfo(evt) {
   }
 
   const isMarried = document.querySelector('input[name="update-marital"]:checked')?.value === 'married';
-  const spouseInFamily = isMarried &&
-    document.querySelector('input[name="update-spouse-in-family"]:checked')?.value === 'yes';
-
-  // إن اختار "نعم" (الزوج/الزوجة من العائلة) دون تحديد أي شخص، ننبّهه
-  if (spouseInFamily && updateSpouseLinkList && updateSpouseLinkList.values().length === 0) {
-    showToast('الرجاء اختيار الزوج/الزوجة من شجرة العائلة، أو اختر «لا».', true);
-    return;
-  }
+  // نجمع النوعين معاً: زوجات من العائلة (روابط) + زوجات من خارجها (أسماء عوائل)
+  const spouseLinkVals = (isMarried && updateSpouseLinkList) ? updateSpouseLinkList.values() : [];
+  const spouseFamilyVals = (isMarried && updateFamilyList) ? updateFamilyList.values() : [];
 
   const btn = document.getElementById('submit-update-btn');
   btn.disabled = true;
@@ -676,9 +672,9 @@ async function submitUpdateInfo(evt) {
       photoURL: photoURL || '',
       status,
       maritalStatus: (document.querySelector('input[name="update-marital"]:checked')?.value) || 'single',
-      spouseFamilies: (isMarried && !spouseInFamily && updateFamilyList) ? updateFamilyList.values() : [],
-      spouseInFamily: spouseInFamily,
-      spouseLinks: (isMarried && spouseInFamily && updateSpouseLinkList) ? updateSpouseLinkList.values() : [],
+      spouseFamilies: spouseFamilyVals,
+      spouseLinks: spouseLinkVals,
+      spouseInFamily: spouseLinkVals.length > 0,
       requestStatus: 'pending',
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     };
@@ -826,8 +822,12 @@ function createSpouseLinkList(inputId, sugId, chipsId) {
     chips.innerHTML = '';
     state.forEach((item, i) => {
       const chip = document.createElement('span');
-      chip.className = 'family-chip-edit';
-      chip.appendChild(document.createTextNode(`(${item.id}) ${item.name}`));
+      chip.className = 'family-chip-edit spouse-chip-link';
+      const badge = document.createElement('span');
+      badge.className = 'chip-origin-badge';
+      badge.textContent = 'من العائلة';
+      chip.appendChild(badge);
+      chip.appendChild(document.createTextNode(` (${item.id}) ${item.name}`));
       const x = document.createElement('button');
       x.type = 'button'; x.className = 'family-chip-remove'; x.textContent = '✕'; x.title = 'إزالة';
       x.addEventListener('click', () => { state.splice(i, 1); renderChips(); });

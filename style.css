@@ -909,11 +909,28 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
 }
 
 /* سؤال: هل الزوج/الزوجة من عائلة الماجد؟ */
-.spouse-origin { margin-bottom: 12px; }
+.spouse-section-label { display: block; font-weight: 800; color: var(--primary-dark); margin-bottom: 4px; }
+.spouse-origin { margin: 10px 0 12px; }
 .spouse-origin-label,
 .spouse-link-label { display: block; margin-bottom: 6px; font-weight: 700; color: var(--primary-dark); }
 #update-spouse-link-block { margin-top: 6px; }
-#update-spouse-link-chips { margin-top: 8px; }
+
+/* قائمة كل الزوجات المضافة (النوعان معاً) */
+.spouse-all-chips { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.spouse-all-chips .family-chips-edit:empty { display: none; }
+
+/* شارة "من العائلة" على روابط الأزواج داخل الشجرة */
+.chip-origin-badge {
+  display: inline-block;
+  font-size: .68rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  margin-inline-end: 5px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+}
+.spouse-chip-link { background: #eef6f0; border-color: var(--primary); }
 
 /* قائمة اقتراحات الأشخاص أسفل الحقل */
 .rel-suggestions {

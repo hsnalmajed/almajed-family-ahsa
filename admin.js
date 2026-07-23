@@ -336,12 +336,11 @@ async function approveUpdateRequest(requestId, btnEl) {
       if (reqData.maritalStatus) {
         updates.maritalStatus = reqData.maritalStatus;
         const married = reqData.maritalStatus === 'married';
-        const inFamily = married && reqData.spouseInFamily === true;
-        // من داخل العائلة → روابط أشخاص؛ من خارجها → أسماء عوائل
-        updates.spouseFamilies = (married && !inFamily)
+        // يمكن الجمع بين النوعين: زوجات من العائلة (روابط) + زوجات من خارجها (أسماء عوائل)
+        updates.spouseFamilies = married
           ? (reqData.spouseFamilies || (reqData.spouseFamily ? [reqData.spouseFamily] : []))
           : [];
-        updates.spouseLinks = (married && inFamily) ? (reqData.spouseLinks || []) : [];
+        updates.spouseLinks = married ? (reqData.spouseLinks || []) : [];
       }
 
       tx.update(personRef, updates);
@@ -351,7 +350,7 @@ async function approveUpdateRequest(requestId, btnEl) {
 
     // ربط تبادلي (خارج المعاملة): نضيف هذا الشخص كزوج/زوجة لدى كل شخص مرتبط من العائلة
     if (approvedReq && approvedReq.maritalStatus === 'married'
-        && approvedReq.spouseInFamily === true && Array.isArray(approvedReq.spouseLinks)) {
+        && Array.isArray(approvedReq.spouseLinks) && approvedReq.spouseLinks.length) {
       for (const link of approvedReq.spouseLinks) {
         try {
           const q = await db.collection('persons').where('displayId', '==', Number(link.id)).limit(1).get();

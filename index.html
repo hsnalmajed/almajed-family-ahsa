@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="عائلة الماجد">
 
-<link rel="stylesheet" href="style.css?v=57">
+<link rel="stylesheet" href="style.css?v=58">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -263,7 +263,10 @@
       </div>
 
       <div class="form-group spouse-group" id="update-spouse-group" style="display:none;">
-        <!-- سؤال: هل الزوجة/الزوج من عائلة الماجد؟ -->
+        <label class="spouse-section-label">الزوجات / الأزواج المسجّلون</label>
+        <p class="family-hint">أضِف كل زوجة على حدة: اختر «نعم» للبحث عنها داخل شجرة العائلة، أو «لا» لكتابة اسم عائلتها. يمكنك إضافة أكثر من زوجة — بعضها من العائلة وبعضها من خارجها.</p>
+
+        <!-- السؤال يُطرح لكل إضافة -->
         <div class="spouse-origin">
           <label class="spouse-origin-label">هل الزوجة من عائلة الماجد؟</label>
           <div class="status-toggle">
@@ -279,19 +282,21 @@
             <input type="text" id="update-spouse-link-input" class="spouse-link-input" placeholder="المعرّف أو الاسم الثلاثي" autocomplete="off">
             <div class="rel-suggestions" id="update-spouse-link-sug"></div>
           </div>
-          <div class="family-chips-edit" id="update-spouse-link-chips"></div>
-          <p class="family-hint">اختر الشخص من القائمة ليتم ربطه. يمكن إضافة أكثر من واحد.</p>
         </div>
 
-        <!-- لا: اسم عائلة الزوجة (كما كان) -->
+        <!-- لا: اسم عائلة الزوجة -->
         <div id="update-spouse-family-block">
           <label for="update-spouse-family" class="spouse-label">عائلة الزوجة</label>
           <div class="family-input-row">
             <input type="text" id="update-spouse-family" placeholder="اسم عائلة الزوجة">
             <button type="button" class="btn btn-secondary btn-sm" id="update-spouse-add">➕ إضافة</button>
           </div>
+        </div>
+
+        <!-- قائمة كل الزوجات المضافة (من العائلة + من خارجها) — تبقى ظاهرة دائماً -->
+        <div class="spouse-all-chips">
+          <div class="family-chips-edit" id="update-spouse-link-chips"></div>
           <div class="family-chips-edit" id="update-spouse-chips"></div>
-          <p class="family-hint">يمكنك إضافة أكثر من عائلة: اكتب الاسم ثم اضغط «إضافة» أو Enter.</p>
         </div>
       </div>
 
@@ -373,7 +378,7 @@
 
 <script src="firebase-config.js"></script>
 <script src="relationship.js"></script>
-<script src="app.js?v=55"></script>
+<script src="app.js?v=56"></script>
 
 <!-- زر تثبيت التطبيق -->
 <script>
