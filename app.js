@@ -77,18 +77,24 @@ function personFamilies(p) {
   return p.spouseFamily ? [p.spouseFamily] : [];
 }
 
-function familyKey(name) {
-  return String(name)
-    .replace(/[ً-ْٰـ]/g, '') // تشكيل وتطويل
+// توحيد الحروف العربية حتى تتطابق الصيغ المختلفة في البحث:
+// أ/إ/آ/ٱ → ا ، ة → ه ، ى → ي ، ؤ → و ، ئ → ي ، وإزالة التشكيل والتطويل
+function normalizeArabic(s) {
+  return String(s || '')
+    .replace(/[ً-ْٰـ]/g, '')   // تشكيل وتطويل
     .replace(/[أإآٱ]/g, 'ا')
     .replace(/ى/g, 'ي')
     .replace(/ؤ/g, 'و')
     .replace(/ئ/g, 'ي')
     .replace(/ة/g, 'ه')
-    .replace(/^(ال|آل)\s*/, '')
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase();
+}
+
+function familyKey(name) {
+  // نفس التوحيد مع إزالة أداة التعريف "ال/آل" في بداية اسم العائلة
+  return normalizeArabic(name).replace(/^(ال|آل)\s*/, '').trim();
 }
 
 // عائلتنا نفسها لا تُحسب ضمن "العوائل المنتسبون معهم"
@@ -1218,7 +1224,8 @@ function matchPersonsForRelation(query) {
   if (/^\d+$/.test(q)) {
     return allPersons.filter(p => String(p.displayId) === q);
   }
-  return allPersons.filter(p => p.firstName && p.firstName.includes(q)).slice(0, 8);
+  const nq = normalizeArabic(q);
+  return allPersons.filter(p => p.firstName && normalizeArabic(p.firstName).includes(nq)).slice(0, 8);
 }
 
 // يربط حقل إدخال بقائمة اقتراحات تعمل مثل "ابحث عن شخص"
@@ -1264,7 +1271,8 @@ function resolveRelationInput(inputId) {
     if (!personsByDisplayId[val]) return { error: `لا يوجد شخص بالمعرّف ${val}` };
     return { id: val };
   }
-  const matches = allPersons.filter(p => p.firstName && p.firstName.includes(val));
+  const nv = normalizeArabic(val);
+  const matches = allPersons.filter(p => p.firstName && normalizeArabic(p.firstName).includes(nv));
   if (matches.length === 1) return { id: String(matches[0].displayId) };
   if (matches.length === 0) return { error: `لا يوجد شخص باسم «${val}»` };
   return { error: `يوجد أكثر من شخص باسم «${val}» — اختر من القائمة` };
@@ -1331,7 +1339,8 @@ function handleSearch(evt) {
   if (/^\d+$/.test(query)) {
     matches = allPersons.filter(p => String(p.displayId) === query);
   } else {
-    matches = allPersons.filter(p => p.firstName && p.firstName.includes(query));
+    const nq = normalizeArabic(query);
+    matches = allPersons.filter(p => p.firstName && normalizeArabic(p.firstName).includes(nq));
   }
 
   if (matches.length === 0) {

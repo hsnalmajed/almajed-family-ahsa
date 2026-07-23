@@ -529,18 +529,23 @@ function showAdminDeleteConfirm() {
 // ---------------------------------------------------------------------
 // حقل يقبل أكثر من اسم عائلة
 // ---------------------------------------------------------------------
-function familyKeyAdmin(name) {
-  return String(name)
+// \u062A\u0648\u062D\u064A\u062F \u0627\u0644\u062D\u0631\u0648\u0641 \u0627\u0644\u0639\u0631\u0628\u064A\u0629 \u062D\u062A\u0649 \u062A\u062A\u0637\u0627\u0628\u0642 \u0627\u0644\u0635\u064A\u063A \u0627\u0644\u0645\u062E\u062A\u0644\u0641\u0629 \u0641\u064A \u0627\u0644\u0628\u062D\u062B:
+// \u0623/\u0625/\u0622/\u0671 \u2192 \u0627 \u060C \u0629 \u2192 \u0647 \u060C \u0649 \u2192 \u064A \u060C \u0624 \u2192 \u0648 \u060C \u0626 \u2192 \u064A \u060C \u0648\u0625\u0632\u0627\u0644\u0629 \u0627\u0644\u062A\u0634\u0643\u064A\u0644 \u0648\u0627\u0644\u062A\u0637\u0648\u064A\u0644
+function normalizeArabic(s) {
+  return String(s || '')
     .replace(/[\u064B-\u0652\u0670\u0640]/g, '')
     .replace(/[\u0623\u0625\u0622\u0671]/g, '\u0627')
     .replace(/\u0649/g, '\u064A')
     .replace(/\u0624/g, '\u0648')
     .replace(/\u0626/g, '\u064A')
     .replace(/\u0629/g, '\u0647')
-    .replace(/^(\u0627\u0644|\u0622\u0644)\s*/, '')
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase();
+}
+
+function familyKeyAdmin(name) {
+  return normalizeArabic(name).replace(/^(\u0627\u0644|\u0622\u0644)\s*/, '').trim();
 }
 
 function personFamiliesAdmin(p) {
@@ -619,8 +624,8 @@ function matchPersonsAdmin(query) {
   const q = String(query || '').trim();
   if (!q) return [];
   if (/^\d+$/.test(q)) return allPersonsAdmin.filter(p => String(p.displayId) === q);
-  const needle = q.toLowerCase();
-  return allPersonsAdmin.filter(p => String(p.firstName || '').toLowerCase().includes(needle)).slice(0, 8);
+  const needle = normalizeArabic(q);
+  return allPersonsAdmin.filter(p => normalizeArabic(p.firstName).includes(needle)).slice(0, 8);
 }
 
 // قائمة ربط الأزواج من داخل الشجرة (لوحة المدير) — تخزّن {id, name}
@@ -1085,8 +1090,8 @@ function handleAdminTreeSearch(evt) {
   if (/^\d+$/.test(term)) {
     matches = allPersonsAdmin.filter(p => String(p.displayId) === term);
   } else {
-    const needle = term.toLowerCase();
-    matches = allPersonsAdmin.filter(p => String(p.firstName || '').toLowerCase().includes(needle));
+    const needle = normalizeArabic(term);
+    matches = allPersonsAdmin.filter(p => normalizeArabic(p.firstName).includes(needle));
   }
 
   if (!box) {
