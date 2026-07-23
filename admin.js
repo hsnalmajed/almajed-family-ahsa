@@ -924,6 +924,21 @@ async function submitAdminEdit(evt) {
 // --- حذف مباشر ---
 async function deleteAdminPerson(person) {
   try {
+    const delId = Number(person.displayId);
+    // تنظيف الإشارات المعلّقة: إزالة هذا الشخص من روابط الأزواج، وإفراغ الأم عند من تشير إليه
+    const affected = allPersonsAdmin.filter(p => p.id !== person.id && (
+      (Array.isArray(p.spouseLinks) && p.spouseLinks.some(s => Number(s.id) === delId)) ||
+      Number(p.motherId) === delId
+    ));
+    for (const p of affected) {
+      const upd = {};
+      if (Array.isArray(p.spouseLinks) && p.spouseLinks.some(s => Number(s.id) === delId)) {
+        upd.spouseLinks = p.spouseLinks.filter(s => Number(s.id) !== delId);
+      }
+      if (Number(p.motherId) === delId) { upd.motherId = null; upd.motherName = ''; }
+      if (Object.keys(upd).length) await db.collection('persons').doc(p.id).update(upd);
+    }
+
     await db.collection('persons').doc(person.id).delete();
     closeAdminNodeModal();
   } catch (err) {
@@ -1527,9 +1542,10 @@ async function renumberAllIds(btnEl) {
   const count = allPersonsAdmin.length;
   const ok = confirm(
     'سيتم إعادة ترقيم جميع المعرّفات لتصبح متسلسلة من 1 إلى ' + count + '.\n\n' +
-    'سيتم تحديث روابط الآباء والأبناء تلقائياً حتى لا تتأثر الشجرة.\n' +
+    'سيتم تحديث جميع الروابط تلقائياً: الآباء، الأبناء، الأزواج المرتبطون من العائلة، والأمهات.\n' +
+    '⚠️ تنبيه للسلامة: أي رابط كان يشير إلى شخص محذوف سابقاً سيُزال. يُنصح بمراجعة الروابط بعد الترقيم.\n' +
     'لا يمكن التراجع عن هذا الإجراء — يُفضّل تنفيذه بعد الانتهاء من إدخال جميع الأفراد.\n\n' +
-    'هل تريد المتابعة؟'
+    'بضغطك «موافق» فأنت المسؤول عن هذا الإجراء. هل تريد المتابعة؟'
   );
   if (!ok) return;
 
@@ -1562,7 +1578,19 @@ async function renumberAllIds(btnEl) {
         newParentKey = 'v' + newId;
         orphans++;
       }
-      return { docId: p.id, displayId: newId, parentKey: newParentKey };
+
+      // إعادة تعيين روابط الأزواج من العائلة إلى المعرّفات الجديدة (وإزالة روابط المحذوفين)
+      const newSpouseLinks = Array.isArray(p.spouseLinks)
+        ? p.spouseLinks.map(s => {
+            const nm = idMap[String(s.id)];
+            return nm !== undefined ? { id: nm, name: s.name || '' } : null;
+          }).filter(Boolean)
+        : [];
+      // إعادة تعيين معرّف الأم (وإزالته إن كانت محذوفة)
+      const newMotherId = (p.motherId != null && idMap[String(p.motherId)] !== undefined)
+        ? idMap[String(p.motherId)] : null;
+
+      return { docId: p.id, displayId: newId, parentKey: newParentKey, spouseLinks: newSpouseLinks, motherId: newMotherId };
     });
 
     // Firestore يسمح بحد أقصى 500 عملية لكل دفعة
@@ -1572,7 +1600,9 @@ async function renumberAllIds(btnEl) {
       updates.slice(i, i + CHUNK).forEach(u => {
         batch.update(db.collection('persons').doc(u.docId), {
           displayId: u.displayId,
-          parentKey: u.parentKey
+          parentKey: u.parentKey,
+          spouseLinks: u.spouseLinks,
+          motherId: u.motherId
         });
       });
       await batch.commit();
