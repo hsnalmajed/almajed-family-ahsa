@@ -908,6 +908,29 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
   transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
 }
 
+/* قائمة اختيار الأم */
+.mother-select {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: .95rem;
+  font-family: inherit;
+  background: #fcfbf8;
+}
+.mother-select:disabled { background: #f0eee8; color: var(--muted); }
+
+/* نتيجة صلة القرابة: المباشرة أولاً ثم ناحية الأب */
+.rel-direct {
+  background: #eef6f0;
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  color: var(--primary-dark);
+}
+.rel-paternal-title { font-weight: 700; margin-top: 4px; color: var(--muted); font-size: .9rem; }
+
 /* سؤال: هل الزوج/الزوجة من عائلة الماجد؟ */
 .spouse-section-label { display: block; font-weight: 800; color: var(--primary-dark); margin-bottom: 4px; }
 .spouse-origin { margin: 10px 0 12px; }

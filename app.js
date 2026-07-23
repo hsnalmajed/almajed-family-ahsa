@@ -473,6 +473,16 @@ function renderPersonNav(person) {
   if (father) { fatherBox.appendChild(mkBtn(father)); fatherGroup.style.display = 'flex'; }
   else fatherGroup.style.display = 'none';
 
+  // الأم (إن كانت مرتبطة من داخل الشجرة)
+  const motherGroup = document.getElementById('pn-mother-group');
+  const motherBox = document.getElementById('pn-mother');
+  const mother = (person.motherId != null) ? personsByDisplayId[String(person.motherId)] : null;
+  if (motherGroup && motherBox) {
+    motherBox.innerHTML = '';
+    if (mother) { motherBox.appendChild(mkBtn(mother)); motherGroup.style.display = 'flex'; }
+    else motherGroup.style.display = 'none';
+  }
+
   const kids = allPersons.filter(p => String(p.parentKey) === String(person.displayId));
   if (kids.length) {
     kids.sort((a, b) => (Number(a.displayId) || 0) - (Number(b.displayId) || 0))
@@ -517,11 +527,11 @@ function renderPersonNav(person) {
       });
       spouseGroup.style.display = 'flex';
     } else spouseGroup.style.display = 'none';
-    nav.style.display = (father || kids.length || showSpouse) ? 'block' : 'none';
+    nav.style.display = (father || mother || kids.length || showSpouse) ? 'block' : 'none';
     return;
   }
 
-  nav.style.display = (father || kids.length) ? 'block' : 'none';
+  nav.style.display = (father || mother || kids.length) ? 'block' : 'none';
 }
 
 // فتح الموقع على شخص محدد عبر رابط مثل ?id=147
@@ -607,6 +617,9 @@ function openUpdateModal(person) {
   if (updateFamilyList) updateFamilyList.set(personFamilies(person));
   refreshMaritalGroup('update-marital', 'update-spouse-group');
 
+  // الأم: خيارات من زوجات والد هذا الشخص المسجّلات في الشجرة
+  populateMotherOptions(person);
+
   // هل الزوج/الزوجة من عائلة الماجد؟ — نحدّد الحالة من بيانات الشخص
   const links = Array.isArray(person.spouseLinks) ? person.spouseLinks : [];
   const inFamily = links.length ? 'yes' : 'no';
@@ -619,6 +632,40 @@ function openUpdateModal(person) {
 function closeUpdateModal() {
   document.getElementById('update-modal').classList.remove('open');
   selectedUpdatePhotoFile = null;
+}
+
+// يملأ قائمة "الأم" من زوجات والد الشخص المسجّلات في الشجرة (spouseLinks)
+function populateMotherOptions(person) {
+  const sel = document.getElementById('update-mother');
+  const hint = document.getElementById('update-mother-hint');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— غير محددة —</option>';
+
+  const father = (person.parentKey && !String(person.parentKey).startsWith('v'))
+    ? personsByDisplayId[String(person.parentKey)] : null;
+  const wives = father && Array.isArray(father.spouseLinks) ? father.spouseLinks : [];
+
+  if (!father) {
+    sel.disabled = true;
+    if (hint) hint.textContent = 'لا يمكن تحديد الأم: لا يوجد أب مسجّل لهذا الشخص في الشجرة.';
+    return;
+  }
+  if (!wives.length) {
+    sel.disabled = true;
+    if (hint) hint.textContent = 'لا توجد زوجات مسجّلات لوالد هذا الشخص من داخل العائلة. أضِف زوجة الأب أولاً في صفحة الأب.';
+    return;
+  }
+
+  sel.disabled = false;
+  if (hint) hint.textContent = 'تُختار من زوجات والد هذا الشخص المسجّلات في شجرة العائلة (لربط الأبناء بأمهاتهم).';
+  wives.forEach(w => {
+    const opt = document.createElement('option');
+    opt.value = String(w.id);
+    opt.textContent = `(${w.id}) ${w.name || (personsByDisplayId[String(w.id)] ? shortLineage(personsByDisplayId[String(w.id)], 2) : '')}`;
+    sel.appendChild(opt);
+  });
+  // القيمة الحالية إن كانت مسجّلة
+  if (person.motherId != null) sel.value = String(person.motherId);
 }
 
 function handleUpdatePhotoSelect(evt) {
@@ -675,6 +722,10 @@ async function submitUpdateInfo(evt) {
       spouseFamilies: spouseFamilyVals,
       spouseLinks: spouseLinkVals,
       spouseInFamily: spouseLinkVals.length > 0,
+      motherId: (function () {
+        const v = document.getElementById('update-mother')?.value;
+        return v ? Number(v) : null;
+      })(),
       requestStatus: 'pending',
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     };
@@ -1199,9 +1250,18 @@ function handleRelationFinder(evt) {
 
   const result = window.FamilyRelationship.computeRelationship(id1, id2, personsByDisplayId);
   if (result.ok) {
-    let html = `<div>${escapeHtmlLocal(result.text)}</div>`;
-    if (result.linkPerson && String(result.linkPerson.id) !== String(id1) && String(result.linkPerson.id) !== String(id2)) {
-      html += `<div class="link-person-line">🔗 الشخص الذي يربط بينهما: <b>${escapeHtmlLocal(result.linkPerson.name)}</b> (#${result.linkPerson.id})</div>`;
+    let html = '';
+    // (1) صلة القرابة المباشرة (تشمل الأم: أم/خال/خالة)
+    if (result.directTerm) {
+      html += `<div class="rel-direct"><b>صلة القرابة المباشرة:</b> ${escapeHtmlLocal(result.directTerm)}</div>`;
+    }
+    // (2) صلة القرابة من ناحية الأب
+    if (result.paternalText) {
+      html += `<div class="rel-paternal-title">صلة القرابة من ناحية الأب:</div>`;
+      html += `<div>${escapeHtmlLocal(result.paternalText)}</div>`;
+      if (result.linkPerson && String(result.linkPerson.id) !== String(id1) && String(result.linkPerson.id) !== String(id2)) {
+        html += `<div class="link-person-line">🔗 الشخص الذي يربط بينهما: <b>${escapeHtmlLocal(result.linkPerson.name)}</b> (#${result.linkPerson.id})</div>`;
+      }
     }
     resultBox.innerHTML = html;
     resultBox.className = 'relation-result';

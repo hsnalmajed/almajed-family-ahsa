@@ -112,9 +112,90 @@ function describeRelationship(personA, personB, d1, d2) {
   return degree === 1 ? label : `${label} من الدرجة ${ordinal(degree)}`;
 }
 
+// =====================================================================
+// صلة القرابة المباشرة (تستخدم الأب parentKey والأم motherId معاً)
+// تصف B بالنسبة إلى A بصيغة تناسب جنس A (الضمير) وجنس B (المصطلح)
+// =====================================================================
+function isNumericKey(k) { return k != null && /^\d+$/.test(String(k)); }
+
+// هل p و q إخوة؟ (نفس الأب الحقيقي/جذر الفرع، أو نفس الأم)
+function areSiblings(p, q) {
+  if (!p || !q) return false;
+  if (String(p.displayId) === String(q.displayId)) return false;
+  const pf = p.parentKey != null ? String(p.parentKey) : '';
+  const qf = q.parentKey != null ? String(q.parentKey) : '';
+  if (pf && qf && pf === qf) return true;          // نفس الأب (أو نفس جذر الفرع)
+  const pm = p.motherId != null ? String(p.motherId) : '';
+  const qm = q.motherId != null ? String(q.motherId) : '';
+  if (pm && qm && pm === qm) return true;          // نفس الأم
+  return false;
+}
+
+function computeDirectRelation(personA, personB, personsByDisplayId) {
+  const aMale = personA.gender === 'male';
+  const bMale = personB.gender === 'male';
+  const Aid = String(personA.displayId);
+  const Bid = String(personB.displayId);
+  const P = personsByDisplayId;
+
+  const fatherA = isNumericKey(personA.parentKey) ? String(personA.parentKey) : null;
+  const motherA = personA.motherId != null ? String(personA.motherId) : null;
+  const fatherB = isNumericKey(personB.parentKey) ? String(personB.parentKey) : null;
+  const motherB = personB.motherId != null ? String(personB.motherId) : null;
+
+  // والدا A
+  if (fatherA === Bid) return aMale ? 'أبوه' : 'أبوها';
+  if (motherA === Bid) return aMale ? 'أمه' : 'أمها';
+
+  // A والد/والدة لـ B  ⇒ B ابن/ابنة
+  if (fatherB === Aid || motherB === Aid) {
+    return bMale ? (aMale ? 'ابنه' : 'ابنها') : (aMale ? 'ابنته' : 'ابنتها');
+  }
+
+  // إخوة
+  if (areSiblings(personA, personB)) {
+    return bMale ? (aMale ? 'أخوه' : 'أخوها') : (aMale ? 'أخته' : 'أختها');
+  }
+
+  // عم/عمة: B أخو/أخت والد A
+  if (fatherA && P[fatherA] && areSiblings(P[fatherA], personB)) {
+    return bMale ? (aMale ? 'عمه' : 'عمها') : (aMale ? 'عمته' : 'عمتها');
+  }
+  // خال/خالة: B أخو/أخت والدة A
+  if (motherA && P[motherA] && areSiblings(P[motherA], personB)) {
+    return bMale ? (aMale ? 'خاله' : 'خالها') : (aMale ? 'خالته' : 'خالتها');
+  }
+
+  // أجداد A (من الأب أو الأم)
+  const grandOf = (parentKey) => {
+    if (!parentKey || !P[parentKey]) return false;
+    const par = P[parentKey];
+    const gf = isNumericKey(par.parentKey) ? String(par.parentKey) : null;
+    const gm = par.motherId != null ? String(par.motherId) : null;
+    return Bid === gf || Bid === gm;
+  };
+  if (grandOf(fatherA) || grandOf(motherA)) {
+    return bMale ? (aMale ? 'جدّه' : 'جدّها') : (aMale ? 'جدّته' : 'جدّتها');
+  }
+
+  // A جد/جدة لـ B  ⇒ B حفيد/حفيدة
+  const grandChild = (bParentKey) => {
+    if (!bParentKey || !P[bParentKey]) return false;
+    const par = P[bParentKey];
+    const gf = isNumericKey(par.parentKey) ? String(par.parentKey) : null;
+    const gm = par.motherId != null ? String(par.motherId) : null;
+    return Aid === gf || Aid === gm;
+  };
+  if (grandChild(fatherB) || grandChild(motherB)) {
+    return bMale ? (aMale ? 'حفيده' : 'حفيدها') : (aMale ? 'حفيدته' : 'حفيدتها');
+  }
+
+  return null;
+}
+
 /**
  * الدالة الرئيسية: تُستدعى من الواجهة
- * personsByDisplayId: كائن { displayId: personObject }  (يحتوي على gender و parentKey)
+ * personsByDisplayId: كائن { displayId: personObject }  (يحتوي على gender و parentKey و motherId)
  * id1, id2: أرقام أو نصوص (معرّف الشخص المعروض في الشجرة)
  */
 function computeRelationship(id1, id2, personsByDisplayId) {
@@ -130,27 +211,35 @@ function computeRelationship(id1, id2, personsByDisplayId) {
     return { ok: true, text: 'نفس الشخص', sameParty: true, linkPerson: null };
   }
 
+  // (1) صلة القرابة المباشرة (تشمل الأم: أم/خال/خالة …)
+  const directTerm = computeDirectRelation(personA, personB, personsByDisplayId);
+
+  // (2) صلة القرابة من ناحية الأب (خوارزمية أقرب جد مشترك)
   const lca = findLCA(key1, key2, personsByDisplayId);
-  if (!lca) {
-    return { ok: false, reason: 'لا توجد صلة قرابة معروفة بين هذين الشخصين (فرعان مختلفان من العائلة)' };
+  let paternalText = null;
+  let linkPerson = null;
+  if (lca) {
+    const relText = describeRelationship(personA, personB, lca.d1, lca.d2);
+    paternalText = `الشخص صاحب المعرّف ${key2} هو ${relText} بالنسبة إلى الشخص صاحب المعرّف ${key1}`;
+    // الشخص الذي "يربط" بينهما هو أقرب جد مشترك إن كان مسجّلاً كفرد حقيقي
+    if (!lca.lcaKey.startsWith('v') && personsByDisplayId[lca.lcaKey]) {
+      const lp = personsByDisplayId[lca.lcaKey];
+      linkPerson = { id: lp.displayId, name: lp.firstName };
+    }
   }
 
-  const relText = describeRelationship(personA, personB, lca.d1, lca.d2);
-
-  // الشخص الذي "يربط" بين الاثنين هو أقرب جد مشترك (LCA)، إن كان مسجّلاً كفرد حقيقي في الشجرة
-  let linkPerson = null;
-  if (!lca.lcaKey.startsWith('v') && personsByDisplayId[lca.lcaKey]) {
-    const lp = personsByDisplayId[lca.lcaKey];
-    linkPerson = { id: lp.displayId, name: lp.firstName };
+  if (!directTerm && !paternalText) {
+    return { ok: false, reason: 'لا توجد صلة قرابة معروفة بين هذين الشخصين (فرعان مختلفان من العائلة)' };
   }
 
   return {
     ok: true,
-    text: `الشخص صاحب المعرّف ${key2} هو ${relText} بالنسبة إلى الشخص صاحب المعرّف ${key1}`,
-    relationTerm: relText,
+    directTerm: directTerm || null,
+    paternalText,                                   // قد تكون null
+    text: paternalText || (directTerm ? `الشخص صاحب المعرّف ${key2} هو ${directTerm} بالنسبة إلى الشخص صاحب المعرّف ${key1}` : ''),
     linkPerson
   };
 }
 
-window.FamilyRelationship = { computeRelationship, getAncestorChain, findLCA };
-if (typeof module !== 'undefined') { module.exports = { computeRelationship, getAncestorChain, findLCA }; }
+window.FamilyRelationship = { computeRelationship, computeDirectRelation, getAncestorChain, findLCA };
+if (typeof module !== 'undefined') { module.exports = { computeRelationship, computeDirectRelation, getAncestorChain, findLCA }; }

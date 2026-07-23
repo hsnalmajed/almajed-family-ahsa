@@ -169,6 +169,7 @@ function renderRequests() {
           <div class="req-meta">الهاتف الجديد: ${r.phone ? escapeHtml(r.phone) : 'بدون تغيير'} | الصورة: ${r.photoURL ? 'محدَّثة' : 'بدون تغيير'}</div>
           <div class="req-meta">الحالة الجديدة: ${STATUS_LABELS_AR[r.status] || r.status}</div>
           <div class="req-meta">الحالة الاجتماعية: ${escapeHtml(maritalLabel(r.maritalStatus, (allPersonsAdmin.find(p => p.displayId === r.targetPersonId) || {}).gender, r.spouseFamilies || r.spouseFamily) + spouseLinksLabel((allPersonsAdmin.find(p => p.displayId === r.targetPersonId) || {}).gender, r.spouseLinks))}</div>
+          ${(r.motherId || r.motherId === 0) ? `<div class="req-meta">الأم: (${r.motherId}) ${escapeHtml((allPersonsAdmin.find(p => p.displayId === Number(r.motherId)) || {}).firstName || '')}</div>` : ''}
         </div>
         <div class="req-actions">
           <button class="btn btn-primary btn-sm" data-approve-update="${r.id}">قبول</button>
@@ -341,6 +342,10 @@ async function approveUpdateRequest(requestId, btnEl) {
           ? (reqData.spouseFamilies || (reqData.spouseFamily ? [reqData.spouseFamily] : []))
           : [];
         updates.spouseLinks = married ? (reqData.spouseLinks || []) : [];
+      }
+      // الأم (ربط بمعرّف شخص في الشجرة، أو إزالتها بالقيمة null)
+      if (reqData.motherId === null || typeof reqData.motherId === 'number') {
+        updates.motherId = reqData.motherId;
       }
 
       tx.update(personRef, updates);
