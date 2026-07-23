@@ -4,6 +4,7 @@
 
 let pendingRequests = [];
 let allPersonsAdmin = [];
+let personsByDisplayIdAdmin = {};
 let selectedRootPhotoFile = null;
 
 // حالة تبويب شجرة العائلة (تعديل/إضافة/حذف فوري)
@@ -169,7 +170,7 @@ function renderRequests() {
           <div class="req-meta">الهاتف الجديد: ${r.phone ? escapeHtml(r.phone) : 'بدون تغيير'} | الصورة: ${r.photoURL ? 'محدَّثة' : 'بدون تغيير'}</div>
           <div class="req-meta">الحالة الجديدة: ${STATUS_LABELS_AR[r.status] || r.status}</div>
           <div class="req-meta">الحالة الاجتماعية: ${escapeHtml(maritalLabel(r.maritalStatus, (allPersonsAdmin.find(p => p.displayId === r.targetPersonId) || {}).gender, r.spouseFamilies || r.spouseFamily) + spouseLinksLabel((allPersonsAdmin.find(p => p.displayId === r.targetPersonId) || {}).gender, r.spouseLinks))}</div>
-          ${(r.motherId || r.motherId === 0) ? `<div class="req-meta">الأم: (${r.motherId}) ${escapeHtml((allPersonsAdmin.find(p => p.displayId === Number(r.motherId)) || {}).firstName || '')}</div>` : ''}
+          ${(r.motherId || r.motherId === 0) ? `<div class="req-meta">الأم: (${r.motherId}) ${escapeHtml((allPersonsAdmin.find(p => p.displayId === Number(r.motherId)) || {}).firstName || '')}</div>` : (r.motherName ? `<div class="req-meta">الأم: ${escapeHtml(r.motherName)}</div>` : '')}
         </div>
         <div class="req-actions">
           <button class="btn btn-primary btn-sm" data-approve-update="${r.id}">قبول</button>
@@ -343,9 +344,12 @@ async function approveUpdateRequest(requestId, btnEl) {
           : [];
         updates.spouseLinks = married ? (reqData.spouseLinks || []) : [];
       }
-      // الأم (ربط بمعرّف شخص في الشجرة، أو إزالتها بالقيمة null)
+      // الأم (ربط بمعرّف شخص في الشجرة، أو اسم عائلة الأم من خارج الشجرة)
       if (reqData.motherId === null || typeof reqData.motherId === 'number') {
         updates.motherId = reqData.motherId;
+      }
+      if (typeof reqData.motherName === 'string') {
+        updates.motherName = reqData.motherName;
       }
 
       tx.update(personRef, updates);
@@ -399,6 +403,8 @@ function listenToPersonsAdmin() {
   db.collection('persons').orderBy('displayId').onSnapshot(snapshot => {
     allPersonsAdmin = [];
     snapshot.forEach(doc => allPersonsAdmin.push({ id: doc.id, ...doc.data() }));
+    personsByDisplayIdAdmin = {};
+    allPersonsAdmin.forEach(p => { personsByDisplayIdAdmin[String(p.displayId)] = p; });
     renderPersonsList(allPersonsAdmin);
     renderAdminTree();
   }, err => console.error(err));
@@ -601,8 +607,144 @@ function applyMaritalLabelsAdmin(scopeEl, gender) {
   scopeEl.querySelectorAll('.marital-single-lbl').forEach(el => { el.textContent = female ? 'غير متزوجة' : 'غير متزوج'; });
   scopeEl.querySelectorAll('.marital-married-lbl').forEach(el => { el.textContent = female ? 'متزوجة' : 'متزوج'; });
   scopeEl.querySelectorAll('.spouse-label').forEach(el => { el.textContent = female ? 'عائلة الزوج' : 'عائلة الزوجة'; });
-  scopeEl.querySelectorAll('.spouse-group input').forEach(el => { el.placeholder = female ? 'اسم عائلة الزوج' : 'اسم عائلة الزوجة'; });
+  scopeEl.querySelectorAll('#admin-edit-spouse-family, #admin-add-spouse-family, #root-spouse-family').forEach(el => { el.placeholder = female ? 'اسم عائلة الزوج' : 'اسم عائلة الزوجة'; });
+  scopeEl.querySelectorAll('.spouse-origin-label').forEach(el => { el.textContent = female ? 'هل الزوج من عائلة الماجد؟' : 'هل الزوجة من عائلة الماجد؟'; });
+  scopeEl.querySelectorAll('.spouse-link-label').forEach(el => {
+    el.textContent = female ? 'ابحث عن الزوج في شجرة العائلة (بالمعرّف أو الاسم)' : 'ابحث عن الزوجة في شجرة العائلة (بالمعرّف أو الاسم)';
+  });
 }
+
+// اقتراحات الأشخاص (معرّف أو اسم) للربط داخل لوحة المدير
+function matchPersonsAdmin(query) {
+  const q = String(query || '').trim();
+  if (!q) return [];
+  if (/^\d+$/.test(q)) return allPersonsAdmin.filter(p => String(p.displayId) === q);
+  const needle = q.toLowerCase();
+  return allPersonsAdmin.filter(p => String(p.firstName || '').toLowerCase().includes(needle)).slice(0, 8);
+}
+
+// قائمة ربط الأزواج من داخل الشجرة (لوحة المدير) — تخزّن {id, name}
+function createSpouseLinkListAdmin(inputId, sugId, chipsId) {
+  const input = document.getElementById(inputId);
+  const sug = document.getElementById(sugId);
+  const chips = document.getElementById(chipsId);
+  const state = [];
+
+  function renderChips() {
+    if (!chips) return;
+    chips.innerHTML = '';
+    state.forEach((item, i) => {
+      const chip = document.createElement('span');
+      chip.className = 'family-chip-edit spouse-chip-link';
+      const badge = document.createElement('span');
+      badge.className = 'chip-origin-badge';
+      badge.textContent = 'من العائلة';
+      chip.appendChild(badge);
+      chip.appendChild(document.createTextNode(` (${item.id}) ${item.name}`));
+      const x = document.createElement('button');
+      x.type = 'button'; x.className = 'family-chip-remove'; x.textContent = '✕';
+      x.addEventListener('click', () => { state.splice(i, 1); renderChips(); });
+      chip.appendChild(x);
+      chips.appendChild(chip);
+    });
+  }
+  const hide = () => { if (sug) { sug.style.display = 'none'; sug.innerHTML = ''; } };
+
+  if (input) {
+    input.addEventListener('input', () => {
+      const matches = matchPersonsAdmin(input.value);
+      if (!matches.length) { hide(); return; }
+      sug.innerHTML = matches.map(p => `
+        <div class="search-result-item" data-id="${p.displayId}">
+          <span class="sr-name"><b class="sr-id">(${p.displayId})</b> ${escapeHtml(shortLineageAdmin(p, 2))}</span>
+        </div>`).join('');
+      sug.style.display = 'block';
+      sug.querySelectorAll('[data-id]').forEach(el => {
+        el.addEventListener('click', () => {
+          const p = personsByDisplayIdAdmin[el.dataset.id];
+          if (p && !state.some(s => String(s.id) === String(p.displayId))) {
+            state.push({ id: Number(p.displayId), name: shortLineageAdmin(p, 2) });
+            renderChips();
+          }
+          input.value = ''; hide();
+        });
+      });
+    });
+    document.addEventListener('click', e => { if (e.target !== input && sug && !sug.contains(e.target)) hide(); });
+  }
+
+  return {
+    values() { return state.map(s => ({ id: s.id, name: s.name })); },
+    set(list) {
+      state.length = 0;
+      (list || []).forEach(v => { if (v && v.id != null) state.push({ id: Number(v.id), name: String(v.name || '') }); });
+      if (input) input.value = '';
+      renderChips();
+    },
+    clear() { this.set([]); }
+  };
+}
+
+function refreshSpouseOriginAdmin(radioName, linkBlockId, familyBlockId) {
+  const linkBlock = document.getElementById(linkBlockId);
+  const famBlock = document.getElementById(familyBlockId);
+  const yes = document.querySelector(`input[name="${radioName}"]:checked`)?.value === 'yes';
+  if (linkBlock) linkBlock.style.display = yes ? 'block' : 'none';
+  if (famBlock) famBlock.style.display = yes ? 'none' : 'block';
+}
+function bindSpouseOriginToggleAdmin(radioName, linkBlockId, familyBlockId) {
+  document.querySelectorAll(`input[name="${radioName}"]`).forEach(r => {
+    r.addEventListener('change', () => refreshSpouseOriginAdmin(radioName, linkBlockId, familyBlockId));
+  });
+}
+
+// يملأ قائمة "الأم" من زوجات والد الشخص المسجّلات في الشجرة
+function populateMotherOptionsAdmin(person, selectId, hintId) {
+  const sel = document.getElementById(selectId);
+  const hint = document.getElementById(hintId);
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— غير محددة —</option>';
+  const father = (person.parentKey && !String(person.parentKey).startsWith('v'))
+    ? personsByDisplayIdAdmin[String(person.parentKey)] : null;
+  if (!father) {
+    sel.disabled = true;
+    if (hint) hint.textContent = 'لا يمكن تحديد الأم: لا يوجد أب مسجّل لهذا الشخص في الشجرة.';
+    return;
+  }
+  const links = Array.isArray(father.spouseLinks) ? father.spouseLinks : [];
+  const fams = personFamiliesAdmin(father);
+  if (!links.length && !fams.length) {
+    sel.disabled = true;
+    if (hint) hint.textContent = 'لا توجد زوجات مسجّلات لوالد هذا الشخص. أضِف زوجات الأب أولاً.';
+    return;
+  }
+  sel.disabled = false;
+  if (hint) hint.textContent = 'تُختار من زوجات والد هذا الشخص (اختيار زوجة من العائلة يُفعّل صلات القرابة تلقائياً).';
+  links.forEach(w => {
+    const nm = w.name || (personsByDisplayIdAdmin[String(w.id)] ? shortLineageAdmin(personsByDisplayIdAdmin[String(w.id)], 2) : '');
+    const opt = document.createElement('option');
+    opt.value = 'id:' + w.id;
+    opt.dataset.mid = String(w.id);
+    opt.dataset.mname = nm;
+    opt.textContent = `من العائلة — (${w.id}) ${nm}`;
+    sel.appendChild(opt);
+  });
+  fams.forEach(fname => {
+    const label = 'من عائلة ' + fname;
+    const opt = document.createElement('option');
+    opt.value = 'fam:' + fname;
+    opt.dataset.mid = '';
+    opt.dataset.mname = label;
+    opt.textContent = label;
+    sel.appendChild(opt);
+  });
+  if (person.motherId != null) sel.value = 'id:' + person.motherId;
+  else if (person.motherName) {
+    const match = Array.from(sel.options).find(o => o.dataset && o.dataset.mname === person.motherName);
+    if (match) sel.value = match.value;
+  }
+}
+let adminEditSpouseLinkList = null;
 function bindMaritalToggleAdmin(radioName, groupId) {
   const group = document.getElementById(groupId);
   if (!group) return;
@@ -642,6 +784,15 @@ function openAdminEditModal(person) {
   if (adminEditFamilyList) adminEditFamilyList.set(personFamiliesAdmin(person));
   refreshMaritalGroupAdmin('admin-edit-marital', 'admin-edit-spouse-group');
 
+  // الزوجات من العائلة (روابط) + سؤال "من عائلة الماجد؟"
+  const links = Array.isArray(person.spouseLinks) ? person.spouseLinks : [];
+  document.querySelectorAll('input[name="admin-edit-spouse-in-family"]').forEach(r => { r.checked = (r.value === (links.length ? 'yes' : 'no')); });
+  if (adminEditSpouseLinkList) adminEditSpouseLinkList.set(links);
+  refreshSpouseOriginAdmin('admin-edit-spouse-in-family', 'admin-edit-spouse-link-block', 'admin-edit-spouse-family-block');
+
+  // الأم
+  populateMotherOptionsAdmin(person, 'admin-edit-mother', 'admin-edit-mother-hint');
+
   document.getElementById('admin-edit-modal').classList.add('open');
 }
 function closeAdminEditModal() {
@@ -676,11 +827,36 @@ async function submitAdminEdit(evt) {
   btn.textContent = 'جارٍ الحفظ...';
 
   try {
-    const updates = { firstName, gender, phone, status, ...readMarital('admin-edit-marital', adminEditFamilyList) };
+    const married = document.querySelector('input[name="admin-edit-marital"]:checked')?.value === 'married';
+    const spouseLinks = married && adminEditSpouseLinkList ? adminEditSpouseLinkList.values() : [];
+    const spouseFamilies = married && adminEditFamilyList ? adminEditFamilyList.values() : [];
+    const motherOpt = document.getElementById('admin-edit-mother')?.selectedOptions?.[0];
+    const motherId = (motherOpt && motherOpt.dataset.mid) ? Number(motherOpt.dataset.mid) : null;
+    const motherName = (motherOpt && motherOpt.value) ? (motherOpt.dataset.mname || '') : '';
+
+    const updates = {
+      firstName, gender, phone, status,
+      maritalStatus: married ? 'married' : 'single',
+      spouseFamilies, spouseLinks, motherId, motherName
+    };
     if (selectedAdminEditPhotoFile) {
       updates.photoURL = await resizeImageToBase64Admin(selectedAdminEditPhotoFile);
     }
     await db.collection('persons').doc(selectedAdminTargetPerson.id).update(updates);
+
+    // ربط تبادلي: إضافة هذا الشخص كزوج/زوجة لدى كل زوجة مرتبطة من العائلة
+    for (const link of spouseLinks) {
+      try {
+        const wife = personsByDisplayIdAdmin[String(link.id)];
+        if (!wife) continue;
+        const existing = Array.isArray(wife.spouseLinks) ? wife.spouseLinks.slice() : [];
+        if (!existing.some(s => Number(s.id) === Number(selectedAdminTargetPerson.displayId))) {
+          existing.push({ id: Number(selectedAdminTargetPerson.displayId), name: firstName });
+          await db.collection('persons').doc(wife.id).update({ maritalStatus: 'married', spouseLinks: existing });
+        }
+      } catch (e) { console.error('تعذّر الربط التبادلي مع', link, e); }
+    }
+
     closeAdminEditModal();
   } catch (err) {
     console.error(err);
@@ -1525,6 +1701,10 @@ document.addEventListener('DOMContentLoaded', () => {
   adminEditFamilyList = createFamilyListAdmin('admin-edit-spouse-family', 'admin-edit-spouse-family-add', 'admin-edit-spouse-family-chips');
   adminAddFamilyList = createFamilyListAdmin('admin-add-spouse-family', 'admin-add-spouse-family-add', 'admin-add-spouse-family-chips');
   rootFamilyList = createFamilyListAdmin('root-spouse-family', 'root-spouse-family-add', 'root-spouse-family-chips');
+
+  // ربط الزوجة من داخل الشجرة + سؤال "من عائلة الماجد؟" في نافذة تعديل المدير
+  adminEditSpouseLinkList = createSpouseLinkListAdmin('admin-edit-spouse-link-input', 'admin-edit-spouse-link-sug', 'admin-edit-spouse-link-chips');
+  bindSpouseOriginToggleAdmin('admin-edit-spouse-in-family', 'admin-edit-spouse-link-block', 'admin-edit-spouse-family-block');
   // في نافذة الإضافة المباشرة تتغيّر الصيغة بحسب الجنس المختار
   document.querySelectorAll('input[name="root-gender"]').forEach(r => {
     r.addEventListener('change', () => {

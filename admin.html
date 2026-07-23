@@ -149,6 +149,14 @@
         </div>
       </div>
 
+      <div class="form-group" id="admin-edit-mother-group">
+        <label for="admin-edit-mother">الأم</label>
+        <select id="admin-edit-mother" class="mother-select">
+          <option value="">— غير محددة —</option>
+        </select>
+        <p class="family-hint" id="admin-edit-mother-hint">تُختار من زوجات والد هذا الشخص المسجّلات في الشجرة (لربط الأبناء بأمهاتهم).</p>
+      </div>
+
       <div class="form-group">
         <label>الحالة الاجتماعية</label>
         <div class="status-toggle">
@@ -158,13 +166,37 @@
       </div>
 
       <div class="form-group spouse-group" id="admin-edit-spouse-group" style="display:none;">
-        <label for="admin-edit-spouse-family" class="spouse-label">عائلة الزوجة</label>
-        <div class="family-input-row">
-          <input type="text" id="admin-edit-spouse-family" placeholder="اسم عائلة الزوجة">
-          <button type="button" class="btn btn-secondary btn-sm" id="admin-edit-spouse-family-add">➕ إضافة</button>
+        <label class="spouse-section-label">الزوجات / الأزواج المسجّلون</label>
+        <p class="family-hint">أضِف كل زوجة على حدة: اختر «نعم» للبحث عنها داخل شجرة العائلة، أو «لا» لكتابة اسم عائلتها.</p>
+
+        <div class="spouse-origin">
+          <label class="spouse-origin-label">هل الزوجة من عائلة الماجد؟</label>
+          <div class="status-toggle">
+            <label><input type="radio" name="admin-edit-spouse-in-family" value="no" checked><span>لا</span></label>
+            <label><input type="radio" name="admin-edit-spouse-in-family" value="yes"><span>نعم</span></label>
+          </div>
         </div>
-        <div class="family-chips-edit" id="admin-edit-spouse-family-chips"></div>
-        <p class="family-hint">يمكنك إضافة أكثر من عائلة: اكتب الاسم ثم اضغط «إضافة» أو Enter.</p>
+
+        <div id="admin-edit-spouse-link-block" style="display:none;">
+          <label for="admin-edit-spouse-link-input" class="spouse-link-label">ابحث عن الزوجة في شجرة العائلة (بالمعرّف أو الاسم)</label>
+          <div class="rel-picker">
+            <input type="text" id="admin-edit-spouse-link-input" class="spouse-link-input" placeholder="المعرّف أو الاسم الثلاثي" autocomplete="off">
+            <div class="rel-suggestions" id="admin-edit-spouse-link-sug"></div>
+          </div>
+        </div>
+
+        <div id="admin-edit-spouse-family-block">
+          <label for="admin-edit-spouse-family" class="spouse-label">عائلة الزوجة</label>
+          <div class="family-input-row">
+            <input type="text" id="admin-edit-spouse-family" placeholder="اسم عائلة الزوجة">
+            <button type="button" class="btn btn-secondary btn-sm" id="admin-edit-spouse-family-add">➕ إضافة</button>
+          </div>
+        </div>
+
+        <div class="spouse-all-chips">
+          <div class="family-chips-edit" id="admin-edit-spouse-link-chips"></div>
+          <div class="family-chips-edit" id="admin-edit-spouse-family-chips"></div>
+        </div>
       </div>
 
       <div class="modal-actions">
@@ -320,6 +352,6 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
 <script src="firebase-config.js"></script>
-<script src="admin.js?v=53"></script>
+<script src="admin.js?v=54"></script>
 </body>
 </html>

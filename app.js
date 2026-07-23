@@ -473,14 +473,24 @@ function renderPersonNav(person) {
   if (father) { fatherBox.appendChild(mkBtn(father)); fatherGroup.style.display = 'flex'; }
   else fatherGroup.style.display = 'none';
 
-  // الأم (إن كانت مرتبطة من داخل الشجرة)
+  // الأم: من داخل الشجرة (قابلة للنقر) أو اسمها فقط إن كانت من خارجها
   const motherGroup = document.getElementById('pn-mother-group');
   const motherBox = document.getElementById('pn-mother');
   const mother = (person.motherId != null) ? personsByDisplayId[String(person.motherId)] : null;
+  let hasMotherInfo = false;
   if (motherGroup && motherBox) {
     motherBox.innerHTML = '';
-    if (mother) { motherBox.appendChild(mkBtn(mother)); motherGroup.style.display = 'flex'; }
-    else motherGroup.style.display = 'none';
+    if (mother) {
+      motherBox.appendChild(mkBtn(mother));
+      hasMotherInfo = true;
+    } else if (person.motherName) {
+      const chip = document.createElement('span');
+      chip.className = 'pn-chip pn-chip-static';
+      chip.textContent = person.motherName;
+      motherBox.appendChild(chip);
+      hasMotherInfo = true;
+    }
+    motherGroup.style.display = hasMotherInfo ? 'flex' : 'none';
   }
 
   const kids = allPersons.filter(p => String(p.parentKey) === String(person.displayId));
@@ -527,11 +537,11 @@ function renderPersonNav(person) {
       });
       spouseGroup.style.display = 'flex';
     } else spouseGroup.style.display = 'none';
-    nav.style.display = (father || mother || kids.length || showSpouse) ? 'block' : 'none';
+    nav.style.display = (father || hasMotherInfo || kids.length || showSpouse) ? 'block' : 'none';
     return;
   }
 
-  nav.style.display = (father || mother || kids.length) ? 'block' : 'none';
+  nav.style.display = (father || hasMotherInfo || kids.length) ? 'block' : 'none';
 }
 
 // فتح الموقع على شخص محدد عبر رابط مثل ?id=147
@@ -643,29 +653,50 @@ function populateMotherOptions(person) {
 
   const father = (person.parentKey && !String(person.parentKey).startsWith('v'))
     ? personsByDisplayId[String(person.parentKey)] : null;
-  const wives = father && Array.isArray(father.spouseLinks) ? father.spouseLinks : [];
-
   if (!father) {
     sel.disabled = true;
     if (hint) hint.textContent = 'لا يمكن تحديد الأم: لا يوجد أب مسجّل لهذا الشخص في الشجرة.';
     return;
   }
-  if (!wives.length) {
+
+  const links = Array.isArray(father.spouseLinks) ? father.spouseLinks : [];
+  const fams = personFamilies(father);
+  if (!links.length && !fams.length) {
     sel.disabled = true;
-    if (hint) hint.textContent = 'لا توجد زوجات مسجّلات لوالد هذا الشخص من داخل العائلة. أضِف زوجة الأب أولاً في صفحة الأب.';
+    if (hint) hint.textContent = 'لا توجد زوجات مسجّلات لوالد هذا الشخص. أضِف زوجات الأب أولاً في صفحة الأب.';
     return;
   }
 
   sel.disabled = false;
-  if (hint) hint.textContent = 'تُختار من زوجات والد هذا الشخص المسجّلات في شجرة العائلة (لربط الأبناء بأمهاتهم).';
-  wives.forEach(w => {
+  if (hint) hint.textContent = 'تُختار من زوجات والد هذا الشخص (اختيار زوجة من العائلة يُفعّل صلات القرابة تلقائياً).';
+
+  // (1) زوجات من العائلة — لها معرّف في الشجرة (تُفعّل صلة القرابة: أم/خال/خالة)
+  links.forEach(w => {
+    const nm = w.name || (personsByDisplayId[String(w.id)] ? shortLineage(personsByDisplayId[String(w.id)], 2) : '');
     const opt = document.createElement('option');
-    opt.value = String(w.id);
-    opt.textContent = `(${w.id}) ${w.name || (personsByDisplayId[String(w.id)] ? shortLineage(personsByDisplayId[String(w.id)], 2) : '')}`;
+    opt.value = 'id:' + w.id;
+    opt.dataset.mid = String(w.id);
+    opt.dataset.mname = nm;
+    opt.textContent = `من العائلة — (${w.id}) ${nm}`;
     sel.appendChild(opt);
   });
+  // (2) زوجات من خارج العائلة — أسماء عوائل فقط (تُسجَّل كاسم دون ربط)
+  fams.forEach(fname => {
+    const label = 'من عائلة ' + fname;
+    const opt = document.createElement('option');
+    opt.value = 'fam:' + fname;
+    opt.dataset.mid = '';
+    opt.dataset.mname = label;
+    opt.textContent = label;
+    sel.appendChild(opt);
+  });
+
   // القيمة الحالية إن كانت مسجّلة
-  if (person.motherId != null) sel.value = String(person.motherId);
+  if (person.motherId != null) sel.value = 'id:' + person.motherId;
+  else if (person.motherName) {
+    const match = Array.from(sel.options).find(o => o.dataset && o.dataset.mname === person.motherName);
+    if (match) sel.value = match.value;
+  }
 }
 
 function handleUpdatePhotoSelect(evt) {
@@ -702,6 +733,13 @@ async function submitUpdateInfo(evt) {
   const spouseLinkVals = (isMarried && updateSpouseLinkList) ? updateSpouseLinkList.values() : [];
   const spouseFamilyVals = (isMarried && updateFamilyList) ? updateFamilyList.values() : [];
 
+  // الأم: قد تكون من العائلة (id) أو من خارجها (اسم عائلة فقط)
+  const motherChoice = (function () {
+    const opt = document.getElementById('update-mother')?.selectedOptions?.[0];
+    if (!opt || !opt.value) return { id: null, name: '' };
+    return { id: opt.dataset.mid ? Number(opt.dataset.mid) : null, name: opt.dataset.mname || '' };
+  })();
+
   const btn = document.getElementById('submit-update-btn');
   btn.disabled = true;
   btn.textContent = 'جارٍ الإرسال...';
@@ -722,10 +760,8 @@ async function submitUpdateInfo(evt) {
       spouseFamilies: spouseFamilyVals,
       spouseLinks: spouseLinkVals,
       spouseInFamily: spouseLinkVals.length > 0,
-      motherId: (function () {
-        const v = document.getElementById('update-mother')?.value;
-        return v ? Number(v) : null;
-      })(),
+      motherId: motherChoice.id,
+      motherName: motherChoice.name,
       requestStatus: 'pending',
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     };
