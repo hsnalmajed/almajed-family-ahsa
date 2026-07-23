@@ -553,7 +553,7 @@ function personFamiliesAdmin(p) {
   return p.spouseFamily ? [p.spouseFamily] : [];
 }
 
-function createFamilyListAdmin(inputId, addBtnId, chipsId) {
+function createFamilyListAdmin(inputId, addBtnId, chipsId, canAddFn) {
   const input = document.getElementById(inputId);
   const addBtn = document.getElementById(addBtnId);
   const chips = document.getElementById(chipsId);
@@ -580,6 +580,7 @@ function createFamilyListAdmin(inputId, addBtnId, chipsId) {
     if (!input) return;
     const v = input.value.trim().replace(/\s+/g, ' ');
     if (!v) return;
+    if (canAddFn && !canAddFn()) { input.value = ''; return; }
     if (!state.some(x => familyKeyAdmin(x) === familyKeyAdmin(v))) state.push(v);
     input.value = '';
     render();
@@ -592,6 +593,7 @@ function createFamilyListAdmin(inputId, addBtnId, chipsId) {
 
   return {
     values() { add(); return state.slice(); },
+    size() { return state.length; },
     set(list) {
       state.length = 0;
       (list || []).forEach(v => { const t = String(v).trim(); if (t) state.push(t); });
@@ -617,6 +619,12 @@ function applyMaritalLabelsAdmin(scopeEl, gender) {
   scopeEl.querySelectorAll('.spouse-link-label').forEach(el => {
     el.textContent = female ? 'ابحث عن الزوج في شجرة العائلة (بالمعرّف أو الاسم)' : 'ابحث عن الزوجة في شجرة العائلة (بالمعرّف أو الاسم)';
   });
+  const secLbl = scopeEl.querySelector('#admin-edit-spouse-section-label');
+  if (secLbl) secLbl.textContent = female ? 'الزوج المسجّل' : 'الزوجات المسجّلات';
+  const multiHint = scopeEl.querySelector('#admin-edit-spouse-multi-hint');
+  if (multiHint) multiHint.textContent = female
+    ? 'يمكن إضافة زوج واحد فقط: اختر «نعم» للبحث عنه في الشجرة، أو «لا» لكتابة اسم عائلته.'
+    : 'أضِف كل زوجة على حدة: اختر «نعم» للبحث عنها في الشجرة، أو «لا» لكتابة اسم عائلتها.';
 }
 
 // اقتراحات الأشخاص (معرّف أو اسم) للربط داخل لوحة المدير
@@ -629,7 +637,7 @@ function matchPersonsAdmin(query) {
 }
 
 // قائمة ربط الأزواج من داخل الشجرة (لوحة المدير) — تخزّن {id, name}
-function createSpouseLinkListAdmin(inputId, sugId, chipsId) {
+function createSpouseLinkListAdmin(inputId, sugId, chipsId, canAddFn) {
   const input = document.getElementById(inputId);
   const sug = document.getElementById(sugId);
   const chips = document.getElementById(chipsId);
@@ -667,6 +675,7 @@ function createSpouseLinkListAdmin(inputId, sugId, chipsId) {
       sug.querySelectorAll('[data-id]').forEach(el => {
         el.addEventListener('click', () => {
           const p = personsByDisplayIdAdmin[el.dataset.id];
+          if (canAddFn && !canAddFn()) { input.value = ''; hide(); return; }
           if (p && !state.some(s => String(s.id) === String(p.displayId))) {
             state.push({ id: Number(p.displayId), name: shortLineageAdmin(p, 2) });
             renderChips();
@@ -680,6 +689,7 @@ function createSpouseLinkListAdmin(inputId, sugId, chipsId) {
 
   return {
     values() { return state.map(s => ({ id: s.id, name: s.name })); },
+    size() { return state.length; },
     set(list) {
       state.length = 0;
       (list || []).forEach(v => { if (v && v.id != null) state.push({ id: Number(v.id), name: String(v.name || '') }); });
@@ -688,6 +698,20 @@ function createSpouseLinkListAdmin(inputId, sugId, chipsId) {
     },
     clear() { this.set([]); }
   };
+}
+
+// للإناث في لوحة المدير: زوج واحد فقط (حسب الجنس المختار في النموذج)
+function adminEditSpouseCanAdd() {
+  const female = document.querySelector('input[name="admin-edit-gender"]:checked')?.value === 'female';
+  if (female) {
+    const total = (adminEditSpouseLinkList ? adminEditSpouseLinkList.size() : 0)
+                + (adminEditFamilyList ? adminEditFamilyList.size() : 0);
+    if (total >= 1) {
+      alert('للإناث يمكن إضافة زوج واحد فقط. احذف الزوج الحالي أولاً إن أردت تغييره.');
+      return false;
+    }
+  }
+  return true;
 }
 
 function refreshSpouseOriginAdmin(radioName, linkBlockId, familyBlockId) {
@@ -1703,12 +1727,12 @@ document.addEventListener('DOMContentLoaded', () => {
   bindMaritalToggleAdmin('admin-edit-marital', 'admin-edit-spouse-group');
   bindMaritalToggleAdmin('admin-add-marital', 'admin-add-spouse-group');
   bindMaritalToggleAdmin('root-marital', 'root-spouse-group');
-  adminEditFamilyList = createFamilyListAdmin('admin-edit-spouse-family', 'admin-edit-spouse-family-add', 'admin-edit-spouse-family-chips');
+  adminEditFamilyList = createFamilyListAdmin('admin-edit-spouse-family', 'admin-edit-spouse-family-add', 'admin-edit-spouse-family-chips', adminEditSpouseCanAdd);
   adminAddFamilyList = createFamilyListAdmin('admin-add-spouse-family', 'admin-add-spouse-family-add', 'admin-add-spouse-family-chips');
   rootFamilyList = createFamilyListAdmin('root-spouse-family', 'root-spouse-family-add', 'root-spouse-family-chips');
 
   // ربط الزوجة من داخل الشجرة + سؤال "من عائلة الماجد؟" في نافذة تعديل المدير
-  adminEditSpouseLinkList = createSpouseLinkListAdmin('admin-edit-spouse-link-input', 'admin-edit-spouse-link-sug', 'admin-edit-spouse-link-chips');
+  adminEditSpouseLinkList = createSpouseLinkListAdmin('admin-edit-spouse-link-input', 'admin-edit-spouse-link-sug', 'admin-edit-spouse-link-chips', adminEditSpouseCanAdd);
   bindSpouseOriginToggleAdmin('admin-edit-spouse-in-family', 'admin-edit-spouse-link-block', 'admin-edit-spouse-family-block');
   // في نافذة الإضافة المباشرة تتغيّر الصيغة بحسب الجنس المختار
   document.querySelectorAll('input[name="root-gender"]').forEach(r => {

@@ -636,6 +636,15 @@ function openUpdateModal(person) {
   // الأم: خيارات من زوجات والد هذا الشخص المسجّلات في الشجرة
   populateMotherOptions(person);
 
+  // نصوص قسم الأزواج بحسب الجنس (الأنثى: زوج واحد فقط)
+  const female = person.gender === 'female';
+  const secLbl = document.getElementById('update-spouse-section-label');
+  const multiHint = document.getElementById('update-spouse-multi-hint');
+  if (secLbl) secLbl.textContent = female ? 'الزوج المسجّل' : 'الزوجات المسجّلات';
+  if (multiHint) multiHint.textContent = female
+    ? 'يمكن إضافة زوج واحد فقط: اختر «نعم» للبحث عنه في الشجرة، أو «لا» لكتابة اسم عائلته.'
+    : 'أضِف كل زوجة على حدة: اختر «نعم» للبحث عنها في الشجرة، أو «لا» لكتابة اسم عائلتها. يمكنك إضافة أكثر من زوجة.';
+
   // هل الزوج/الزوجة من عائلة الماجد؟ — نحدّد الحالة من بيانات الشخص
   const links = Array.isArray(person.spouseLinks) ? person.spouseLinks : [];
   const inFamily = links.length ? 'yes' : 'no';
@@ -904,7 +913,7 @@ function bindSpouseOriginToggle(radioName, linkBlockId, familyBlockId) {
 }
 
 // قائمة ربط الأزواج من داخل الشجرة: بحث بالمعرّف أو الاسم ثم اختيار (يخزّن {id, name})
-function createSpouseLinkList(inputId, sugId, chipsId) {
+function createSpouseLinkList(inputId, sugId, chipsId, canAddFn) {
   const input = document.getElementById(inputId);
   const sug = document.getElementById(sugId);
   const chips = document.getElementById(chipsId);
@@ -943,6 +952,7 @@ function createSpouseLinkList(inputId, sugId, chipsId) {
       sug.querySelectorAll('[data-id]').forEach(el => {
         el.addEventListener('click', () => {
           const p = personsByDisplayId[el.dataset.id];
+          if (canAddFn && !canAddFn()) { input.value = ''; hide(); return; }
           if (p && !state.some(s => String(s.id) === String(p.displayId))) {
             state.push({ id: Number(p.displayId), name: shortLineage(p, 2) });
             renderChips();
@@ -956,6 +966,7 @@ function createSpouseLinkList(inputId, sugId, chipsId) {
 
   return {
     values() { return state.map(s => ({ id: s.id, name: s.name })); },
+    size() { return state.length; },
     set(list) {
       state.length = 0;
       (list || []).forEach(v => { if (v && v.id != null) state.push({ id: Number(v.id), name: String(v.name || '') }); });
@@ -967,11 +978,24 @@ function createSpouseLinkList(inputId, sugId, chipsId) {
 }
 let updateSpouseLinkList = null;
 
+// للإناث: يُسمح بزوج واحد فقط (مجموع الروابط + الأسماء = 1)
+function updateSpouseCanAdd() {
+  if (selectedTargetPerson && selectedTargetPerson.gender === 'female') {
+    const total = (updateSpouseLinkList ? updateSpouseLinkList.size() : 0)
+                + (updateFamilyList ? updateFamilyList.size() : 0);
+    if (total >= 1) {
+      showToast('للإناث يمكن إضافة زوج واحد فقط. احذف الزوج الحالي أولاً إن أردت تغييره.', true);
+      return false;
+    }
+  }
+  return true;
+}
+
 
 // ---------------------------------------------------------------------
 // حقل يقبل أكثر من اسم عائلة (للزوجات المتعددات أو تعدد الروابط)
 // ---------------------------------------------------------------------
-function createFamilyList(inputId, addBtnId, chipsId) {
+function createFamilyList(inputId, addBtnId, chipsId, canAddFn) {
   const input = document.getElementById(inputId);
   const addBtn = document.getElementById(addBtnId);
   const chips = document.getElementById(chipsId);
@@ -999,6 +1023,7 @@ function createFamilyList(inputId, addBtnId, chipsId) {
     if (!input) return;
     const v = input.value.trim().replace(/\s+/g, ' ');
     if (!v) return;
+    if (canAddFn && !canAddFn()) { input.value = ''; return; }
     // لا نكرّر نفس العائلة حتى لو اختلف الرسم
     if (!state.some(x => familyKey(x) === familyKey(v))) state.push(v);
     input.value = '';
@@ -1013,6 +1038,7 @@ function createFamilyList(inputId, addBtnId, chipsId) {
   return {
     // نضيف ما تبقّى مكتوباً في الحقل حتى لو نسي المستخدم الضغط على "إضافة"
     values() { add(); return state.slice(); },
+    size() { return state.length; },
     set(list) {
       state.length = 0;
       (list || []).forEach(v => { const t = String(v).trim(); if (t) state.push(t); });
@@ -1673,11 +1699,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // إظهار خانة عائلة الزوج/الزوجة عند اختيار "متزوج"
   bindMaritalToggle('update-marital', 'update-spouse-group');
   bindMaritalToggle('input-marital', 'input-spouse-group');
-  updateFamilyList = createFamilyList('update-spouse-family', 'update-spouse-add', 'update-spouse-chips');
+  updateFamilyList = createFamilyList('update-spouse-family', 'update-spouse-add', 'update-spouse-chips', updateSpouseCanAdd);
   addFamilyList = createFamilyList('input-spouse-family', 'input-spouse-add', 'input-spouse-chips');
 
   // سؤال "هل الزوج/الزوجة من عائلة الماجد؟" وربط الزوج/الزوجة من الشجرة
-  updateSpouseLinkList = createSpouseLinkList('update-spouse-link-input', 'update-spouse-link-sug', 'update-spouse-link-chips');
+  updateSpouseLinkList = createSpouseLinkList('update-spouse-link-input', 'update-spouse-link-sug', 'update-spouse-link-chips', updateSpouseCanAdd);
   bindSpouseOriginToggle('update-spouse-in-family', 'update-spouse-link-block', 'update-spouse-family-block');
 
   const closeFamBtn = document.getElementById('close-family-members-btn');
