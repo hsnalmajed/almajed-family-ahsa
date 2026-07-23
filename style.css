@@ -933,6 +933,23 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
 .rel-extra-title { font-weight: 800; margin-top: 10px; color: var(--gold-dark); font-size: .92rem; }
 .rel-extra { margin-top: 4px; padding: 6px 10px; background: rgba(207,154,46,.10); border-radius: 8px; }
 
+/* شريحة اسم الشخص القابلة للنقر داخل نتيجة الصلة */
+.rel-person {
+  display: inline-block;
+  font-family: inherit;
+  font-size: .9rem;
+  font-weight: 700;
+  color: var(--primary-dark);
+  background: #eef6f0;
+  border: 1px solid var(--primary);
+  border-radius: 7px;
+  padding: 1px 8px;
+  margin: 0 2px;
+  cursor: pointer;
+  transition: background .15s ease;
+}
+.rel-person:hover { background: var(--primary); color: #fff; }
+
 /* سؤال: هل الزوج/الزوجة من عائلة الماجد؟ */
 .spouse-section-label { display: block; font-weight: 800; color: var(--primary-dark); margin-bottom: 4px; }
 .spouse-origin { margin: 10px 0 12px; }

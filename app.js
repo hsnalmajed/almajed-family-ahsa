@@ -1278,6 +1278,28 @@ function resolveRelationInput(inputId) {
   return { error: `يوجد أكثر من شخص باسم «${val}» — اختر من القائمة` };
 }
 
+// شريحة قابلة للنقر تُظهر اسم الشخص ومعرّفه وتنقل إليه في الشجرة
+function personChipHtml(id) {
+  const p = personsByDisplayId[String(id)];
+  const name = p ? p.firstName : ('#' + id);
+  return `<button type="button" class="rel-person" data-goto="${id}">${escapeHtmlLocal(name)} (ID:${id})</button>`;
+}
+// يحوّل الرموز @{id} داخل نص الصلة إلى شرائح أسماء قابلة للنقر
+function renderRelText(str) {
+  return escapeHtmlLocal(String(str || '')).replace(/@\{(\d+)\}/g, (m, id) => personChipHtml(id));
+}
+// يربط النقر على شرائح الأشخاص بالانتقال إليهم في الشجرة
+function bindRelPersonClicks(scope) {
+  scope.querySelectorAll('.rel-person[data-goto]').forEach(el => {
+    el.addEventListener('click', () => {
+      const p = personsByDisplayId[el.dataset.goto];
+      if (!p) return;
+      scrollToPerson(p.displayId);
+      setTimeout(() => openChoiceModal(p), 320);
+    });
+  });
+}
+
 function handleRelationFinder(evt) {
   evt.preventDefault();
   const resultBox = document.getElementById('relation-result');
@@ -1302,18 +1324,19 @@ function handleRelationFinder(evt) {
     // (2) صلة القرابة من ناحية الأب
     if (result.paternalText) {
       html += `<div class="rel-paternal-title">صلة القرابة من ناحية الأب:</div>`;
-      html += `<div>${escapeHtmlLocal(result.paternalText)}</div>`;
+      html += `<div>${renderRelText(result.paternalText)}</div>`;
       if (result.linkPerson && String(result.linkPerson.id) !== String(id1) && String(result.linkPerson.id) !== String(id2)) {
-        html += `<div class="link-person-line">🔗 الشخص الذي يربط بينهما: <b>${escapeHtmlLocal(result.linkPerson.name)}</b> (#${result.linkPerson.id})</div>`;
+        html += `<div class="link-person-line">🔗 الشخص الذي يربط بينهما: ${personChipHtml(result.linkPerson.id)}</div>`;
       }
     }
     // (3) صلات إضافية عبر الأخوال/الأعمام
     if (result.extras && result.extras.length) {
       html += `<div class="rel-extra-title">صلات إضافية عبر الأخوال/الأعمام:</div>`;
-      result.extras.forEach(s => { html += `<div class="rel-extra">🔸 ${escapeHtmlLocal(s)}</div>`; });
+      result.extras.forEach(s => { html += `<div class="rel-extra">🔸 ${renderRelText(s)}</div>`; });
     }
     resultBox.innerHTML = html;
     resultBox.className = 'relation-result';
+    bindRelPersonClicks(resultBox);
   } else {
     resultBox.textContent = result.reason;
     resultBox.className = 'relation-result error';
