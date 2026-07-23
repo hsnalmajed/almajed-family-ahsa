@@ -474,6 +474,20 @@ function renderPersonNav(person) {
     return b;
   };
 
+  // الشخص نفسه (اسمه ومعرّفه) في أعلى البطاقة، قابل للنقر لتحديد موقعه في الشجرة
+  const selfGroup = document.getElementById('pn-self-group');
+  const selfBox = document.getElementById('pn-self');
+  if (selfGroup && selfBox) {
+    selfBox.innerHTML = '';
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'pn-chip';
+    b.textContent = person.firstName + ' (' + person.displayId + ')';
+    b.addEventListener('click', () => { closeChoiceModal(); setTimeout(() => scrollToPerson(person.displayId), 120); });
+    selfBox.appendChild(b);
+    selfGroup.style.display = 'flex';
+  }
+
   const pk = String(person.parentKey || '');
   const father = (!pk || pk.startsWith('v')) ? null : personsByDisplayId[pk];
   if (father) { fatherBox.appendChild(mkBtn(father)); fatherGroup.style.display = 'flex'; }
@@ -543,11 +557,11 @@ function renderPersonNav(person) {
       });
       spouseGroup.style.display = 'flex';
     } else spouseGroup.style.display = 'none';
-    nav.style.display = (father || hasMotherInfo || kids.length || showSpouse) ? 'block' : 'none';
+    nav.style.display = 'block';   // يظهر دائماً لأن صفّ "الشخص" حاضر دوماً
     return;
   }
 
-  nav.style.display = (father || hasMotherInfo || kids.length) ? 'block' : 'none';
+  nav.style.display = 'block';
 }
 
 // فتح الموقع على شخص محدد عبر رابط مثل ?id=147
