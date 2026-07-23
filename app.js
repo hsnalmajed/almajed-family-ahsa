@@ -480,6 +480,28 @@ function renderPersonNav(person) {
     kidsGroup.style.display = 'flex';
   } else kidsGroup.style.display = 'none';
 
+  // عائلة الزوجة/الزوج داخل نفس المربع مع الأب والأبناء
+  const spouseGroup = document.getElementById('pn-spouse-group');
+  const spouseBox = document.getElementById('pn-spouse');
+  const spouseLabel = document.getElementById('pn-spouse-label');
+  if (spouseGroup && spouseBox) {
+    spouseBox.innerHTML = '';
+    const fams = personFamilies(person);
+    const showSpouse = person.maritalStatus === 'married' && fams.length;
+    if (showSpouse) {
+      spouseLabel.textContent = person.gender === 'female' ? 'عائلة الزوج' : 'عائلة الزوجة';
+      fams.forEach(f => {
+        const chip = document.createElement('span');
+        chip.className = 'pn-chip pn-chip-static';
+        chip.textContent = f;
+        spouseBox.appendChild(chip);
+      });
+      spouseGroup.style.display = 'flex';
+    } else spouseGroup.style.display = 'none';
+    nav.style.display = (father || kids.length || showSpouse) ? 'block' : 'none';
+    return;
+  }
+
   nav.style.display = (father || kids.length) ? 'block' : 'none';
 }
 
@@ -494,12 +516,8 @@ function openPersonFromUrl() {
 
 function openChoiceModal(person) {
   selectedTargetPerson = person;
-  const fams = personFamilies(person);
-  const spouseNote = person.maritalStatus === 'married' && fams.length
-    ? ` — ${person.gender === 'female' ? 'عائلة الزوج' : 'عوائل الزوجات'}: ${fams.join('، ')}`
-    : '';
   document.getElementById('choice-modal-title').textContent =
-    `${person.firstName} (#${person.displayId})${spouseNote} — ماذا تريد أن تفعل؟`;
+    `${person.firstName} (#${person.displayId}) — ماذا تريد أن تفعل؟`;
 
   // الاسم الكامل بسلسلة الآباء حتى أعلى الشجرة
   const fullBox = document.getElementById('choice-full-name');
