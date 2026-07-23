@@ -482,7 +482,7 @@ function renderPersonNav(person) {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'pn-chip';
-    b.textContent = person.firstName + ' (' + person.displayId + ')';
+    b.textContent = 'ID: ' + person.displayId;
     b.addEventListener('click', () => { closeChoiceModal(); setTimeout(() => scrollToPerson(person.displayId), 120); });
     selfBox.appendChild(b);
     selfGroup.style.display = 'flex';
