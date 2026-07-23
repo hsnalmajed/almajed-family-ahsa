@@ -193,6 +193,115 @@ function computeDirectRelation(personA, personB, personsByDisplayId) {
   return null;
 }
 
+// =====================================================================
+// صلات إضافية عبر الأخوال والأعمام (تسلك روابط الأم motherId أيضاً)
+// تُظهر الصلات التي لا تلتقطها شجرة الأب وحدها
+// =====================================================================
+
+// أسلاف عبر الأب والأم معاً: Map مفتاح -> أقرب عمق (1=والد)
+function getBilateralAncestors(id, P) {
+  const res = new Map();
+  const start = String(id);
+  const seen = new Set([start]);
+  const queue = [{ k: start, d: 0 }];
+  while (queue.length) {
+    const { k, d } = queue.shift();
+    const person = P[k];
+    if (!person) continue;
+    const parents = [];
+    if (isNumericKey(person.parentKey)) parents.push(String(person.parentKey));
+    if (person.motherId != null) parents.push(String(person.motherId));
+    for (const pk of parents) {
+      if (seen.has(pk)) continue;
+      seen.add(pk);
+      const nd = d + 1;
+      if (!res.has(pk) || res.get(pk) > nd) res.set(pk, nd);
+      queue.push({ k: pk, d: nd });
+    }
+  }
+  return res;
+}
+
+// أسلاف عبر الأب فقط (لتمييز ما هو مغطّى بالفعل في شجرة الأب)
+function paternalAncestorKeys(id, P) {
+  const set = new Set();
+  getAncestorChain(id, P).forEach(item => { if (item.depth > 0) set.add(item.key); });
+  return set;
+}
+
+// أخوال/أعمام شخص: أشقّاء الأب (عم/عمة) وأشقّاء الأم (خال/خالة)
+function unclesAuntsOf(id, P) {
+  const person = P[String(id)];
+  const out = [];
+  if (!person) return out;
+  const father = isNumericKey(person.parentKey) ? P[String(person.parentKey)] : null;
+  const mother = person.motherId != null ? P[String(person.motherId)] : null;
+  const pushSibs = (parent, maleTerm, femaleTerm) => {
+    if (!parent) return;
+    Object.keys(P).forEach(k => {
+      const x = P[k];
+      if (areSiblings(parent, x)) {
+        out.push({ id: x.displayId, name: x.firstName, gender: x.gender, term: x.gender === 'female' ? femaleTerm : maleTerm });
+      }
+    });
+  };
+  pushSibs(father, 'عم', 'عمة');
+  pushSibs(mother, 'خال', 'خالة');
+  return out;
+}
+
+function computeExtraRelations(personA, personB, P) {
+  const out = [];
+  const Aid = String(personA.displayId), Bid = String(personB.displayId);
+  const aMale = personA.gender === 'male';
+  const bMale = personB.gender === 'male';
+
+  const bBilat = getBilateralAncestors(Bid, P);
+  const bPater = paternalAncestorKeys(Bid, P);
+  const aBilat = getBilateralAncestors(Aid, P);
+  const aPater = paternalAncestorKeys(Aid, P);
+
+  // وصف انحدار (depth) من قريب term مع لاحقة الملكية داخل النص
+  const descK = (term, depth, gMale) => {
+    const t = term + 'ك';                      // خالك/عمك/خالتك/عمتك
+    if (depth === 1) return (gMale ? 'ابن ' : 'بنت ') + t;
+    if (depth === 2) return (gMale ? 'حفيد ' : 'حفيدة ') + t;
+    return `من نسل ${t} (يبعد ${depth} أجيال)`;
+  };
+  const descOf = (term, depth, gMale, ofWhom) => {
+    const t = `${term} ${ofWhom}`;             // خال الطرف الآخر
+    if (depth === 1) return (gMale ? 'ابن ' : 'بنت ') + t;
+    if (depth === 2) return (gMale ? 'حفيد ' : 'حفيدة ') + t;
+    return `من نسل ${t} (يبعد ${depth} أجيال)`;
+  };
+
+  // (I) الطرف الآخر ينحدر من أحد أخوال/أعمام A عبر رابط أمّي
+  unclesAuntsOf(Aid, P).forEach(u => {
+    const uk = String(u.id);
+    if (uk === Bid) return;                     // مغطّى في الصلة المباشرة
+    const d = bBilat.get(uk);
+    if (d == null) return;
+    const maternal = (u.term === 'خال' || u.term === 'خالة');
+    const viaMotherOnB = !bPater.has(uk);       // وصله من جهة أمّ في نسب الطرف الآخر
+    if (!maternal && !viaMotherOnB) return;     // علاقة أبوية بحتة مغطّاة مسبقاً
+    out.push(`الطرف الآخر (${Bid}) هو ${descK(u.term, d, bMale)}: ${u.name} (#${u.id})`);
+  });
+
+  // (II) أنت تنحدر من أحد أخوال/أعمام الطرف الآخر عبر رابط أمّي
+  unclesAuntsOf(Bid, P).forEach(u => {
+    const uk = String(u.id);
+    if (uk === Aid) return;
+    const d = aBilat.get(uk);
+    if (d == null) return;
+    const maternal = (u.term === 'خال' || u.term === 'خالة');
+    const viaMotherOnA = !aPater.has(uk);
+    if (!maternal && !viaMotherOnA) return;
+    out.push(`أنت (${Aid}) ${descOf(u.term, d, aMale, 'الطرف الآخر')}: ${u.name} (#${u.id})`);
+  });
+
+  return Array.from(new Set(out));
+}
+
 /**
  * الدالة الرئيسية: تُستدعى من الواجهة
  * personsByDisplayId: كائن { displayId: personObject }  (يحتوي على gender و parentKey و motherId)
@@ -228,7 +337,10 @@ function computeRelationship(id1, id2, personsByDisplayId) {
     }
   }
 
-  if (!directTerm && !paternalText) {
+  // (3) صلات إضافية عبر الأخوال/الأعمام (روابط الأم)
+  const extras = computeExtraRelations(personA, personB, personsByDisplayId);
+
+  if (!directTerm && !paternalText && (!extras || !extras.length)) {
     return { ok: false, reason: 'لا توجد صلة قرابة معروفة بين هذين الشخصين (فرعان مختلفان من العائلة)' };
   }
 
@@ -236,6 +348,7 @@ function computeRelationship(id1, id2, personsByDisplayId) {
     ok: true,
     directTerm: directTerm || null,
     paternalText,                                   // قد تكون null
+    extras: extras || [],
     text: paternalText || (directTerm ? `الشخص صاحب المعرّف ${key2} هو ${directTerm} بالنسبة إلى الشخص صاحب المعرّف ${key1}` : ''),
     linkPerson
   };

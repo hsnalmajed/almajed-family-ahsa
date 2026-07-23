@@ -1307,6 +1307,11 @@ function handleRelationFinder(evt) {
         html += `<div class="link-person-line">🔗 الشخص الذي يربط بينهما: <b>${escapeHtmlLocal(result.linkPerson.name)}</b> (#${result.linkPerson.id})</div>`;
       }
     }
+    // (3) صلات إضافية عبر الأخوال/الأعمام
+    if (result.extras && result.extras.length) {
+      html += `<div class="rel-extra-title">صلات إضافية عبر الأخوال/الأعمام:</div>`;
+      result.extras.forEach(s => { html += `<div class="rel-extra">🔸 ${escapeHtmlLocal(s)}</div>`; });
+    }
     resultBox.innerHTML = html;
     resultBox.className = 'relation-result';
   } else {

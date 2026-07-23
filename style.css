@@ -930,6 +930,8 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
   color: var(--primary-dark);
 }
 .rel-paternal-title { font-weight: 700; margin-top: 4px; color: var(--muted); font-size: .9rem; }
+.rel-extra-title { font-weight: 800; margin-top: 10px; color: var(--gold-dark); font-size: .92rem; }
+.rel-extra { margin-top: 4px; padding: 6px 10px; background: rgba(207,154,46,.10); border-radius: 8px; }
 
 /* سؤال: هل الزوج/الزوجة من عائلة الماجد؟ */
 .spouse-section-label { display: block; font-weight: 800; color: var(--primary-dark); margin-bottom: 4px; }
