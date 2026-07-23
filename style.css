@@ -908,6 +908,13 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
   transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
 }
 
+/* سؤال: هل الزوج/الزوجة من عائلة الماجد؟ */
+.spouse-origin { margin-bottom: 12px; }
+.spouse-origin-label,
+.spouse-link-label { display: block; margin-bottom: 6px; font-weight: 700; color: var(--primary-dark); }
+#update-spouse-link-block { margin-top: 6px; }
+#update-spouse-link-chips { margin-top: 8px; }
+
 /* قائمة اقتراحات الأشخاص أسفل الحقل */
 .rel-suggestions {
   display: none;

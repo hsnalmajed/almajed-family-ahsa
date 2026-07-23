@@ -487,9 +487,27 @@ function renderPersonNav(person) {
   if (spouseGroup && spouseBox) {
     spouseBox.innerHTML = '';
     const fams = personFamilies(person);
-    const showSpouse = person.maritalStatus === 'married' && fams.length;
+    const links = Array.isArray(person.spouseLinks) ? person.spouseLinks : [];
+    const showSpouse = person.maritalStatus === 'married' && (fams.length || links.length);
     if (showSpouse) {
-      spouseLabel.textContent = person.gender === 'female' ? 'عائلة الزوج' : 'عائلة الزوجة';
+      const female = person.gender === 'female';
+      // إن كان الزوج/الزوجة من العائلة نعرض الاسم؛ وإلا نعرض اسم العائلة
+      spouseLabel.textContent = links.length
+        ? (female ? 'الزوج' : 'الزوجة')
+        : (female ? 'عائلة الزوج' : 'عائلة الزوجة');
+      // أزواج مرتبطون من داخل الشجرة — قابلون للنقر للانتقال إليهم
+      links.forEach(l => {
+        const p = personsByDisplayId[l.id];
+        if (p) {
+          spouseBox.appendChild(mkBtn(p));
+        } else {
+          const chip = document.createElement('span');
+          chip.className = 'pn-chip pn-chip-static';
+          chip.textContent = l.name || ('#' + l.id);
+          spouseBox.appendChild(chip);
+        }
+      });
+      // عوائل الزوجات من خارج الشجرة — نص ثابت
       fams.forEach(f => {
         const chip = document.createElement('span');
         chip.className = 'pn-chip pn-chip-static';
@@ -588,6 +606,13 @@ function openUpdateModal(person) {
   if (updateFamilyList) updateFamilyList.set(personFamilies(person));
   refreshMaritalGroup('update-marital', 'update-spouse-group');
 
+  // هل الزوج/الزوجة من عائلة الماجد؟ — نحدّد الحالة من بيانات الشخص
+  const links = Array.isArray(person.spouseLinks) ? person.spouseLinks : [];
+  const inFamily = links.length ? 'yes' : 'no';
+  document.querySelectorAll('input[name="update-spouse-in-family"]').forEach(r => { r.checked = (r.value === inFamily); });
+  if (updateSpouseLinkList) updateSpouseLinkList.set(links);
+  refreshSpouseOrigin('update-spouse-in-family', 'update-spouse-link-block', 'update-spouse-family-block');
+
   document.getElementById('update-modal').classList.add('open');
 }
 function closeUpdateModal() {
@@ -624,6 +649,16 @@ async function submitUpdateInfo(evt) {
     return;
   }
 
+  const isMarried = document.querySelector('input[name="update-marital"]:checked')?.value === 'married';
+  const spouseInFamily = isMarried &&
+    document.querySelector('input[name="update-spouse-in-family"]:checked')?.value === 'yes';
+
+  // إن اختار "نعم" (الزوج/الزوجة من العائلة) دون تحديد أي شخص، ننبّهه
+  if (spouseInFamily && updateSpouseLinkList && updateSpouseLinkList.values().length === 0) {
+    showToast('الرجاء اختيار الزوج/الزوجة من شجرة العائلة، أو اختر «لا».', true);
+    return;
+  }
+
   const btn = document.getElementById('submit-update-btn');
   btn.disabled = true;
   btn.textContent = 'جارٍ الإرسال...';
@@ -641,9 +676,9 @@ async function submitUpdateInfo(evt) {
       photoURL: photoURL || '',
       status,
       maritalStatus: (document.querySelector('input[name="update-marital"]:checked')?.value) || 'single',
-      spouseFamilies: (document.querySelector('input[name="update-marital"]:checked')?.value === 'married' && updateFamilyList)
-        ? updateFamilyList.values()
-        : [],
+      spouseFamilies: (isMarried && !spouseInFamily && updateFamilyList) ? updateFamilyList.values() : [],
+      spouseInFamily: spouseInFamily,
+      spouseLinks: (isMarried && spouseInFamily && updateSpouseLinkList) ? updateSpouseLinkList.values() : [],
       requestStatus: 'pending',
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     };
@@ -733,8 +768,16 @@ function applyMaritalLabels(scopeEl, gender) {
   scopeEl.querySelectorAll('.spouse-label').forEach(el => {
     el.textContent = female ? 'عائلة الزوج' : 'عائلة الزوجة';
   });
-  scopeEl.querySelectorAll('.spouse-group input').forEach(el => {
+  scopeEl.querySelectorAll('#update-spouse-family, #input-spouse-family').forEach(el => {
     el.placeholder = female ? 'اسم عائلة الزوج' : 'اسم عائلة الزوجة';
+  });
+  scopeEl.querySelectorAll('.spouse-origin-label').forEach(el => {
+    el.textContent = female ? 'هل الزوج من عائلة الماجد؟' : 'هل الزوجة من عائلة الماجد؟';
+  });
+  scopeEl.querySelectorAll('.spouse-link-label').forEach(el => {
+    el.textContent = female
+      ? 'ابحث عن الزوج في شجرة العائلة (بالمعرّف أو الاسم)'
+      : 'ابحث عن الزوجة في شجرة العائلة (بالمعرّف أو الاسم)';
   });
 }
 
@@ -755,6 +798,81 @@ function refreshMaritalGroup(radioName, groupId) {
   const checked = document.querySelector(`input[name="${radioName}"]:checked`);
   group.style.display = (checked && checked.value === 'married') ? 'block' : 'none';
 }
+
+// سؤال: هل الزوج/الزوجة من عائلة الماجد؟ — يبدّل بين مربّع الربط ومربّع اسم العائلة
+function refreshSpouseOrigin(radioName, linkBlockId, familyBlockId) {
+  const linkBlock = document.getElementById(linkBlockId);
+  const famBlock = document.getElementById(familyBlockId);
+  const val = document.querySelector(`input[name="${radioName}"]:checked`)?.value;
+  const yes = val === 'yes';
+  if (linkBlock) linkBlock.style.display = yes ? 'block' : 'none';
+  if (famBlock) famBlock.style.display = yes ? 'none' : 'block';
+}
+function bindSpouseOriginToggle(radioName, linkBlockId, familyBlockId) {
+  document.querySelectorAll(`input[name="${radioName}"]`).forEach(r => {
+    r.addEventListener('change', () => refreshSpouseOrigin(radioName, linkBlockId, familyBlockId));
+  });
+}
+
+// قائمة ربط الأزواج من داخل الشجرة: بحث بالمعرّف أو الاسم ثم اختيار (يخزّن {id, name})
+function createSpouseLinkList(inputId, sugId, chipsId) {
+  const input = document.getElementById(inputId);
+  const sug = document.getElementById(sugId);
+  const chips = document.getElementById(chipsId);
+  const state = [];
+
+  function renderChips() {
+    if (!chips) return;
+    chips.innerHTML = '';
+    state.forEach((item, i) => {
+      const chip = document.createElement('span');
+      chip.className = 'family-chip-edit';
+      chip.appendChild(document.createTextNode(`(${item.id}) ${item.name}`));
+      const x = document.createElement('button');
+      x.type = 'button'; x.className = 'family-chip-remove'; x.textContent = '✕'; x.title = 'إزالة';
+      x.addEventListener('click', () => { state.splice(i, 1); renderChips(); });
+      chip.appendChild(x);
+      chips.appendChild(chip);
+    });
+  }
+  const hide = () => { if (sug) { sug.style.display = 'none'; sug.innerHTML = ''; } };
+
+  if (input) {
+    input.addEventListener('input', () => {
+      const matches = matchPersonsForRelation(input.value);
+      if (!matches.length) { hide(); return; }
+      sug.innerHTML = matches.map(p => `
+        <div class="search-result-item" data-id="${p.displayId}">
+          <img src="${p.photoURL || defaultAvatar(p.gender)}" alt="">
+          <span class="sr-name"><b class="sr-id">(${p.displayId})</b> ${escapeHtmlLocal(shortLineage(p, 2))}</span>
+        </div>`).join('');
+      sug.style.display = 'block';
+      sug.querySelectorAll('[data-id]').forEach(el => {
+        el.addEventListener('click', () => {
+          const p = personsByDisplayId[el.dataset.id];
+          if (p && !state.some(s => String(s.id) === String(p.displayId))) {
+            state.push({ id: Number(p.displayId), name: shortLineage(p, 2) });
+            renderChips();
+          }
+          input.value = ''; hide();
+        });
+      });
+    });
+    document.addEventListener('click', e => { if (e.target !== input && sug && !sug.contains(e.target)) hide(); });
+  }
+
+  return {
+    values() { return state.map(s => ({ id: s.id, name: s.name })); },
+    set(list) {
+      state.length = 0;
+      (list || []).forEach(v => { if (v && v.id != null) state.push({ id: Number(v.id), name: String(v.name || '') }); });
+      if (input) input.value = '';
+      renderChips();
+    },
+    clear() { this.set([]); }
+  };
+}
+let updateSpouseLinkList = null;
 
 
 // ---------------------------------------------------------------------
@@ -1424,6 +1542,10 @@ document.addEventListener('DOMContentLoaded', () => {
   bindMaritalToggle('input-marital', 'input-spouse-group');
   updateFamilyList = createFamilyList('update-spouse-family', 'update-spouse-add', 'update-spouse-chips');
   addFamilyList = createFamilyList('input-spouse-family', 'input-spouse-add', 'input-spouse-chips');
+
+  // سؤال "هل الزوج/الزوجة من عائلة الماجد؟" وربط الزوج/الزوجة من الشجرة
+  updateSpouseLinkList = createSpouseLinkList('update-spouse-link-input', 'update-spouse-link-sug', 'update-spouse-link-chips');
+  bindSpouseOriginToggle('update-spouse-in-family', 'update-spouse-link-block', 'update-spouse-family-block');
 
   const closeFamBtn = document.getElementById('close-family-members-btn');
   if (closeFamBtn) closeFamBtn.addEventListener('click', closeFamilyMembersModal);

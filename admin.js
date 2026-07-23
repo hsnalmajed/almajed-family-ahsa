@@ -139,6 +139,14 @@ function maritalLabel(maritalStatus, gender, families) {
   return female ? 'غير متزوجة' : 'غير متزوج';
 }
 
+// وصف الأزواج المرتبطين من داخل الشجرة
+function spouseLinksLabel(gender, links) {
+  const list = Array.isArray(links) ? links.filter(l => l && l.id != null) : [];
+  if (!list.length) return '';
+  const who = gender === 'female' ? 'الزوج من العائلة' : 'الزوجة من العائلة';
+  return ` — ${who}: ${list.map(l => `(${l.id}) ${l.name || ''}`.trim()).join('، ')}`;
+}
+
 function renderRequests() {
   const list = document.getElementById('requests-list');
   document.getElementById('requests-count').textContent = pendingRequests.length;
@@ -160,7 +168,7 @@ function renderRequests() {
           <div class="req-name">✏️ طلب تحديث بيانات: <b>${escapeHtml(r.targetPersonName || '')}</b> (#${r.targetPersonId})</div>
           <div class="req-meta">الهاتف الجديد: ${r.phone ? escapeHtml(r.phone) : 'بدون تغيير'} | الصورة: ${r.photoURL ? 'محدَّثة' : 'بدون تغيير'}</div>
           <div class="req-meta">الحالة الجديدة: ${STATUS_LABELS_AR[r.status] || r.status}</div>
-          <div class="req-meta">الحالة الاجتماعية: ${escapeHtml(maritalLabel(r.maritalStatus, (allPersonsAdmin.find(p => p.displayId === r.targetPersonId) || {}).gender, r.spouseFamilies || r.spouseFamily))}</div>
+          <div class="req-meta">الحالة الاجتماعية: ${escapeHtml(maritalLabel(r.maritalStatus, (allPersonsAdmin.find(p => p.displayId === r.targetPersonId) || {}).gender, r.spouseFamilies || r.spouseFamily) + spouseLinksLabel((allPersonsAdmin.find(p => p.displayId === r.targetPersonId) || {}).gender, r.spouseLinks))}</div>
         </div>
         <div class="req-actions">
           <button class="btn btn-primary btn-sm" data-approve-update="${r.id}">قبول</button>
@@ -308,6 +316,7 @@ async function approveUpdateRequest(requestId, btnEl) {
   btnEl.disabled = true;
   try {
     const reqRef = db.collection('requests').doc(requestId);
+    let approvedReq = null;
 
     await db.runTransaction(async (tx) => {
       const reqSnap = await tx.get(reqRef);
@@ -326,14 +335,36 @@ async function approveUpdateRequest(requestId, btnEl) {
       if (reqData.status) updates.status = reqData.status;
       if (reqData.maritalStatus) {
         updates.maritalStatus = reqData.maritalStatus;
-        updates.spouseFamilies = reqData.maritalStatus === 'married'
+        const married = reqData.maritalStatus === 'married';
+        const inFamily = married && reqData.spouseInFamily === true;
+        // من داخل العائلة → روابط أشخاص؛ من خارجها → أسماء عوائل
+        updates.spouseFamilies = (married && !inFamily)
           ? (reqData.spouseFamilies || (reqData.spouseFamily ? [reqData.spouseFamily] : []))
           : [];
+        updates.spouseLinks = (married && inFamily) ? (reqData.spouseLinks || []) : [];
       }
 
       tx.update(personRef, updates);
       tx.update(reqRef, { requestStatus: 'approved', approvedAt: firebase.firestore.FieldValue.serverTimestamp() });
+      approvedReq = reqData;
     });
+
+    // ربط تبادلي (خارج المعاملة): نضيف هذا الشخص كزوج/زوجة لدى كل شخص مرتبط من العائلة
+    if (approvedReq && approvedReq.maritalStatus === 'married'
+        && approvedReq.spouseInFamily === true && Array.isArray(approvedReq.spouseLinks)) {
+      for (const link of approvedReq.spouseLinks) {
+        try {
+          const q = await db.collection('persons').where('displayId', '==', Number(link.id)).limit(1).get();
+          if (q.empty) continue;
+          const ref = q.docs[0].ref;
+          const existing = Array.isArray(q.docs[0].data().spouseLinks) ? q.docs[0].data().spouseLinks : [];
+          if (!existing.some(s => Number(s.id) === Number(approvedReq.targetPersonId))) {
+            existing.push({ id: Number(approvedReq.targetPersonId), name: approvedReq.targetPersonName || '' });
+            await ref.update({ maritalStatus: 'married', spouseLinks: existing });
+          }
+        } catch (e) { console.error('تعذّر الربط التبادلي مع', link, e); }
+      }
+    }
   } catch (err) {
     console.error(err);
     alert('حدث خطأ: ' + err.message);
