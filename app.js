@@ -1065,6 +1065,66 @@ function createFamilyList(inputId, addBtnId, chipsId, canAddFn) {
 
 let updateFamilyList = null;
 let addFamilyList = null;
+let addSpouseLinkList = null;
+
+// للإناث (ابنة/أخت): زوج واحد فقط
+function addSpouseCanAdd() {
+  if (RELATION_TO_GENDER[selectedRelationType] === 'female') {
+    const total = (addSpouseLinkList ? addSpouseLinkList.size() : 0)
+                + (addFamilyList ? addFamilyList.size() : 0);
+    if (total >= 1) {
+      showToast('للإناث يمكن إضافة زوج واحد فقط. احذف الزوج الحالي أولاً إن أردت تغييره.', true);
+      return false;
+    }
+  }
+  return true;
+}
+
+// يملأ قائمة "الأم" للفرد الجديد من زوجات والده (والده يختلف حسب نوع القرابة)
+function populateAddMotherOptions() {
+  const sel = document.getElementById('input-mother');
+  const hint = document.getElementById('input-mother-hint');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— غير محددة —</option>';
+
+  // الابن/الابنة: الأب هو الشخص المستهدف. الأخ/الأخت: الأب هو والد الشخص المستهدف
+  let father = null;
+  if (selectedRelationType === 'son' || selectedRelationType === 'daughter') {
+    father = selectedTargetPerson;
+  } else if (selectedTargetPerson && selectedTargetPerson.parentKey
+             && !String(selectedTargetPerson.parentKey).startsWith('v')) {
+    father = personsByDisplayId[String(selectedTargetPerson.parentKey)];
+  }
+
+  if (!father) {
+    sel.disabled = true;
+    if (hint) hint.textContent = 'لا يمكن تحديد الأم: لا يوجد أب مسجّل لهذا الفرد في الشجرة.';
+    return;
+  }
+  const links = Array.isArray(father.spouseLinks) ? father.spouseLinks : [];
+  const fams = personFamilies(father);
+  if (!links.length && !fams.length) {
+    sel.disabled = true;
+    if (hint) hint.textContent = 'لا توجد زوجات مسجّلات لوالد هذا الفرد. أضِف زوجات الأب أولاً.';
+    return;
+  }
+  sel.disabled = false;
+  if (hint) hint.textContent = 'تُختار من زوجات والد هذا الفرد (اختيار زوجة من العائلة يُفعّل صلات القرابة).';
+  links.forEach(w => {
+    const nm = w.name || (personsByDisplayId[String(w.id)] ? shortLineage(personsByDisplayId[String(w.id)], 2) : '');
+    const opt = document.createElement('option');
+    opt.value = 'id:' + w.id; opt.dataset.mid = String(w.id); opt.dataset.mname = nm;
+    opt.textContent = `من العائلة — (${w.id}) ${nm}`;
+    sel.appendChild(opt);
+  });
+  fams.forEach(fname => {
+    const label = 'من عائلة ' + fname;
+    const opt = document.createElement('option');
+    opt.value = 'fam:' + fname; opt.dataset.mid = ''; opt.dataset.mname = label;
+    opt.textContent = label;
+    sel.appendChild(opt);
+  });
+}
 
 function chooseRelationType(type, btnEl) {
   selectedRelationType = type;
@@ -1072,7 +1132,25 @@ function chooseRelationType(type, btnEl) {
   btnEl.classList.add('selected');
   document.getElementById('add-member-form').style.display = 'block';
   // ابن/أخ ← صيغة المذكر وعائلة الزوجة، ابنة/أخت ← صيغة المؤنث وعائلة الزوج
+  const female = RELATION_TO_GENDER[type] === 'female';
   applyMaritalLabels(document.getElementById('add-modal'), RELATION_TO_GENDER[type]);
+
+  // نصوص قسم الأزواج بحسب الجنس
+  const secLbl = document.getElementById('input-spouse-section-label');
+  const multiHint = document.getElementById('input-spouse-multi-hint');
+  if (secLbl) secLbl.textContent = female ? 'الزوج المسجّل' : 'الزوجات المسجّلات';
+  if (multiHint) multiHint.textContent = female
+    ? 'يمكن إضافة زوج واحد فقط: اختر «نعم» للبحث عنه في الشجرة، أو «لا» لكتابة اسم عائلته.'
+    : 'أضِف كل زوجة على حدة: اختر «نعم» للبحث عنها في الشجرة، أو «لا» لكتابة اسم عائلتها.';
+
+  // إعادة ضبط سؤال «من عائلة الماجد؟» والقوائم
+  document.querySelectorAll('input[name="input-spouse-in-family"]').forEach(r => { r.checked = (r.value === 'no'); });
+  if (addSpouseLinkList) addSpouseLinkList.clear();
+  refreshSpouseOrigin('input-spouse-in-family', 'input-spouse-link-block', 'input-spouse-family-block');
+
+  // خيارات الأم بحسب والد الفرد الجديد
+  populateAddMotherOptions();
+
   document.getElementById('input-first-name').focus();
 }
 
@@ -1106,12 +1184,21 @@ async function stashCurrentMember(showErrors) {
   }
 
   const maritalStatus = document.querySelector('input[name="input-marital"]:checked')?.value || 'single';
-  const spouseFamilies = (maritalStatus === 'married' && addFamilyList) ? addFamilyList.values() : [];
+  const married = maritalStatus === 'married';
+  const spouseFamilies = (married && addFamilyList) ? addFamilyList.values() : [];
+  const spouseLinks = (married && addSpouseLinkList) ? addSpouseLinkList.values() : [];
+  const spouseInFamily = married &&
+    document.querySelector('input[name="input-spouse-in-family"]:checked')?.value === 'yes';
+
+  // الأم (من العائلة id أو من خارجها اسم)
+  const motherOpt = document.getElementById('input-mother')?.selectedOptions?.[0];
+  const motherId = (motherOpt && motherOpt.dataset.mid) ? Number(motherOpt.dataset.mid) : null;
+  const motherName = (motherOpt && motherOpt.value) ? (motherOpt.dataset.mname || '') : '';
 
   pendingMembers.push({
     firstName, gender, phone, photoURL,
     relationType: selectedRelationType, parentKey,
-    maritalStatus, spouseFamilies
+    maritalStatus, spouseFamilies, spouseLinks, spouseInFamily, motherId, motherName
   });
   renderPendingMembers();
 
@@ -1119,7 +1206,11 @@ async function stashCurrentMember(showErrors) {
   document.getElementById('add-member-form').reset();
   document.getElementById('photo-preview').style.display = 'none';
   if (addFamilyList) addFamilyList.clear();
+  if (addSpouseLinkList) addSpouseLinkList.clear();
+  document.querySelectorAll('input[name="input-spouse-in-family"]').forEach(r => { r.checked = (r.value === 'no'); });
+  refreshSpouseOrigin('input-spouse-in-family', 'input-spouse-link-block', 'input-spouse-family-block');
   refreshMaritalGroup('input-marital', 'input-spouse-group');
+  populateAddMotherOptions();
   selectedPhotoFile = null;
   return true;
 }
@@ -1714,11 +1805,13 @@ document.addEventListener('DOMContentLoaded', () => {
   bindMaritalToggle('update-marital', 'update-spouse-group');
   bindMaritalToggle('input-marital', 'input-spouse-group');
   updateFamilyList = createFamilyList('update-spouse-family', 'update-spouse-add', 'update-spouse-chips', updateSpouseCanAdd);
-  addFamilyList = createFamilyList('input-spouse-family', 'input-spouse-add', 'input-spouse-chips');
+  addFamilyList = createFamilyList('input-spouse-family', 'input-spouse-add', 'input-spouse-chips', addSpouseCanAdd);
 
   // سؤال "هل الزوج/الزوجة من عائلة الماجد؟" وربط الزوج/الزوجة من الشجرة
   updateSpouseLinkList = createSpouseLinkList('update-spouse-link-input', 'update-spouse-link-sug', 'update-spouse-link-chips', updateSpouseCanAdd);
   bindSpouseOriginToggle('update-spouse-in-family', 'update-spouse-link-block', 'update-spouse-family-block');
+  addSpouseLinkList = createSpouseLinkList('input-spouse-link-input', 'input-spouse-link-sug', 'input-spouse-link-chips', addSpouseCanAdd);
+  bindSpouseOriginToggle('input-spouse-in-family', 'input-spouse-link-block', 'input-spouse-family-block');
 
   const closeFamBtn = document.getElementById('close-family-members-btn');
   if (closeFamBtn) closeFamBtn.addEventListener('click', closeFamilyMembersModal);

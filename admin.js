@@ -180,7 +180,7 @@ function renderRequests() {
     } else if (r.requestType === 'addBatch') {
       const members = r.members || [];
       const membersHtml = members.map(m =>
-        `<div class="req-meta">• ${escapeHtml(m.firstName)} — ${RELATION_LABELS_AR[m.relationType] || m.relationType} (${GENDER_LABELS_AR[m.gender] || ''})${m.phone ? ' — ' + escapeHtml(m.phone) : ''} — ${escapeHtml(maritalLabel(m.maritalStatus, m.gender, m.spouseFamilies || m.spouseFamily))}</div>`
+        `<div class="req-meta">• ${escapeHtml(m.firstName)} — ${RELATION_LABELS_AR[m.relationType] || m.relationType} (${GENDER_LABELS_AR[m.gender] || ''})${m.phone ? ' — ' + escapeHtml(m.phone) : ''} — ${escapeHtml(maritalLabel(m.maritalStatus, m.gender, m.spouseFamilies || m.spouseFamily) + spouseLinksLabel(m.gender, m.spouseLinks))}${(m.motherId || m.motherName) ? ' — الأم: ' + escapeHtml(m.motherId ? ('(' + m.motherId + ') ' + ((allPersonsAdmin.find(p => p.displayId === Number(m.motherId)) || {}).firstName || '')) : m.motherName) : ''}</div>`
       ).join('');
       row.innerHTML = `
         <div class="req-info">
@@ -272,6 +272,7 @@ async function approveBatchRequest(requestId, btnEl) {
   try {
     const reqRef = db.collection('requests').doc(requestId);
     const counterRef = db.collection('meta').doc('counter');
+    const batchReciprocal = [];
 
     await db.runTransaction(async (tx) => {
       const reqSnap = await tx.get(reqRef);
@@ -285,6 +286,7 @@ async function approveBatchRequest(requestId, btnEl) {
       const members = reqData.members || [];
       members.forEach(m => {
         lastId += 1;
+        const married = (m.maritalStatus || 'single') === 'married';
         const personRef = db.collection('persons').doc();
         tx.set(personRef, {
           displayId: lastId,
@@ -294,15 +296,38 @@ async function approveBatchRequest(requestId, btnEl) {
           phone: m.phone || '',
           status: 'alive',
           maritalStatus: m.maritalStatus || 'single',
-          spouseFamilies: m.spouseFamilies || (m.spouseFamily ? [m.spouseFamily] : []),
+          spouseFamilies: married ? (m.spouseFamilies || (m.spouseFamily ? [m.spouseFamily] : [])) : [],
+          spouseLinks: married ? (m.spouseLinks || []) : [],
+          motherId: (typeof m.motherId === 'number') ? m.motherId : null,
+          motherName: (typeof m.motherName === 'string') ? m.motherName : '',
           parentKey: m.parentKey,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
+        // نجمع الروابط لتطبيق الربط التبادلي بعد نجاح المعاملة
+        if (married && Array.isArray(m.spouseLinks) && m.spouseLinks.length) {
+          batchReciprocal.push({ memberId: lastId, memberName: m.firstName, links: m.spouseLinks });
+        }
       });
 
       tx.set(counterRef, { lastId }, { merge: true });
       tx.update(reqRef, { requestStatus: 'approved', approvedAt: firebase.firestore.FieldValue.serverTimestamp() });
     });
+
+    // ربط تبادلي (خارج المعاملة): إضافة كل فرد جديد كزوج لدى زوجاته المرتبطة من العائلة
+    for (const rec of batchReciprocal) {
+      for (const link of rec.links) {
+        try {
+          const q = await db.collection('persons').where('displayId', '==', Number(link.id)).limit(1).get();
+          if (q.empty) continue;
+          const ref = q.docs[0].ref;
+          const existing = Array.isArray(q.docs[0].data().spouseLinks) ? q.docs[0].data().spouseLinks : [];
+          if (!existing.some(s => Number(s.id) === Number(rec.memberId))) {
+            existing.push({ id: Number(rec.memberId), name: rec.memberName || '' });
+            await ref.update({ maritalStatus: 'married', spouseLinks: existing });
+          }
+        } catch (e) { console.error('تعذّر الربط التبادلي (دفعة) مع', link, e); }
+      }
+    }
   } catch (err) {
     console.error(err);
     alert('حدث خطأ: ' + err.message);

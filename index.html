@@ -356,6 +356,14 @@
         <input type="tel" id="input-phone" placeholder="05xxxxxxxx">
       </div>
 
+      <div class="form-group" id="input-mother-group">
+        <label for="input-mother">الأم</label>
+        <select id="input-mother" class="mother-select">
+          <option value="">— غير محددة —</option>
+        </select>
+        <p class="family-hint" id="input-mother-hint">تُختار من زوجات والد هذا الشخص (لربط الأبناء بأمهاتهم).</p>
+      </div>
+
       <div class="form-group">
         <label>الحالة الاجتماعية</label>
         <div class="status-toggle">
@@ -365,13 +373,37 @@
       </div>
 
       <div class="form-group spouse-group" id="input-spouse-group" style="display:none;">
-        <label for="input-spouse-family" class="spouse-label">عائلة الزوجة</label>
-        <div class="family-input-row">
-          <input type="text" id="input-spouse-family" placeholder="اسم عائلة الزوجة">
-          <button type="button" class="btn btn-secondary btn-sm" id="input-spouse-add">➕ إضافة</button>
+        <label class="spouse-section-label" id="input-spouse-section-label">الزوجات المسجّلات</label>
+        <p class="family-hint" id="input-spouse-multi-hint">أضِف كل زوجة على حدة: اختر «نعم» للبحث عنها في الشجرة، أو «لا» لكتابة اسم عائلتها.</p>
+
+        <div class="spouse-origin">
+          <label class="spouse-origin-label">هل الزوجة من عائلة الماجد؟</label>
+          <div class="status-toggle">
+            <label><input type="radio" name="input-spouse-in-family" value="no" checked><span>لا</span></label>
+            <label><input type="radio" name="input-spouse-in-family" value="yes"><span>نعم</span></label>
+          </div>
         </div>
-        <div class="family-chips-edit" id="input-spouse-chips"></div>
-        <p class="family-hint">يمكنك إضافة أكثر من عائلة: اكتب الاسم ثم اضغط «إضافة» أو Enter.</p>
+
+        <div id="input-spouse-link-block" style="display:none;">
+          <label for="input-spouse-link-input" class="spouse-link-label">ابحث عن الزوجة في شجرة العائلة (بالمعرّف أو الاسم)</label>
+          <div class="rel-picker">
+            <input type="text" id="input-spouse-link-input" class="spouse-link-input" placeholder="المعرّف أو الاسم الثلاثي" autocomplete="off">
+            <div class="rel-suggestions" id="input-spouse-link-sug"></div>
+          </div>
+        </div>
+
+        <div id="input-spouse-family-block">
+          <label for="input-spouse-family" class="spouse-label">عائلة الزوجة</label>
+          <div class="family-input-row">
+            <input type="text" id="input-spouse-family" placeholder="اسم عائلة الزوجة">
+            <button type="button" class="btn btn-secondary btn-sm" id="input-spouse-add">➕ إضافة</button>
+          </div>
+        </div>
+
+        <div class="spouse-all-chips">
+          <div class="family-chips-edit" id="input-spouse-link-chips"></div>
+          <div class="family-chips-edit" id="input-spouse-chips"></div>
+        </div>
       </div>
 
       <p class="hint-text">اختر نوع القرابة وعبّئ البيانات، ثم اضغط «➕ إضافة فرد آخر» لإضافة المزيد ضمن <b>نفس الطلب</b>، أو «📨 إرسال الطلب» لإرسالهم جميعاً كطلب واحد.</p>
@@ -394,7 +426,7 @@
 
 <script src="firebase-config.js"></script>
 <script src="relationship.js?v=4"></script>
-<script src="app.js?v=64"></script>
+<script src="app.js?v=65"></script>
 
 <!-- زر تثبيت التطبيق -->
 <script>
