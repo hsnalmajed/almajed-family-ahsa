@@ -1006,18 +1006,78 @@ function sendUpdateRequestEmailNotification(data) {
 // ---------------------------------------------------------------------
 // حاسبة صلة القرابة
 // ---------------------------------------------------------------------
+// يبحث عن الأشخاص المطابقين لنص (معرّف أو اسم) لعرضهم كاقتراحات
+function matchPersonsForRelation(query) {
+  const q = query.trim();
+  if (!q) return [];
+  if (/^\d+$/.test(q)) {
+    return allPersons.filter(p => String(p.displayId) === q);
+  }
+  return allPersons.filter(p => p.firstName && p.firstName.includes(q)).slice(0, 8);
+}
+
+// يربط حقل إدخال بقائمة اقتراحات تعمل مثل "ابحث عن شخص"
+function attachRelationPicker(inputId, sugId) {
+  const input = document.getElementById(inputId);
+  const box = document.getElementById(sugId);
+  if (!input || !box) return;
+
+  const hide = () => { box.style.display = 'none'; box.innerHTML = ''; };
+
+  input.addEventListener('input', () => {
+    input.dataset.selectedId = '';           // مسح أي اختيار سابق عند الكتابة
+    const matches = matchPersonsForRelation(input.value);
+    if (!matches.length) { hide(); return; }
+    box.innerHTML = matches.map(p => `
+      <div class="search-result-item" data-id="${p.displayId}">
+        <img src="${p.photoURL || defaultAvatar(p.gender)}" alt="">
+        <span class="sr-name"><b class="sr-id">(${p.displayId})</b> ${escapeHtmlLocal(shortLineage(p, 2))}</span>
+      </div>
+    `).join('');
+    box.style.display = 'block';
+    box.querySelectorAll('[data-id]').forEach(el => {
+      el.addEventListener('click', () => {
+        const p = personsByDisplayId[el.dataset.id];
+        input.value = `(${p.displayId}) ${shortLineage(p, 2)}`;
+        input.dataset.selectedId = String(p.displayId);
+        hide();
+      });
+    });
+  });
+
+  input.addEventListener('focus', () => { if (input.value.trim()) input.dispatchEvent(new Event('input')); });
+  document.addEventListener('click', (e) => { if (e.target !== input && !box.contains(e.target)) hide(); });
+}
+
+// يحوّل ما في الحقل إلى معرّف: اختيار من القائمة، أو رقم، أو اسم فريد
+function resolveRelationInput(inputId) {
+  const input = document.getElementById(inputId);
+  const val = input.value.trim();
+  if (input.dataset.selectedId) return { id: input.dataset.selectedId };
+  if (!val) return { error: 'الرجاء إدخال المعرّف أو الاسم' };
+  if (/^\d+$/.test(val)) {
+    if (!personsByDisplayId[val]) return { error: `لا يوجد شخص بالمعرّف ${val}` };
+    return { id: val };
+  }
+  const matches = allPersons.filter(p => p.firstName && p.firstName.includes(val));
+  if (matches.length === 1) return { id: String(matches[0].displayId) };
+  if (matches.length === 0) return { error: `لا يوجد شخص باسم «${val}»` };
+  return { error: `يوجد أكثر من شخص باسم «${val}» — اختر من القائمة` };
+}
+
 function handleRelationFinder(evt) {
   evt.preventDefault();
-  const id1 = document.getElementById('rel-id-1').value.trim();
-  const id2 = document.getElementById('rel-id-2').value.trim();
   const resultBox = document.getElementById('relation-result');
+  const r1 = resolveRelationInput('rel-id-1');
+  const r2 = resolveRelationInput('rel-id-2');
 
-  if (!id1 || !id2) {
-    resultBox.textContent = 'الرجاء إدخال المعرّفين';
+  if (r1.error || r2.error) {
+    resultBox.textContent = r1.error || r2.error;
     resultBox.className = 'relation-result error';
     resultBox.style.display = 'block';
     return;
   }
+  const id1 = r1.id, id2 = r2.id;
 
   const result = window.FamilyRelationship.computeRelationship(id1, id2, personsByDisplayId);
   if (result.ok) {
@@ -1399,8 +1459,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const gotoMeBtn = document.getElementById('pb-goto-me');
   if (gotoMeBtn) gotoMeBtn.addEventListener('click', gotoPreparedByPerson);
 
-  // حاسبة القرابة
+  // حاسبة القرابة — البحث بالمعرّف أو الاسم مثل "ابحث عن شخص"
   document.getElementById('relation-finder-form').addEventListener('submit', handleRelationFinder);
+  attachRelationPicker('rel-id-1', 'rel-sug-1');
+  attachRelationPicker('rel-id-2', 'rel-sug-2');
 
   // البحث
   document.getElementById('search-form').addEventListener('submit', handleSearch);
