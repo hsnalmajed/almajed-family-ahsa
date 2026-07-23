@@ -695,8 +695,9 @@ function matchPersonsAdmin(query) {
   const q = String(query || '').trim();
   if (!q) return [];
   if (/^\d+$/.test(q)) return allPersonsAdmin.filter(p => String(p.displayId) === q);
-  const needle = normalizeArabic(q);
-  return allPersonsAdmin.filter(p => normalizeArabic(p.firstName).includes(needle)).slice(0, 8);
+  const tokens = nameSearchTokensAdmin(q);
+  if (!tokens.length) return [];
+  return allPersonsAdmin.filter(p => p.firstName && matchByNameTokensAdmin(p, tokens)).slice(0, 8);
 }
 
 // قائمة ربط الأزواج من داخل الشجرة (لوحة المدير) — تخزّن {id, name}
@@ -1284,6 +1285,19 @@ function shortLineageAdmin(person, depth) {
     .filter(Boolean).join(' - ');
 }
 
+// بحث بالنسب: الكلمة الأولى = الاسم، الثانية = الأب، الثالثة = الجد (حتى 3)
+function nameSearchTokensAdmin(query) {
+  return normalizeArabic(query).split(' ').filter(Boolean).slice(0, 3);
+}
+function matchByNameTokensAdmin(person, tokens) {
+  if (!tokens.length) return false;
+  const names = [person.firstName].concat(ancestorsOfAdmin(person, tokens.length - 1).map(a => a.firstName));
+  for (let i = 0; i < tokens.length; i++) {
+    if (!names[i] || !normalizeArabic(names[i]).includes(tokens[i])) return false;
+  }
+  return true;
+}
+
 // البحث داخل شجرة العائلة بالاسم أو بالمعرّف: التمرير إلى الشخص وإبرازه
 function focusAdminTreeNode(displayId) {
   const el = document.getElementById('admin-person-node-' + displayId);
@@ -1305,8 +1319,8 @@ function handleAdminTreeSearch(evt) {
   if (/^\d+$/.test(term)) {
     matches = allPersonsAdmin.filter(p => String(p.displayId) === term);
   } else {
-    const needle = normalizeArabic(term);
-    matches = allPersonsAdmin.filter(p => normalizeArabic(p.firstName).includes(needle));
+    const tokens = nameSearchTokensAdmin(term);
+    matches = tokens.length ? allPersonsAdmin.filter(p => p.firstName && matchByNameTokensAdmin(p, tokens)) : [];
   }
 
   if (!box) {

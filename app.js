@@ -442,6 +442,22 @@ function shortLineage(person, depth) {
   return names.filter(Boolean).join(' - ');
 }
 
+// يفكّك نص البحث إلى كلمات مُوحّدة (اسم، اسم الأب، اسم الجد) — حتى 3 كلمات
+function nameSearchTokens(query) {
+  return normalizeArabic(query).split(' ').filter(Boolean).slice(0, 3);
+}
+
+// يطابق الشخص حسب سلسلة النسب: الكلمة الأولى = اسمه، الثانية = أبوه، الثالثة = جدّه
+// (الكلمة الأولى تُطابق الاسم الأول فقط، فلا يظهر من اسمه الأول مختلف)
+function matchByNameTokens(person, tokens) {
+  if (!tokens.length) return false;
+  const names = [person.firstName].concat(ancestorsOf(person, tokens.length - 1).map(a => a.firstName));
+  for (let i = 0; i < tokens.length; i++) {
+    if (!names[i] || !normalizeArabic(names[i]).includes(tokens[i])) return false;
+  }
+  return true;
+}
+
 // الاسم الكامل حتى نهاية الشجرة
 function fullLineage(person) {
   const names = [person.firstName].concat(ancestorsOf(person).map(a => a.firstName));
@@ -1355,8 +1371,9 @@ function matchPersonsForRelation(query) {
   if (/^\d+$/.test(q)) {
     return allPersons.filter(p => String(p.displayId) === q);
   }
-  const nq = normalizeArabic(q);
-  return allPersons.filter(p => p.firstName && normalizeArabic(p.firstName).includes(nq)).slice(0, 8);
+  const tokens = nameSearchTokens(q);
+  if (!tokens.length) return [];
+  return allPersons.filter(p => p.firstName && matchByNameTokens(p, tokens)).slice(0, 8);
 }
 
 // يربط حقل إدخال بقائمة اقتراحات تعمل مثل "ابحث عن شخص"
@@ -1402,8 +1419,8 @@ function resolveRelationInput(inputId) {
     if (!personsByDisplayId[val]) return { error: `لا يوجد شخص بالمعرّف ${val}` };
     return { id: val };
   }
-  const nv = normalizeArabic(val);
-  const matches = allPersons.filter(p => p.firstName && normalizeArabic(p.firstName).includes(nv));
+  const tokens = nameSearchTokens(val);
+  const matches = tokens.length ? allPersons.filter(p => p.firstName && matchByNameTokens(p, tokens)) : [];
   if (matches.length === 1) return { id: String(matches[0].displayId) };
   if (matches.length === 0) return { error: `لا يوجد شخص باسم «${val}»` };
   return { error: `يوجد أكثر من شخص باسم «${val}» — اختر من القائمة` };
@@ -1498,8 +1515,8 @@ function handleSearch(evt) {
   if (/^\d+$/.test(query)) {
     matches = allPersons.filter(p => String(p.displayId) === query);
   } else {
-    const nq = normalizeArabic(query);
-    matches = allPersons.filter(p => p.firstName && normalizeArabic(p.firstName).includes(nq));
+    const tokens = nameSearchTokens(query);
+    matches = tokens.length ? allPersons.filter(p => p.firstName && matchByNameTokens(p, tokens)) : [];
   }
 
   if (matches.length === 0) {
