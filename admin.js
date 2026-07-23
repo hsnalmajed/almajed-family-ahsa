@@ -1826,27 +1826,35 @@ async function saveTreeAsPdf(btnEl) {
     const fullW = el.scrollWidth, fullH = el.scrollHeight;
 
     // ===== حدود المتصفح للرسم (canvas) =====
-    // لا يمكن إنشاء رسم واحد ضخم، لذلك نلتقط الشجرة على شرائح عمودية
-    // عالية الدقة ثم نضعها كلها جنباً إلى جنب في *صفحة واحدة*.
-    // المساحة محدودة أيضاً بالذاكرة: كل بكسل يستهلك 4 بايت، فرسم بمساحة
-    // 45 مليون بكسل يحجز ~180 ميجابايت — وهو الحد الآمن قبل أن ينهار المتصفح.
-    const MAX_DIM  = 30000;    // أقصى بُعد آمن للرسم الواحد
-    const MAX_AREA = 45e6;     // أقصى مساحة آمنة للرسم الواحد (~180MB)
+    // المتصفحات لا تسمح برسم canvas يتجاوز ~16384 بكسل في أي بُعد، وتفشل
+    // (تُرجع مربّعاً أسود) عند تجاوز الذاكرة. لذلك نقسم الشجرة إلى «بلاطات»
+    // شبكية (صفوف × أعمدة) بحيث تبقى كل بلاطة أصغر من الحدود الآمنة، ثم
+    // نرصّها في *صفحة واحدة* في مواضعها الصحيحة.
+    const SAFE_DIM  = 8000;    // أقصى بُعد آمن لكل بلاطة (px) — أقل بكثير من حدّ 16384
+    const SAFE_AREA = 30e6;    // أقصى مساحة آمنة لكل بلاطة (~120MB)
 
-    // ملاحظة مهمة: الوضوح لا يأتي من هذا الرقم وحده بل من نسبة البكسلات
-    // إلى مقاس الصفحة. مع تثبيت الصفحة على 14400 نقطة، فإن ضِعفين
-    // يعطيان أكثر من 500 نقطة/بوصة وهو أعلى من جودة الطباعة (300).
-    const scale = Math.max(1, Math.min(2, MAX_DIM / fullH));
+    // دقّة عالية للحدّة (3x). نخفّضها تدريجياً فقط للأشجار الضخمة جداً
+    // حتى لا تنهار الذاكرة، مع إبقائها ≥ 2x لضمان وضوح النص.
+    const PIXEL_BUDGET = 200e6;  // ميزانية إجمالية للبكسلات
+    let scale = 3;
+    const byBudget = Math.sqrt(PIXEL_BUDGET / Math.max(1, fullW * fullH));
+    scale = Math.max(2, Math.min(scale, byBudget));
 
-    // أقصى عرض شريحة يبقى ضمن حدود المساحة والأبعاد
-    const stripPxW  = Math.min(MAX_DIM, Math.floor(MAX_AREA / (fullH * scale)));
-    const stripCssW = Math.max(400, Math.floor(stripPxW / scale));
-    const strips    = Math.max(1, Math.ceil(fullW / stripCssW));
+    // أقصى مقاس بلاطة بالـCSS بحيث تبقى بكسلاتها ضمن حدّ البُعد والمساحة
+    const tileCssMax = Math.max(
+      300,
+      Math.floor(Math.min(SAFE_DIM / scale, Math.sqrt(SAFE_AREA) / scale))
+    );
+
+    const cols  = Math.max(1, Math.ceil(fullW / tileCssMax));
+    const rows  = Math.max(1, Math.ceil(fullH / tileCssMax));
+    const tileW = Math.ceil(fullW / cols);
+    const tileH = Math.ceil(fullH / rows);
+    const totalTiles = cols * rows;
 
     // ===== مقاس الصفحة =====
     // معيار PDF لا يسمح بصفحة أكبر من 14400 نقطة (200 بوصة) في أي اتجاه.
-    // نُصغّر التخطيط ليناسبها، لكن الصور المدمجة تبقى بدقتها العالية،
-    // فتكون النتيجة صفحة واحدة بدقة تفوق 500 نقطة/بوصة.
+    // نُصغّر التخطيط ليناسبها، لكن الصور المدمجة تبقى بدقتها العالية.
     const MAX_PT = 14400;
     const k = Math.min(1, MAX_PT / fullW, MAX_PT / fullH);
     const pageW = fullW * k;
@@ -1864,40 +1872,43 @@ async function saveTreeAsPdf(btnEl) {
     pdf.setFillColor(255, 255, 255);
     pdf.rect(0, 0, pageW, pageH, 'F');
 
-    for (let i = 0; i < strips; i++) {
-      if (btnEl) btnEl.textContent = `جارٍ التجهيز... ${i + 1}/${strips}`;
-      // نترك المتصفح يتنفّس بين الشرائح حتى لا تتجمد الصفحة
-      await new Promise(r => setTimeout(r, 0));
+    let done = 0;
+    for (let ry = 0; ry < rows; ry++) {
+      const y = ry * tileH;
+      const h = Math.min(tileH, fullH - y);
+      for (let cx = 0; cx < cols; cx++) {
+        done++;
+        if (btnEl) btnEl.textContent = `جارٍ التجهيز... ${done}/${totalTiles}`;
+        await new Promise(r => setTimeout(r, 0)); // نترك المتصفح يتنفّس
 
-      const x = i * stripCssW;
-      const w = Math.min(stripCssW, fullW - x);
+        const x = cx * tileW;
+        const w = Math.min(tileW, fullW - x);
 
-      const canvas = await html2canvas(el, {
-        backgroundColor: '#ffffff',
-        scale: scale,
-        x: x,
-        y: 0,
-        width: w,
-        height: fullH,
-        windowWidth: fullW,
-        windowHeight: fullH,
-        scrollX: 0,
-        scrollY: 0,
-        useCORS: true,
-        allowTaint: true,
-        imageTimeout: 0,
-        logging: false
-      });
+        const canvas = await html2canvas(el, {
+          backgroundColor: '#ffffff',
+          scale: scale,
+          x: x,
+          y: y,
+          width: w,
+          height: h,
+          windowWidth: fullW,
+          windowHeight: fullH,
+          scrollX: 0,
+          scrollY: 0,
+          useCORS: true,
+          allowTaint: true,
+          imageTimeout: 0,
+          logging: false
+        });
 
-      // PNG يحافظ على حدّة النص والخطوط بلا تشويش ضغط
-      const imgData = canvas.toDataURL('image/png');
+        // PNG يحافظ على حدّة النص والخطوط بلا تشويش ضغط
+        const imgData = canvas.toDataURL('image/png');
+        pdf.addImage(imgData, 'PNG', x * k, y * k, w * k, h * k, undefined, 'FAST');
 
-      // كل الشرائح تُرسم على نفس الصفحة، كلٌّ في موضعه الصحيح
-      pdf.addImage(imgData, 'PNG', x * k, 0, w * k, fullH * k, undefined, 'FAST');
-
-      // تحرير ذاكرة الشريحة فوراً قبل الانتقال للتالية
-      canvas.width = 0;
-      canvas.height = 0;
+        // تحرير ذاكرة البلاطة فوراً
+        canvas.width = 0;
+        canvas.height = 0;
+      }
     }
 
     if (btnEl) btnEl.textContent = 'جارٍ الحفظ...';
