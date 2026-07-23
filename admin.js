@@ -102,6 +102,38 @@ function switchTab(tabName) {
   if (tabName === 'tree') {
     setTimeout(() => { adminTreeCenteredOnce = false; centerAdminTreeOnRootSoon(); }, 80);
   }
+  if (tabName === 'cards') renderIdCards();
+}
+
+// الاسم الثلاثي + «الماجد» للبطاقة التعريفية
+function idCardName(person) {
+  const names = [person.firstName]
+    .concat(ancestorsOfAdmin(person, 2).map(a => a.firstName))
+    .filter(Boolean);
+  return names.join(' ') + ' الماجد';
+}
+
+// بطاقات تعريفية للأحياء فقط (اسم ثلاثي + معرّف) — للطباعة
+function renderIdCards() {
+  const box = document.getElementById('id-cards-print');
+  const countEl = document.getElementById('id-cards-count');
+  if (!box) return;
+  const living = allPersonsAdmin
+    .filter(p => p.status === 'alive')
+    .sort((a, b) => (Number(a.displayId) || 0) - (Number(b.displayId) || 0));
+  if (countEl) countEl.textContent = living.length;
+  if (!living.length) {
+    box.innerHTML = '<div class="empty-state">لا يوجد أفراد أحياء لعرض بطاقاتهم.</div>';
+    return;
+  }
+  box.innerHTML = living.map(p => `
+    <div class="id-card">
+      <img class="id-card-logo" src="logo.jpg" alt="" onerror="this.style.display='none'">
+      <div class="id-card-family">عائلة الماجد</div>
+      <div class="id-card-name">${escapeHtml(idCardName(p))}</div>
+      <div class="id-card-idrow"><span>الرقم التعريفي</span><b class="id-card-num">${p.displayId}</b></div>
+    </div>
+  `).join('');
 }
 
 // ---------------------------------------------------------------------
@@ -470,6 +502,7 @@ function listenToPersonsAdmin() {
     allPersonsAdmin.forEach(p => { personsByDisplayIdAdmin[String(p.displayId)] = p; });
     renderPersonsList(allPersonsAdmin);
     renderAdminTree();
+    renderIdCards();
   }, err => console.error(err));
 }
 
@@ -1947,6 +1980,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('tab-btn-requests').addEventListener('click', () => switchTab('requests'));
   document.getElementById('tab-btn-persons').addEventListener('click', () => switchTab('persons'));
   document.getElementById('tab-btn-tree').addEventListener('click', () => switchTab('tree'));
+  document.getElementById('tab-btn-cards').addEventListener('click', () => switchTab('cards'));
+  const printCardsBtn = document.getElementById('print-id-cards-btn');
+  if (printCardsBtn) printCardsBtn.addEventListener('click', () => window.print());
 
   // حفظ الشجرة كاملة PDF
   document.getElementById('save-tree-pdf-btn').addEventListener('click', (e) => saveTreeAsPdf(e.currentTarget));

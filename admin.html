@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>لوحة تحكم المدير - عائلة الماجد</title>
-<link rel="stylesheet" href="style.css?v=63">
+<link rel="stylesheet" href="style.css?v=64">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -38,6 +38,7 @@
       <button class="tab-btn active" id="tab-btn-requests">الطلبات المعلقة (<span id="requests-count">0</span>)</button>
       <button class="tab-btn" id="tab-btn-persons">كل الأشخاص</button>
       <button class="tab-btn" id="tab-btn-tree">🌳 شجرة العائلة</button>
+      <button class="tab-btn" id="tab-btn-cards">🪪 البطاقات التعريفية</button>
     </div>
 
     <!-- تبويب الطلبات -->
@@ -87,6 +88,18 @@
       <div class="tree-viewport" id="admin-tree-viewport">
         <div class="tree-forest" id="admin-tree-forest"></div>
       </div>
+    </div>
+
+    <!-- تبويب البطاقات التعريفية (للأحياء فقط) -->
+    <div class="tab-panel" id="tab-panel-cards">
+      <div class="panel-toolbar no-print">
+        <div style="font-size:.9rem; color:var(--muted);">بطاقات تعريفية للأحياء فقط (<span id="id-cards-count">0</span>) — للطباعة في المناسبات العائلية.</div>
+        <button class="btn btn-primary btn-sm" id="print-id-cards-btn">🖨️ طباعة / حفظ PDF</button>
+      </div>
+      <p class="cards-hint no-print" style="font-size:.82rem; color:var(--muted); margin:6px 0 14px;">
+        كل بطاقة تعرض الاسم الثلاثي + «الماجد» والرقم التعريفي. اضغط «طباعة / حفظ PDF» ثم اختر «حفظ كـ PDF» أو أرسلها للطابعة لطباعتها وقصّها.
+      </p>
+      <div id="id-cards-print" class="id-cards-grid"></div>
     </div>
   </div>
 </div>
@@ -416,6 +429,6 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
 <script src="firebase-config.js"></script>
-<script src="admin.js?v=61"></script>
+<script src="admin.js?v=62"></script>
 </body>
 </html>
