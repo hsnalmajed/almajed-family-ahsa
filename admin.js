@@ -702,6 +702,7 @@ function listenToPersonsAdmin() {
     renderAdminTree();
     renderIdCards();
     renderCollectPreview();
+    renderProtoTree();
   }, err => console.error(err));
 }
 
