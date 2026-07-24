@@ -953,6 +953,67 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
 /* صفّ "رقم المعرف الخاص بك" — عنوان أطول من بقية العناوين */
 .pn-label-self { min-width: auto; white-space: nowrap; }
 
+/* ===== نموذج شجرة العائلة (تصميم مقترح: شجرة عمودية قابلة للطيّ) ===== */
+.proto-tree-wrap {
+  background: linear-gradient(180deg, #fbfaf6, #f4f2ec);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 14px;
+  overflow-x: auto;
+}
+.ptree, .ptree ul { list-style: none; margin: 0; padding: 0; }
+.ptree ul { margin-right: 26px; }
+.ptree ul li { position: relative; padding-right: 24px; }
+/* خطوط الربط الناعمة (RTL) */
+.ptree ul li::before {
+  content: ''; position: absolute; top: 0; right: 9px; height: 100%;
+  border-right: 2px solid #dcd8cf;
+}
+.ptree ul li:last-child::before { height: 30px; }
+.ptree ul li::after {
+  content: ''; position: absolute; top: 30px; right: 9px; width: 15px;
+  border-top: 2px solid #dcd8cf;
+}
+
+/* بطاقة الشخص */
+.pnode {
+  display: inline-flex; align-items: center; gap: 10px;
+  margin: 5px 0; padding: 6px 14px 6px 8px;
+  background: #fff; border: 1px solid var(--border);
+  border-right: 4px solid var(--primary);
+  border-radius: 40px; box-shadow: 0 1px 5px rgba(0,0,0,.06);
+  cursor: pointer; transition: transform .12s ease, box-shadow .12s ease;
+  max-width: 340px;
+}
+.pnode:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+.pnode.female { border-right-color: var(--accent); }
+.pnode.dead { opacity: .6; filter: grayscale(.3); }
+
+.pnode-av {
+  width: 38px; height: 38px; border-radius: 50%; object-fit: cover;
+  flex-shrink: 0; background: #eee;
+}
+.pnode-av-ph {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 800; color: #fff; font-size: 1rem;
+}
+.pnode-av-ph.m { background: linear-gradient(135deg, #1f8a5b, #0f6e46); }
+.pnode-av-ph.f { background: linear-gradient(135deg, #e8b53c, #cf9a2e); }
+
+.pnode-info { display: flex; flex-direction: column; line-height: 1.35; min-width: 0; }
+.pnode-name { font-weight: 700; color: var(--primary-dark); font-size: .95rem; }
+.pnode-id { color: var(--gold-dark); font-weight: 700; font-size: .8rem; }
+.pnode-meta { font-size: .72rem; color: var(--muted); }
+
+.pnode-chev {
+  color: var(--primary); font-size: .8rem; width: 14px; text-align: center;
+  transition: transform .15s ease; flex-shrink: 0;
+}
+.ptree li.collapsed > .pnode .pnode-chev { transform: rotate(90deg); }
+.pnode-dot { width: 6px; height: 6px; border-radius: 50%; background: #cdd3ce; flex-shrink: 0; }
+
+.ptree li.collapsed > ul { display: none; }
+
 /* ===== جمع البيانات: معاينة الفروع ===== */
 .collect-title { font-weight: 800; color: var(--primary-dark); margin-bottom: 10px; }
 .collect-branch-row {

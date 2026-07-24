@@ -104,6 +104,66 @@ function switchTab(tabName) {
   }
   if (tabName === 'cards') renderIdCards();
   if (tabName === 'collect') renderCollectPreview();
+  if (tabName === 'proto') renderProtoTree();
+}
+
+// ---------------------------------------------------------------------
+// نموذج شجرة العائلة: تصميم عمودي أنيق قابل للطيّ (معاينة فقط)
+// ---------------------------------------------------------------------
+function protoRootsAndChildren() {
+  const childrenOf = {};
+  const roots = [];
+  allPersonsAdmin.forEach(p => {
+    const pk = String(p.parentKey || '');
+    if (!pk || pk.startsWith('v') || !personsByDisplayIdAdmin[pk]) roots.push(p);
+    else { (childrenOf[pk] = childrenOf[pk] || []).push(p); }
+  });
+  const byId = (a, b) => (Number(a.displayId) || 0) - (Number(b.displayId) || 0);
+  roots.sort(byId);
+  Object.values(childrenOf).forEach(list => list.sort(byId));
+  return { roots, childrenOf };
+}
+
+function protoNodeHtml(p, childrenOf, depth) {
+  const kids = childrenOf[String(p.displayId)] || [];
+  const female = p.gender === 'female';
+  const dead = p.status === 'death';
+  const collapsed = kids.length && depth >= 2 ? ' collapsed' : '';
+  const av = p.photoURL
+    ? `<img class="pnode-av" src="${p.photoURL}" alt="">`
+    : `<span class="pnode-av pnode-av-ph ${female ? 'f' : 'm'}">${escapeHtml((p.firstName || '؟').slice(0, 1))}</span>`;
+  const chev = kids.length ? '<span class="pnode-chev">▾</span>' : '<span class="pnode-dot"></span>';
+  const metaBits = [female ? 'أنثى' : 'ذكر'];
+  if (dead) metaBits.push('متوفى');
+  if (kids.length) metaBits.push(kids.length + ' فرع');
+  let html =
+    `<li class="${collapsed.trim()}">` +
+      `<div class="pnode ${female ? 'female' : 'male'}${dead ? ' dead' : ''}">` +
+        chev + av +
+        `<span class="pnode-info">` +
+          `<span class="pnode-name">${escapeHtml(p.firstName || '')} <b class="pnode-id">#${p.displayId}</b></span>` +
+          `<span class="pnode-meta">${metaBits.join(' • ')}</span>` +
+        `</span>` +
+      `</div>`;
+  if (kids.length) {
+    html += '<ul>' + kids.map(k => protoNodeHtml(k, childrenOf, depth + 1)).join('') + '</ul>';
+  }
+  html += '</li>';
+  return html;
+}
+
+function renderProtoTree() {
+  const box = document.getElementById('proto-tree');
+  if (!box) return;
+  if (!allPersonsAdmin.length) { box.innerHTML = '<div class="empty-state">لا توجد بيانات بعد.</div>'; return; }
+  const { roots, childrenOf } = protoRootsAndChildren();
+  box.innerHTML = '<ul class="ptree">' + roots.map(r => protoNodeHtml(r, childrenOf, 0)).join('') + '</ul>';
+}
+
+function protoSetAll(collapsed) {
+  document.querySelectorAll('#proto-tree li').forEach(li => {
+    if (li.querySelector(':scope > ul')) li.classList.toggle('collapsed', collapsed);
+  });
 }
 
 // ---------------------------------------------------------------------
@@ -2123,6 +2183,20 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('tab-btn-collect').addEventListener('click', () => switchTab('collect'));
   const dlXlsxBtn = document.getElementById('download-collect-xlsx-btn');
   if (dlXlsxBtn) dlXlsxBtn.addEventListener('click', (e) => downloadCollectionXlsx(e.currentTarget));
+
+  // نموذج شجرة العائلة
+  document.getElementById('tab-btn-proto').addEventListener('click', () => switchTab('proto'));
+  const protoBox = document.getElementById('proto-tree');
+  if (protoBox) protoBox.addEventListener('click', (e) => {
+    const node = e.target.closest('.pnode');
+    if (!node) return;
+    const li = node.parentElement;
+    if (li && li.querySelector(':scope > ul')) li.classList.toggle('collapsed');
+  });
+  const pExpand = document.getElementById('proto-expand-all');
+  if (pExpand) pExpand.addEventListener('click', () => protoSetAll(false));
+  const pCollapse = document.getElementById('proto-collapse-all');
+  if (pCollapse) pCollapse.addEventListener('click', () => protoSetAll(true));
   const printCardsBtn = document.getElementById('print-id-cards-btn');
   if (printCardsBtn) printCardsBtn.addEventListener('click', () => window.print());
   document.querySelectorAll('.cards-filter-btn').forEach(b => {
