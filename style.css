@@ -953,119 +953,178 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
 /* صفّ "رقم المعرف الخاص بك" — عنوان أطول من بقية العناوين */
 .pn-label-self { min-width: auto; white-space: nowrap; }
 
-/* ===== نموذج شجرة العائلة (تصميم مقترح: مخطّط أفقي من الأعلى للأسفل) ===== */
+/* ===== نموذج شجرة العائلة — مستكشف تفاعلي بالتركيز (Focus Explorer) ===== */
+:root {
+  --pex-male: #2f74c0; --pex-male-2: #245c9e;
+  --pex-female: #d85b96; --pex-female-2: #b64277;
+  --pex-gold: #d9a63a; --pex-gold-2: #f2cd69;
+}
 .proto-tree-wrap {
+  position: relative;
   background:
-    radial-gradient(rgba(232,181,60,.06) 1px, transparent 1px),
-    radial-gradient(1100px 560px at 50% -8%, #1a5040 0%, #0e3227 46%, #071d17 100%);
-  background-size: 24px 24px, 100% 100%;
-  border: 1px solid #0a2019;
-  border-radius: 16px;
-  padding: 24px 16px;
-  max-height: 72vh;
+    radial-gradient(900px 420px at 50% -6%, rgba(232,181,60,.14), transparent 60%),
+    radial-gradient(rgba(31,138,91,.05) 1.2px, transparent 1.2px),
+    linear-gradient(165deg, #f5f9f6 0%, #eaf2ed 55%, #e0ebe4 100%);
+  background-size: 100% 100%, 22px 22px, 100% 100%;
+  border: 1px solid #d6e3db;
+  border-radius: 18px;
+  padding: 18px 12px 26px;
+  min-height: 62vh; max-height: 78vh;
   overflow: auto;
 }
-/* وضع ملء الشاشة للنموذج */
-#tab-panel-proto.proto-fs { position: fixed; inset: 0; z-index: 9998; background: #071d17; overflow: hidden; }
+/* وضع ملء الشاشة */
+#tab-panel-proto.proto-fs { position: fixed; inset: 0; z-index: 9998; background: #eaf2ed; overflow: hidden; }
 #tab-panel-proto.proto-fs > .panel-toolbar {
   position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
-  margin: 0; padding: 8px 12px; background: #fff; box-shadow: 0 1px 8px rgba(0,0,0,.15);
+  margin: 0; padding: 8px 12px; background: #fff; box-shadow: 0 1px 10px rgba(0,0,0,.14);
 }
 #tab-panel-proto.proto-fs > .panel-toolbar > div:first-child { display: none; }
 #tab-panel-proto.proto-fs > p { display: none; }
 #tab-panel-proto.proto-fs .proto-tree-wrap {
-  position: fixed; inset: 56px 0 0 0; max-height: none; height: auto;
+  position: fixed; inset: 54px 0 0 0; max-height: none; height: auto;
   width: 100%; border: 0; border-radius: 0; margin: 0;
 }
 
-.ptree, .ptree ul { list-style: none; margin: 0; padding: 0; }
-/* هيكل الشجرة LTR (البطاقات تبقى RTL للنص) */
-.ptree, .ptree ul, .ptree li { direction: ltr; }
-.ptree { position: relative; display: inline-flex; justify-content: center; align-items: flex-start; min-width: 100%; padding: 6px; }
-.ptree ul { display: flex; justify-content: center; align-items: flex-start; padding-top: 46px; position: relative; }
-.ptree li {
-  position: relative; display: flex; flex-direction: column; align-items: center;
-  padding: 46px 16px 0;
-}
-.ptree li:only-child { padding-top: 46px; }
-.ptree > li { padding-top: 0; }
-/* الخطوط تُرسم كمنحنيات SVG — نُخفي خطوط CSS القديمة */
-.ptree li::before, .ptree li::after, .ptree ul::before { display: none !important; }
-/* طبقة الخطوط المنحنية خلف البطاقات */
-svg.ptree-links { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 0; overflow: visible; }
+.pex { direction: rtl; display: flex; flex-direction: column; align-items: center; gap: 0; }
 
-/* بطاقة الشخص — زجاجية على خلفية داكنة */
-.pnode {
-  position: relative; z-index: 1;
-  direction: rtl;
-  display: inline-flex; align-items: center; gap: 12px;
-  margin: 0; padding: 10px 16px 10px 12px;
-  background: rgba(255,255,255,.07);
-  -webkit-backdrop-filter: blur(9px); backdrop-filter: blur(9px);
-  border: 1px solid rgba(255,255,255,.16);
-  border-radius: 18px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.10);
-  color: #eef4f0;
-  cursor: pointer; transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
-  max-width: 340px;
+/* شريط المسار (breadcrumb) */
+.pex-breadcrumb {
+  display: flex; align-items: center; gap: 6px; flex-wrap: nowrap;
+  max-width: 100%; overflow-x: auto; padding: 2px 4px 12px; margin-bottom: 2px;
+  scrollbar-width: thin;
 }
-.pnode:hover {
-  transform: translateY(-3px);
-  border-color: rgba(232,181,60,.7);
-  box-shadow: 0 16px 34px rgba(0,0,0,.5), 0 0 22px rgba(232,181,60,.28);
+.pex-crumb {
+  flex-shrink: 0; cursor: pointer; white-space: nowrap;
+  font-size: .78rem; font-weight: 700; color: #2f5d4a;
+  background: #fff; border: 1px solid #cfe0d6; border-radius: 999px;
+  padding: 4px 11px; transition: all .15s ease;
 }
-/* المتوفّى: شارة رمادية في ركن البطاقة + خفوت خفيف */
-.pnode.dead { opacity: .74; border-top-left-radius: 0; overflow: hidden; }
-.pnode.dead::after {
-  content: ''; position: absolute; top: 0; left: 0;
-  border-style: solid; border-width: 16px 16px 0 0;
-  border-color: #cfd4d0 transparent transparent transparent;
-}
+.pex-crumb:hover { border-color: var(--pex-gold); color: #1f4536; }
+.pex-crumb.current { background: linear-gradient(135deg, #2f7d5b, #1f5d43); color: #fff; border-color: transparent; box-shadow: 0 3px 10px rgba(31,93,67,.3); }
+.pex-crumb-sep { flex-shrink: 0; color: #9bb3a7; font-size: .7rem; }
 
-/* الأفاتار: إطار حسب الجنس + هالة ذهبية */
-.pnode-av {
-  width: 48px; height: 48px; border-radius: 50%; object-fit: cover;
-  flex-shrink: 0; background: #2a3b34;
-  border: 3px solid #4a9be0;
-  box-shadow: 0 0 0 2px rgba(255,255,255,.15), 0 0 0 4px rgba(232,181,60,.55), 0 3px 8px rgba(0,0,0,.4);
+/* المسرح: أب فوق، تركيز، أبناء أسفل — مع طبقة خطوط */
+.pex-stage { position: relative; width: 100%; display: flex; flex-direction: column; align-items: center; }
+svg.pex-links { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; overflow: visible; }
+.pex-stage > * { position: relative; z-index: 1; }
+
+/* بطاقة الأب (أعلى) */
+.pex-parent-row { display: flex; justify-content: center; margin-bottom: 30px; }
+.pex-parent {
+  cursor: pointer; display: inline-flex; align-items: center; gap: 10px;
+  background: #ffffff; border: 1px solid #d8e4dc; border-radius: 16px;
+  padding: 8px 14px 8px 10px; box-shadow: 0 6px 16px rgba(31,71,55,.1);
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+  max-width: 82vw;
 }
-.pnode.female .pnode-av { border-color: #e0679f; }
-.pnode-av-ph {
+.pex-parent:hover { transform: translateY(-2px); border-color: var(--pex-gold); box-shadow: 0 12px 24px rgba(31,71,55,.16); }
+.pex-parent .pex-mini-label { font-size: .64rem; color: #8aa398; font-weight: 700; }
+.pex-parent .pex-updot {
+  margin-inline-start: 4px; width: 22px; height: 22px; border-radius: 50%;
   display: inline-flex; align-items: center; justify-content: center;
-  font-weight: 800; color: #fff; font-size: 1.2rem;
+  background: linear-gradient(135deg, var(--pex-gold-2), var(--pex-gold)); color: #4a3400;
+  font-size: .8rem; box-shadow: 0 2px 6px rgba(217,166,58,.4);
 }
-.pnode-av-ph.m { background: linear-gradient(135deg, #4a9be0, #1d4e89); }
-.pnode-av-ph.f { background: linear-gradient(135deg, #e879b0, #a8386b); }
-
-/* عدّاد إجمالي من تحت الشخص (ذهبي متوهّج) */
-.pnode-count {
-  margin-inline-start: 4px; flex-shrink: 0;
-  font-size: .72rem; font-weight: 800; color: #3a2903;
-  background: linear-gradient(135deg, #f2cd69, #d9a63a);
-  border: 1px solid rgba(255,220,140,.6);
-  border-radius: 999px; padding: 2px 10px;
-  box-shadow: 0 0 10px rgba(232,181,60,.4);
-  white-space: nowrap;
+.pex-pav, .pex-pav img, .pex-pav .pex-ph { width: 38px; height: 38px; border-radius: 50%; display: block; object-fit: cover; }
+.pex-pav .pex-ph { font-size: 1rem; }
+.pex-pav img, .pex-pav .pex-ph { border: 2px solid var(--pex-male); box-shadow: 0 2px 6px rgba(0,0,0,.15); }
+.pex-parent.female .pex-pav img, .pex-parent.female .pex-pav .pex-ph { border-color: var(--pex-female); }
+.pex-root-badge {
+  margin-bottom: 26px; font-size: .74rem; font-weight: 800; color: #7a5b12;
+  background: linear-gradient(135deg, #fbe9b8, #f3d689); border: 1px solid #e6c56a;
+  border-radius: 999px; padding: 5px 16px; box-shadow: 0 4px 12px rgba(217,166,58,.28);
 }
 
-.pnode-info { display: flex; flex-direction: column; line-height: 1.4; min-width: 0; }
-.pnode-name { font-weight: 800; color: #f4f8f4; font-size: 1rem; letter-spacing: .2px; }
-.pnode-id {
-  color: #f0d38a; font-weight: 700; font-size: .68rem;
-  background: rgba(232,181,60,.16); border: 1px solid rgba(232,181,60,.4);
-  border-radius: 6px; padding: 0 5px; margin-inline-start: 3px;
+/* البطاقة المركزية (التركيز) */
+.pex-focus {
+  position: relative; width: 300px; max-width: 88vw;
+  background: #ffffff; border-radius: 26px;
+  box-shadow: 0 20px 44px rgba(24,58,44,.16), 0 4px 12px rgba(24,58,44,.08);
+  padding: 0 20px 20px; margin-bottom: 34px; overflow: hidden;
+  text-align: center;
 }
-.pnode-meta { font-size: .72rem; color: #a9c6b8; margin-top: 1px; }
-
-.pnode-chev {
-  color: #ffe6a6; font-size: .78rem; width: 18px; height: 18px; line-height: 18px;
-  text-align: center; background: rgba(232,181,60,.18); border-radius: 50%;
-  transition: transform .15s ease; flex-shrink: 0;
+.pex-focus::before {   /* شريط علوي بلون الجنس */
+  content: ''; display: block; height: 74px; margin: 0 -20px 0;
+  background: linear-gradient(135deg, var(--pex-male), var(--pex-male-2));
 }
-.ptree li.collapsed > .pnode .pnode-chev { transform: rotate(-90deg); }
-.pnode-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.35); flex-shrink: 0; }
+.pex-focus.female::before { background: linear-gradient(135deg, var(--pex-female), var(--pex-female-2)); }
+.pex-focus .pex-av {
+  width: 96px; height: 96px; margin: -54px auto 0; position: relative; z-index: 2;
+}
+.pex-focus .pex-av img, .pex-focus .pex-av .pex-ph {
+  width: 96px; height: 96px; border-radius: 50%; object-fit: cover; display: block;
+  border: 4px solid #fff; box-shadow: 0 0 0 3px var(--pex-male), 0 8px 20px rgba(0,0,0,.22);
+}
+.pex-focus.female .pex-av img, .pex-focus.female .pex-av .pex-ph { box-shadow: 0 0 0 3px var(--pex-female), 0 8px 20px rgba(0,0,0,.22); }
+.pex-ph { display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; font-size: 2.2rem; }
+.pex-ph.m { background: linear-gradient(135deg, #4a9be0, var(--pex-male-2)); }
+.pex-ph.f { background: linear-gradient(135deg, #ec7fb1, var(--pex-female-2)); }
+.pex-focus .pex-name { margin-top: 12px; font-size: 1.35rem; font-weight: 800; color: #1e3b2f; }
+.pex-focus .pex-sub { font-size: .82rem; color: #6f8a7e; margin-top: 2px; }
+.pex-focus .pex-id {
+  display: inline-block; margin-top: 9px; font-size: .74rem; font-weight: 800; color: #5a4207;
+  background: linear-gradient(135deg, var(--pex-gold-2), var(--pex-gold));
+  border-radius: 999px; padding: 3px 14px; box-shadow: 0 3px 10px rgba(217,166,58,.35);
+}
+.pex-stats { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+.pex-stat {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: .74rem; font-weight: 700; color: #23503c;
+  background: #eef6f1; border: 1px solid #d3e6db; border-radius: 12px; padding: 5px 11px;
+}
+.pex-stat b { font-size: .92rem; color: #17402e; }
+/* شارة المتوفّى — شريط أنيق في الأعلى */
+.pex-focus.dead .pex-av img, .pex-focus.dead .pex-av .pex-ph { filter: grayscale(.85); }
+.pex-dead-ribbon {
+  position: absolute; top: 12px; inset-inline-start: 14px; z-index: 3;
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: .66rem; font-weight: 800; color: #fff;
+  background: rgba(38,50,45,.82); border: 1px solid rgba(255,255,255,.35);
+  border-radius: 999px; padding: 3px 9px; backdrop-filter: blur(3px);
+}
 
-.ptree li.collapsed > ul { display: none; }
+/* صفّ الأبناء (تمرير أفقي) */
+.pex-children-label { font-size: .78rem; font-weight: 800; color: #33604a; margin-bottom: 12px; }
+.pex-children {
+  display: flex; gap: 12px; align-items: stretch;
+  max-width: 100%; overflow-x: auto; padding: 4px 6px 14px;
+  scroll-snap-type: x proximity; scrollbar-width: thin;
+  justify-content: flex-start;
+}
+.pex-children.centered { justify-content: center; }
+.pex-child {
+  scroll-snap-align: center; flex: 0 0 auto; width: 132px; cursor: pointer;
+  background: #fff; border: 1px solid #dbe7e0; border-radius: 18px;
+  padding: 14px 10px 12px; text-align: center; position: relative;
+  box-shadow: 0 6px 16px rgba(31,71,55,.09);
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+  border-bottom: 3px solid var(--pex-male);
+}
+.pex-child.female { border-bottom-color: var(--pex-female); }
+.pex-child:hover { transform: translateY(-4px); border-color: var(--pex-gold); box-shadow: 0 14px 28px rgba(31,71,55,.18); }
+.pex-child .pex-cav { width: 56px; height: 56px; margin: 0 auto; }
+.pex-child .pex-cav img, .pex-child .pex-cav .pex-ph {
+  width: 56px; height: 56px; border-radius: 50%; object-fit: cover; display: block;
+  border: 3px solid var(--pex-male); box-shadow: 0 3px 8px rgba(0,0,0,.15);
+}
+.pex-child.female .pex-cav img, .pex-child.female .pex-cav .pex-ph { border-color: var(--pex-female); }
+.pex-child .pex-ph { font-size: 1.3rem; }
+.pex-child.dead .pex-cav img, .pex-child.dead .pex-cav .pex-ph { filter: grayscale(.85); }
+.pex-child .pex-cname { margin-top: 8px; font-size: .84rem; font-weight: 800; color: #1e3b2f; line-height: 1.3; }
+.pex-child .pex-cid { font-size: .64rem; color: #94a99e; font-weight: 700; margin-top: 1px; }
+.pex-child .pex-ccount {
+  position: absolute; top: 8px; inset-inline-end: 8px;
+  font-size: .62rem; font-weight: 800; color: #4a3400;
+  background: linear-gradient(135deg, var(--pex-gold-2), var(--pex-gold));
+  border-radius: 999px; padding: 1px 7px; box-shadow: 0 2px 6px rgba(217,166,58,.4);
+}
+.pex-child .pex-cdead {
+  position: absolute; top: 8px; inset-inline-start: 8px; font-size: .62rem;
+  background: rgba(38,50,45,.8); color: #fff; border-radius: 999px; padding: 1px 6px;
+}
+.pex-child .pex-cmore { font-size: .62rem; color: #2f7d5b; font-weight: 800; margin-top: 5px; }
+.pex-no-children { font-size: .82rem; color: #8aa398; padding: 10px; }
+.pex-hint { font-size: .72rem; color: #a2b6ab; margin-top: 4px; }
 
 /* ===== جمع البيانات: معاينة الفروع ===== */
 .collect-title { font-weight: 800; color: var(--primary-dark); margin-bottom: 10px; }
