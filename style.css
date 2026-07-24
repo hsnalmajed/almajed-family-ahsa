@@ -994,6 +994,7 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
 
 /* بطاقة الشخص */
 .pnode {
+  position: relative;
   direction: rtl;                                  /* البطاقة عربية RTL داخل هيكل LTR */
   display: inline-flex; align-items: center; gap: 10px;
   margin: 0; padding: 6px 14px 6px 8px;
@@ -1006,11 +1007,12 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
 .pnode:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.1); }
 .pnode.male   { border-right-color: #1d4e89; }     /* أزرق داكن */
 .pnode.female { border-right-color: #a8386b; }     /* وردي داكن */
-/* المتوفّى: شريط أسود واضح بجانب الاسم */
-.pnode.dead { background: #f6f6f4; }
-.pnode-deadbar {
-  align-self: stretch; width: 5px; flex-shrink: 0;
-  background: #111; border-radius: 3px;
+/* المتوفّى: شارة سوداء في ركن البطاقة (الزاوية العليا) */
+.pnode.dead { background: #f6f6f4; border-top-left-radius: 0; overflow: hidden; }
+.pnode.dead::after {
+  content: ''; position: absolute; top: 0; left: 0;
+  border-style: solid; border-width: 16px 16px 0 0;
+  border-color: #111 transparent transparent transparent;
 }
 
 .pnode-av {

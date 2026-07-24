@@ -139,9 +139,8 @@ function protoNodeHtml(p, childrenOf, depth, descOf) {
   const countBadge = total > 0 ? `<span class="pnode-count" title="إجمالي من تحته (أبناء وأحفاد...)">👥 ${total}</span>` : '';
   let html =
     `<li class="${collapsed.trim()}">` +
-      `<div class="pnode ${female ? 'female' : 'male'}${dead ? ' dead' : ''}">` +
+      `<div class="pnode ${female ? 'female' : 'male'}${dead ? ' dead' : ''}"${dead ? ' title="متوفى"' : ''}>` +
         chev + av +
-        (dead ? '<span class="pnode-deadbar" title="متوفى"></span>' : '') +
         `<span class="pnode-info">` +
           `<span class="pnode-name">${escapeHtml(p.firstName || '')} <b class="pnode-id">#${p.displayId}</b></span>` +
           `<span class="pnode-meta">${metaBits.join(' • ')}</span>` +
@@ -171,6 +170,20 @@ function renderProtoTree() {
     memo[id] = c; return c;
   };
   box.innerHTML = '<ul class="ptree">' + roots.map(r => protoNodeHtml(r, childrenOf, 0, descOf)).join('') + '</ul>';
+  applyProtoZoom();
+}
+
+// تكبير/تصغير النموذج (10% إلى 100%، الافتراضي 50%)
+let protoZoom = 0.5;
+function applyProtoZoom() {
+  const t = document.querySelector('#proto-tree .ptree');
+  if (t) t.style.zoom = protoZoom;
+  const lbl = document.getElementById('proto-zoom-level');
+  if (lbl) lbl.textContent = Math.round(protoZoom * 100) + '%';
+}
+function setProtoZoom(z) {
+  protoZoom = Math.max(0.1, Math.min(1, Math.round(z * 10) / 10));
+  applyProtoZoom();
 }
 
 function protoSetAll(collapsed) {
@@ -2211,6 +2224,12 @@ document.addEventListener('DOMContentLoaded', () => {
   if (pExpand) pExpand.addEventListener('click', () => protoSetAll(false));
   const pCollapse = document.getElementById('proto-collapse-all');
   if (pCollapse) pCollapse.addEventListener('click', () => protoSetAll(true));
+  const pzIn = document.getElementById('proto-zoom-in');
+  if (pzIn) pzIn.addEventListener('click', () => setProtoZoom(protoZoom + 0.1));
+  const pzOut = document.getElementById('proto-zoom-out');
+  if (pzOut) pzOut.addEventListener('click', () => setProtoZoom(protoZoom - 0.1));
+  const pzReset = document.getElementById('proto-zoom-reset');
+  if (pzReset) pzReset.addEventListener('click', () => setProtoZoom(0.5));
   const printCardsBtn = document.getElementById('print-id-cards-btn');
   if (printCardsBtn) printCardsBtn.addEventListener('click', () => window.print());
   document.querySelectorAll('.cards-filter-btn').forEach(b => {
