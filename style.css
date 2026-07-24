@@ -955,15 +955,18 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
 
 /* ===== نموذج شجرة العائلة (تصميم مقترح: مخطّط أفقي من الأعلى للأسفل) ===== */
 .proto-tree-wrap {
-  background: linear-gradient(180deg, #fbfaf6, #f4f2ec);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 20px 14px;
+  background:
+    radial-gradient(rgba(232,181,60,.06) 1px, transparent 1px),
+    radial-gradient(1100px 560px at 50% -8%, #1a5040 0%, #0e3227 46%, #071d17 100%);
+  background-size: 24px 24px, 100% 100%;
+  border: 1px solid #0a2019;
+  border-radius: 16px;
+  padding: 24px 16px;
   max-height: 72vh;
   overflow: auto;
 }
 /* وضع ملء الشاشة للنموذج */
-#tab-panel-proto.proto-fs { position: fixed; inset: 0; z-index: 9998; background: #fff; overflow: hidden; }
+#tab-panel-proto.proto-fs { position: fixed; inset: 0; z-index: 9998; background: #071d17; overflow: hidden; }
 #tab-panel-proto.proto-fs > .panel-toolbar {
   position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
   margin: 0; padding: 8px 12px; background: #fff; box-shadow: 0 1px 8px rgba(0,0,0,.15);
@@ -976,99 +979,91 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
 }
 
 .ptree, .ptree ul { list-style: none; margin: 0; padding: 0; }
-/* هيكل الشجرة LTR لضبط خطوط الربط بدقّة (البطاقات تبقى RTL للنص) */
+/* هيكل الشجرة LTR (البطاقات تبقى RTL للنص) */
 .ptree, .ptree ul, .ptree li { direction: ltr; }
-.ptree { display: inline-flex; justify-content: center; align-items: flex-start; min-width: 100%; padding: 6px; }
-.ptree ul { display: flex; justify-content: center; align-items: flex-start; padding-top: 36px; position: relative; }
-/* خط نزول رأسي من الأب إلى ناقل الأبناء */
-.ptree ul::before {
-  content: ''; position: absolute; top: 0; left: 50%; width: 2px; height: 36px;
-  background: linear-gradient(#c7c1b2, #d8d3c7); transform: translateX(-1px);
-}
+.ptree { position: relative; display: inline-flex; justify-content: center; align-items: flex-start; min-width: 100%; padding: 6px; }
+.ptree ul { display: flex; justify-content: center; align-items: flex-start; padding-top: 46px; position: relative; }
 .ptree li {
   position: relative; display: flex; flex-direction: column; align-items: center;
-  padding: 36px 14px 0;
+  padding: 46px 16px 0;
 }
-/* الناقل الأفقي فوق كل عقدة + منعطفات منحنية */
-.ptree li::before, .ptree li::after {
-  content: ''; position: absolute; top: 0; right: 50%; width: 50%; height: 36px;
-  border-top: 2px solid #d3cdbf;
-}
-.ptree li::after { right: auto; left: 50%; border-left: 2px solid #d3cdbf; }
-/* الابن الوحيد: خط نزول واحد فقط بلا ناقل أفقي */
-.ptree li:only-child::before, .ptree li:only-child::after { display: none; }
-.ptree li:only-child { padding-top: 0; }
-.ptree li:first-child::before, .ptree li:last-child::after { border: 0 none; }
-.ptree li:last-child::before { border-right: 2px solid #d3cdbf; border-radius: 0 18px 0 0; }
-.ptree li:first-child::after { border-radius: 18px 0 0 0; }
-/* الجذور (المستوى الأعلى): بلا خطوط فوقها */
+.ptree li:only-child { padding-top: 46px; }
 .ptree > li { padding-top: 0; }
-.ptree > li::before, .ptree > li::after { display: none; }
+/* الخطوط تُرسم كمنحنيات SVG — نُخفي خطوط CSS القديمة */
+.ptree li::before, .ptree li::after, .ptree ul::before { display: none !important; }
+/* طبقة الخطوط المنحنية خلف البطاقات */
+svg.ptree-links { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 0; overflow: visible; }
 
-/* بطاقة الشخص — تصميم فاخر */
+/* بطاقة الشخص — زجاجية على خلفية داكنة */
 .pnode {
-  position: relative;
-  direction: rtl;                                  /* البطاقة عربية RTL داخل هيكل LTR */
+  position: relative; z-index: 1;
+  direction: rtl;
   display: inline-flex; align-items: center; gap: 12px;
-  margin: 0; padding: 9px 16px 9px 12px;
-  background: linear-gradient(180deg, #ffffff, #f7f5ef);
-  border: 1px solid rgba(0,0,0,.05);
+  margin: 0; padding: 10px 16px 10px 12px;
+  background: rgba(255,255,255,.07);
+  -webkit-backdrop-filter: blur(9px); backdrop-filter: blur(9px);
+  border: 1px solid rgba(255,255,255,.16);
   border-radius: 18px;
-  box-shadow: 0 3px 12px rgba(20,45,32,.10), 0 1px 3px rgba(0,0,0,.05);
-  cursor: pointer; transition: transform .14s ease, box-shadow .14s ease;
+  box-shadow: 0 8px 24px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.10);
+  color: #eef4f0;
+  cursor: pointer; transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
   max-width: 340px;
 }
-.pnode:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(20,45,32,.18); }
-/* المتوفّى: شارة سوداء في ركن البطاقة (الزاوية العليا) */
-.pnode.dead { background: linear-gradient(180deg,#fbfbf9,#f1f0eb); border-top-left-radius: 0; overflow: hidden; }
+.pnode:hover {
+  transform: translateY(-3px);
+  border-color: rgba(232,181,60,.7);
+  box-shadow: 0 16px 34px rgba(0,0,0,.5), 0 0 22px rgba(232,181,60,.28);
+}
+/* المتوفّى: شارة رمادية في ركن البطاقة + خفوت خفيف */
+.pnode.dead { opacity: .74; border-top-left-radius: 0; overflow: hidden; }
 .pnode.dead::after {
   content: ''; position: absolute; top: 0; left: 0;
   border-style: solid; border-width: 16px 16px 0 0;
-  border-color: #141414 transparent transparent transparent;
+  border-color: #cfd4d0 transparent transparent transparent;
 }
 
 /* الأفاتار: إطار حسب الجنس + هالة ذهبية */
 .pnode-av {
   width: 48px; height: 48px; border-radius: 50%; object-fit: cover;
-  flex-shrink: 0; background: #eee;
-  border: 3px solid #1d4e89;
-  box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(207,154,46,.55), 0 2px 6px rgba(0,0,0,.18);
+  flex-shrink: 0; background: #2a3b34;
+  border: 3px solid #4a9be0;
+  box-shadow: 0 0 0 2px rgba(255,255,255,.15), 0 0 0 4px rgba(232,181,60,.55), 0 3px 8px rgba(0,0,0,.4);
 }
-.pnode.female .pnode-av { border-color: #a8386b; }
+.pnode.female .pnode-av { border-color: #e0679f; }
 .pnode-av-ph {
   display: inline-flex; align-items: center; justify-content: center;
   font-weight: 800; color: #fff; font-size: 1.2rem;
 }
-.pnode-av-ph.m { background: linear-gradient(135deg, #3a7ec5, #163a66); }
-.pnode-av-ph.f { background: linear-gradient(135deg, #d267a0, #8a2c5c); }
+.pnode-av-ph.m { background: linear-gradient(135deg, #4a9be0, #1d4e89); }
+.pnode-av-ph.f { background: linear-gradient(135deg, #e879b0, #a8386b); }
 
-/* عدّاد إجمالي من تحت الشخص (ذهبي) */
+/* عدّاد إجمالي من تحت الشخص (ذهبي متوهّج) */
 .pnode-count {
   margin-inline-start: 4px; flex-shrink: 0;
-  font-size: .72rem; font-weight: 800; color: #4a3407;
-  background: linear-gradient(135deg, #edc158, #cf9a2e);
-  border: 1px solid #c69128;
+  font-size: .72rem; font-weight: 800; color: #3a2903;
+  background: linear-gradient(135deg, #f2cd69, #d9a63a);
+  border: 1px solid rgba(255,220,140,.6);
   border-radius: 999px; padding: 2px 10px;
-  box-shadow: 0 1px 3px rgba(160,120,20,.28);
+  box-shadow: 0 0 10px rgba(232,181,60,.4);
   white-space: nowrap;
 }
 
 .pnode-info { display: flex; flex-direction: column; line-height: 1.4; min-width: 0; }
-.pnode-name { font-weight: 800; color: var(--primary-dark); font-size: 1rem; letter-spacing: .2px; }
+.pnode-name { font-weight: 800; color: #f4f8f4; font-size: 1rem; letter-spacing: .2px; }
 .pnode-id {
-  color: var(--gold-dark); font-weight: 700; font-size: .68rem;
-  background: var(--gold-light); border: 1px solid rgba(207,154,46,.45);
+  color: #f0d38a; font-weight: 700; font-size: .68rem;
+  background: rgba(232,181,60,.16); border: 1px solid rgba(232,181,60,.4);
   border-radius: 6px; padding: 0 5px; margin-inline-start: 3px;
 }
-.pnode-meta { font-size: .72rem; color: var(--muted); margin-top: 1px; }
+.pnode-meta { font-size: .72rem; color: #a9c6b8; margin-top: 1px; }
 
 .pnode-chev {
-  color: var(--primary); font-size: .78rem; width: 18px; height: 18px; line-height: 18px;
-  text-align: center; background: rgba(23,89,57,.10); border-radius: 50%;
+  color: #ffe6a6; font-size: .78rem; width: 18px; height: 18px; line-height: 18px;
+  text-align: center; background: rgba(232,181,60,.18); border-radius: 50%;
   transition: transform .15s ease; flex-shrink: 0;
 }
 .ptree li.collapsed > .pnode .pnode-chev { transform: rotate(-90deg); }
-.pnode-dot { width: 7px; height: 7px; border-radius: 50%; background: #d3d8d3; flex-shrink: 0; }
+.pnode-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.35); flex-shrink: 0; }
 
 .ptree li.collapsed > ul { display: none; }
 
