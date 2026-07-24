@@ -978,88 +978,97 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
 .ptree, .ptree ul { list-style: none; margin: 0; padding: 0; }
 /* هيكل الشجرة LTR لضبط خطوط الربط بدقّة (البطاقات تبقى RTL للنص) */
 .ptree, .ptree ul, .ptree li { direction: ltr; }
-.ptree { display: inline-flex; justify-content: center; align-items: flex-start; min-width: 100%; }
-.ptree ul { display: flex; justify-content: center; align-items: flex-start; padding-top: 26px; position: relative; }
+.ptree { display: inline-flex; justify-content: center; align-items: flex-start; min-width: 100%; padding: 6px; }
+.ptree ul { display: flex; justify-content: center; align-items: flex-start; padding-top: 36px; position: relative; }
 /* خط نزول رأسي من الأب إلى ناقل الأبناء */
 .ptree ul::before {
-  content: ''; position: absolute; top: 0; left: 50%; width: 0; height: 26px;
-  border-left: 2px solid #d8d5cc;
+  content: ''; position: absolute; top: 0; left: 50%; width: 2px; height: 36px;
+  background: linear-gradient(#c7c1b2, #d8d3c7); transform: translateX(-1px);
 }
 .ptree li {
   position: relative; display: flex; flex-direction: column; align-items: center;
-  padding: 26px 10px 0;
+  padding: 36px 14px 0;
 }
-/* الناقل الأفقي فوق كل عقدة */
+/* الناقل الأفقي فوق كل عقدة + منعطفات منحنية */
 .ptree li::before, .ptree li::after {
-  content: ''; position: absolute; top: 0; right: 50%; width: 50%; height: 26px;
-  border-top: 2px solid #d8d5cc;
+  content: ''; position: absolute; top: 0; right: 50%; width: 50%; height: 36px;
+  border-top: 2px solid #d3cdbf;
 }
-.ptree li::after { right: auto; left: 50%; border-left: 2px solid #d8d5cc; }
-/* الابن الوحيد: خط نزول واحد فقط (يأتي من ul::before) بلا ناقل أفقي */
+.ptree li::after { right: auto; left: 50%; border-left: 2px solid #d3cdbf; }
+/* الابن الوحيد: خط نزول واحد فقط بلا ناقل أفقي */
 .ptree li:only-child::before, .ptree li:only-child::after { display: none; }
 .ptree li:only-child { padding-top: 0; }
 .ptree li:first-child::before, .ptree li:last-child::after { border: 0 none; }
-.ptree li:last-child::before { border-right: 2px solid #d8d5cc; border-radius: 0 7px 0 0; }
-.ptree li:first-child::after { border-radius: 7px 0 0 0; }
+.ptree li:last-child::before { border-right: 2px solid #d3cdbf; border-radius: 0 18px 0 0; }
+.ptree li:first-child::after { border-radius: 18px 0 0 0; }
 /* الجذور (المستوى الأعلى): بلا خطوط فوقها */
 .ptree > li { padding-top: 0; }
 .ptree > li::before, .ptree > li::after { display: none; }
 
-/* بطاقة الشخص */
+/* بطاقة الشخص — تصميم فاخر */
 .pnode {
   position: relative;
   direction: rtl;                                  /* البطاقة عربية RTL داخل هيكل LTR */
-  display: inline-flex; align-items: center; gap: 10px;
-  margin: 0; padding: 6px 14px 6px 8px;
-  background: #fff; border: 1px solid var(--border);
-  border-right: 5px solid #1d4e89;                 /* لون الجنس على الحافة */
-  border-radius: 14px; box-shadow: 0 1px 5px rgba(0,0,0,.06);
-  cursor: pointer; transition: transform .12s ease, box-shadow .12s ease;
+  display: inline-flex; align-items: center; gap: 12px;
+  margin: 0; padding: 9px 16px 9px 12px;
+  background: linear-gradient(180deg, #ffffff, #f7f5ef);
+  border: 1px solid rgba(0,0,0,.05);
+  border-radius: 18px;
+  box-shadow: 0 3px 12px rgba(20,45,32,.10), 0 1px 3px rgba(0,0,0,.05);
+  cursor: pointer; transition: transform .14s ease, box-shadow .14s ease;
   max-width: 340px;
 }
-.pnode:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.1); }
-.pnode.male   { border-right-color: #1d4e89; }     /* أزرق داكن */
-.pnode.female { border-right-color: #a8386b; }     /* وردي داكن */
+.pnode:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(20,45,32,.18); }
 /* المتوفّى: شارة سوداء في ركن البطاقة (الزاوية العليا) */
-.pnode.dead { background: #f6f6f4; border-top-left-radius: 0; overflow: hidden; }
+.pnode.dead { background: linear-gradient(180deg,#fbfbf9,#f1f0eb); border-top-left-radius: 0; overflow: hidden; }
 .pnode.dead::after {
   content: ''; position: absolute; top: 0; left: 0;
   border-style: solid; border-width: 16px 16px 0 0;
-  border-color: #111 transparent transparent transparent;
+  border-color: #141414 transparent transparent transparent;
 }
 
+/* الأفاتار: إطار حسب الجنس + هالة ذهبية */
 .pnode-av {
-  width: 38px; height: 38px; border-radius: 50%; object-fit: cover;
+  width: 48px; height: 48px; border-radius: 50%; object-fit: cover;
   flex-shrink: 0; background: #eee;
+  border: 3px solid #1d4e89;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(207,154,46,.55), 0 2px 6px rgba(0,0,0,.18);
 }
+.pnode.female .pnode-av { border-color: #a8386b; }
 .pnode-av-ph {
   display: inline-flex; align-items: center; justify-content: center;
-  font-weight: 800; color: #fff; font-size: 1rem;
+  font-weight: 800; color: #fff; font-size: 1.2rem;
 }
-.pnode-av-ph.m { background: linear-gradient(135deg, #2c6bb3, #163a66); }   /* أزرق داكن */
-.pnode-av-ph.f { background: linear-gradient(135deg, #c85a90, #8a2c5c); }   /* وردي داكن */
+.pnode-av-ph.m { background: linear-gradient(135deg, #3a7ec5, #163a66); }
+.pnode-av-ph.f { background: linear-gradient(135deg, #d267a0, #8a2c5c); }
 
-/* عدّاد إجمالي من تحت الشخص */
+/* عدّاد إجمالي من تحت الشخص (ذهبي) */
 .pnode-count {
   margin-inline-start: 4px; flex-shrink: 0;
   font-size: .72rem; font-weight: 800; color: #4a3407;
-  background: linear-gradient(135deg, #e8b53c, #cf9a2e);   /* ذهبي */
+  background: linear-gradient(135deg, #edc158, #cf9a2e);
   border: 1px solid #c69128;
-  border-radius: 999px; padding: 2px 9px;
+  border-radius: 999px; padding: 2px 10px;
+  box-shadow: 0 1px 3px rgba(160,120,20,.28);
   white-space: nowrap;
 }
 
-.pnode-info { display: flex; flex-direction: column; line-height: 1.35; min-width: 0; }
-.pnode-name { font-weight: 700; color: var(--primary-dark); font-size: .95rem; }
-.pnode-id { color: var(--gold-dark); font-weight: 700; font-size: .8rem; }
-.pnode-meta { font-size: .72rem; color: var(--muted); }
+.pnode-info { display: flex; flex-direction: column; line-height: 1.4; min-width: 0; }
+.pnode-name { font-weight: 800; color: var(--primary-dark); font-size: 1rem; letter-spacing: .2px; }
+.pnode-id {
+  color: var(--gold-dark); font-weight: 700; font-size: .68rem;
+  background: var(--gold-light); border: 1px solid rgba(207,154,46,.45);
+  border-radius: 6px; padding: 0 5px; margin-inline-start: 3px;
+}
+.pnode-meta { font-size: .72rem; color: var(--muted); margin-top: 1px; }
 
 .pnode-chev {
-  color: var(--primary); font-size: .8rem; width: 14px; text-align: center;
+  color: var(--primary); font-size: .78rem; width: 18px; height: 18px; line-height: 18px;
+  text-align: center; background: rgba(23,89,57,.10); border-radius: 50%;
   transition: transform .15s ease; flex-shrink: 0;
 }
-.ptree li.collapsed > .pnode .pnode-chev { transform: rotate(90deg); }
-.pnode-dot { width: 6px; height: 6px; border-radius: 50%; background: #cdd3ce; flex-shrink: 0; }
+.ptree li.collapsed > .pnode .pnode-chev { transform: rotate(-90deg); }
+.pnode-dot { width: 7px; height: 7px; border-radius: 50%; background: #d3d8d3; flex-shrink: 0; }
 
 .ptree li.collapsed > ul { display: none; }
 
