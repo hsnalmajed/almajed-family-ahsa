@@ -956,17 +956,17 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
 /* ===== نموذج شجرة العائلة (تصميم مقترح: مخطّط أفقي من الأعلى للأسفل) ===== */
 .proto-tree-wrap {
   background:
-    radial-gradient(rgba(232,181,60,.06) 1px, transparent 1px),
-    radial-gradient(1100px 560px at 50% -8%, #1a5040 0%, #0e3227 46%, #071d17 100%);
+    radial-gradient(rgba(31,71,55,.045) 1px, transparent 1px),
+    radial-gradient(900px 460px at 50% -6%, #ffffff 0%, #eef2f6 55%, #e3e9f0 100%);
   background-size: 24px 24px, 100% 100%;
-  border: 1px solid #0a2019;
+  border: 1px solid #dbe2ea;
   border-radius: 16px;
   padding: 24px 16px;
   max-height: 72vh;
   overflow: auto;
 }
 /* وضع ملء الشاشة للنموذج */
-#tab-panel-proto.proto-fs { position: fixed; inset: 0; z-index: 9998; background: #071d17; overflow: hidden; }
+#tab-panel-proto.proto-fs { position: fixed; inset: 0; z-index: 9998; background: #eef2f6; overflow: hidden; }
 #tab-panel-proto.proto-fs > .panel-toolbar {
   position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
   margin: 0; padding: 8px 12px; background: #fff; box-shadow: 0 1px 8px rgba(0,0,0,.15);
@@ -994,76 +994,75 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
 /* طبقة الخطوط المنحنية خلف البطاقات */
 svg.ptree-links { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 0; overflow: visible; }
 
-/* بطاقة الشخص — زجاجية على خلفية داكنة */
+/* بطاقة الشخص — فاتحة أنيقة على خلفية فاتحة */
 .pnode {
   position: relative; z-index: 1;
   direction: rtl;
   display: inline-flex; align-items: center; gap: 12px;
   margin: 0; padding: 10px 16px 10px 12px;
-  background: rgba(255,255,255,.07);
-  -webkit-backdrop-filter: blur(9px); backdrop-filter: blur(9px);
-  border: 1px solid rgba(255,255,255,.16);
+  background: #ffffff;
+  border: 1px solid #e2e7ee;
   border-radius: 18px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.10);
-  color: #eef4f0;
+  box-shadow: 0 6px 18px rgba(20,40,60,.10), inset 0 1px 0 rgba(255,255,255,.7);
+  color: #22303a;
   cursor: pointer; transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
   max-width: 340px;
 }
 .pnode:hover {
   transform: translateY(-3px);
-  border-color: rgba(232,181,60,.7);
-  box-shadow: 0 16px 34px rgba(0,0,0,.5), 0 0 22px rgba(232,181,60,.28);
+  border-color: rgba(217,166,58,.85);
+  box-shadow: 0 14px 30px rgba(20,40,60,.16), 0 0 0 3px rgba(232,181,60,.18);
 }
 /* المتوفّى: شارة رمادية في ركن البطاقة + خفوت خفيف */
-.pnode.dead { opacity: .74; border-top-left-radius: 0; overflow: hidden; }
+.pnode.dead { opacity: .72; border-top-left-radius: 0; overflow: hidden; }
 .pnode.dead::after {
   content: ''; position: absolute; top: 0; left: 0;
   border-style: solid; border-width: 16px 16px 0 0;
-  border-color: #cfd4d0 transparent transparent transparent;
+  border-color: #98a2a8 transparent transparent transparent;
 }
 
 /* الأفاتار: إطار حسب الجنس + هالة ذهبية */
 .pnode-av {
   width: 48px; height: 48px; border-radius: 50%; object-fit: cover;
-  flex-shrink: 0; background: #2a3b34;
-  border: 3px solid #4a9be0;
-  box-shadow: 0 0 0 2px rgba(255,255,255,.15), 0 0 0 4px rgba(232,181,60,.55), 0 3px 8px rgba(0,0,0,.4);
+  flex-shrink: 0; background: #eef2f6;
+  border: 3px solid #3f8ad6;
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px rgba(232,181,60,.5), 0 2px 7px rgba(20,40,60,.18);
 }
-.pnode.female .pnode-av { border-color: #e0679f; }
+.pnode.female .pnode-av { border-color: #d6568f; }
 .pnode-av-ph {
   display: inline-flex; align-items: center; justify-content: center;
   font-weight: 800; color: #fff; font-size: 1.2rem;
 }
-.pnode-av-ph.m { background: linear-gradient(135deg, #4a9be0, #1d4e89); }
-.pnode-av-ph.f { background: linear-gradient(135deg, #e879b0, #a8386b); }
+.pnode-av-ph.m { background: linear-gradient(135deg, #4a9be0, #245c9e); }
+.pnode-av-ph.f { background: linear-gradient(135deg, #ec7fb1, #b64277); }
 
-/* عدّاد إجمالي من تحت الشخص (ذهبي متوهّج) */
+/* عدّاد إجمالي من تحت الشخص (ذهبي) */
 .pnode-count {
   margin-inline-start: 4px; flex-shrink: 0;
-  font-size: .72rem; font-weight: 800; color: #3a2903;
+  font-size: .72rem; font-weight: 800; color: #5a4207;
   background: linear-gradient(135deg, #f2cd69, #d9a63a);
-  border: 1px solid rgba(255,220,140,.6);
+  border: 1px solid #e7cf86;
   border-radius: 999px; padding: 2px 10px;
-  box-shadow: 0 0 10px rgba(232,181,60,.4);
+  box-shadow: 0 2px 7px rgba(217,166,58,.35);
   white-space: nowrap;
 }
 
 .pnode-info { display: flex; flex-direction: column; line-height: 1.4; min-width: 0; }
-.pnode-name { font-weight: 800; color: #f4f8f4; font-size: 1rem; letter-spacing: .2px; }
+.pnode-name { font-weight: 800; color: #1e2e3a; font-size: 1rem; letter-spacing: .2px; }
 .pnode-id {
-  color: #f0d38a; font-weight: 700; font-size: .68rem;
-  background: rgba(232,181,60,.16); border: 1px solid rgba(232,181,60,.4);
+  color: #7a5a10; font-weight: 700; font-size: .68rem;
+  background: #fbeecb; border: 1px solid #e7cf86;
   border-radius: 6px; padding: 0 5px; margin-inline-start: 3px;
 }
-.pnode-meta { font-size: .72rem; color: #a9c6b8; margin-top: 1px; }
+.pnode-meta { font-size: .72rem; color: #6b7d86; margin-top: 1px; }
 
 .pnode-chev {
-  color: #ffe6a6; font-size: .78rem; width: 18px; height: 18px; line-height: 18px;
+  color: #9a7b1f; font-size: .78rem; width: 18px; height: 18px; line-height: 18px;
   text-align: center; background: rgba(232,181,60,.18); border-radius: 50%;
   transition: transform .15s ease; flex-shrink: 0;
 }
 .ptree li.collapsed > .pnode .pnode-chev { transform: rotate(-90deg); }
-.pnode-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.35); flex-shrink: 0; }
+.pnode-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(31,71,55,.3); flex-shrink: 0; }
 
 .ptree li.collapsed > ul { display: none; }
 
