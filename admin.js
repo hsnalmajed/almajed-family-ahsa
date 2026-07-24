@@ -124,7 +124,7 @@ function protoRootsAndChildren() {
   return { roots, childrenOf };
 }
 
-function protoNodeHtml(p, childrenOf, depth) {
+function protoNodeHtml(p, childrenOf, depth, descOf) {
   const kids = childrenOf[String(p.displayId)] || [];
   const female = p.gender === 'female';
   const dead = p.status === 'death';
@@ -133,9 +133,10 @@ function protoNodeHtml(p, childrenOf, depth) {
     ? `<img class="pnode-av" src="${p.photoURL}" alt="">`
     : `<span class="pnode-av pnode-av-ph ${female ? 'f' : 'm'}">${escapeHtml((p.firstName || '؟').slice(0, 1))}</span>`;
   const chev = kids.length ? '<span class="pnode-chev">▾</span>' : '<span class="pnode-dot"></span>';
+  const total = descOf(p.displayId);           // إجمالي من تحته (كل الذريّة)
   const metaBits = [female ? 'أنثى' : 'ذكر'];
   if (dead) metaBits.push('متوفى');
-  if (kids.length) metaBits.push(kids.length + ' فرع');
+  const countBadge = total > 0 ? `<span class="pnode-count" title="إجمالي من تحته (أبناء وأحفاد...)">👥 ${total}</span>` : '';
   let html =
     `<li class="${collapsed.trim()}">` +
       `<div class="pnode ${female ? 'female' : 'male'}${dead ? ' dead' : ''}">` +
@@ -144,9 +145,10 @@ function protoNodeHtml(p, childrenOf, depth) {
           `<span class="pnode-name">${escapeHtml(p.firstName || '')} <b class="pnode-id">#${p.displayId}</b></span>` +
           `<span class="pnode-meta">${metaBits.join(' • ')}</span>` +
         `</span>` +
+        countBadge +
       `</div>`;
   if (kids.length) {
-    html += '<ul>' + kids.map(k => protoNodeHtml(k, childrenOf, depth + 1)).join('') + '</ul>';
+    html += '<ul>' + kids.map(k => protoNodeHtml(k, childrenOf, depth + 1, descOf)).join('') + '</ul>';
   }
   html += '</li>';
   return html;
@@ -157,7 +159,17 @@ function renderProtoTree() {
   if (!box) return;
   if (!allPersonsAdmin.length) { box.innerHTML = '<div class="empty-state">لا توجد بيانات بعد.</div>'; return; }
   const { roots, childrenOf } = protoRootsAndChildren();
-  box.innerHTML = '<ul class="ptree">' + roots.map(r => protoNodeHtml(r, childrenOf, 0)).join('') + '</ul>';
+  // عدّاد إجمالي الذريّة تحت كل شخص (مع تخزين مؤقّت)
+  const memo = {};
+  const descOf = (id) => {
+    id = String(id);
+    if (memo[id] != null) return memo[id];
+    const kids = childrenOf[id] || [];
+    let c = kids.length;
+    for (const k of kids) c += descOf(k.displayId);
+    memo[id] = c; return c;
+  };
+  box.innerHTML = '<ul class="ptree">' + roots.map(r => protoNodeHtml(r, childrenOf, 0, descOf)).join('') + '</ul>';
 }
 
 function protoSetAll(collapsed) {

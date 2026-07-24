@@ -980,8 +980,9 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
   border-top: 2px solid #d8d5cc;
 }
 .ptree li::after { right: auto; left: 50%; border-left: 2px solid #d8d5cc; }
+/* الابن الوحيد: خط نزول واحد فقط (يأتي من ul::before) بلا ناقل أفقي */
 .ptree li:only-child::before, .ptree li:only-child::after { display: none; }
-.ptree li:only-child { padding-top: 26px; }
+.ptree li:only-child { padding-top: 0; }
 .ptree li:first-child::before, .ptree li:last-child::after { border: 0 none; }
 .ptree li:last-child::before { border-right: 2px solid #d8d5cc; border-radius: 0 7px 0 0; }
 .ptree li:first-child::after { border-radius: 7px 0 0 0; }
@@ -994,14 +995,16 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
   display: inline-flex; align-items: center; gap: 10px;
   margin: 0; padding: 6px 14px 6px 8px;
   background: #fff; border: 1px solid var(--border);
-  border-right: 4px solid var(--primary);
-  border-radius: 40px; box-shadow: 0 1px 5px rgba(0,0,0,.06);
+  border-right: 5px solid #1d4e89;                 /* لون الجنس على الحافة */
+  border-radius: 14px; box-shadow: 0 1px 5px rgba(0,0,0,.06);
   cursor: pointer; transition: transform .12s ease, box-shadow .12s ease;
   max-width: 340px;
 }
 .pnode:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.1); }
-.pnode.female { border-right-color: var(--accent); }
-.pnode.dead { opacity: .6; filter: grayscale(.3); }
+.pnode.male   { border-right-color: #1d4e89; }     /* أزرق داكن */
+.pnode.female { border-right-color: #a8386b; }     /* وردي داكن */
+/* المتوفّى: شريط أسود على الحافة المقابلة */
+.pnode.dead { border-left: 6px solid #141414; background: #fbfbfa; }
 
 .pnode-av {
   width: 38px; height: 38px; border-radius: 50%; object-fit: cover;
@@ -1011,8 +1014,16 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
   display: inline-flex; align-items: center; justify-content: center;
   font-weight: 800; color: #fff; font-size: 1rem;
 }
-.pnode-av-ph.m { background: linear-gradient(135deg, #1f8a5b, #0f6e46); }
-.pnode-av-ph.f { background: linear-gradient(135deg, #e8b53c, #cf9a2e); }
+.pnode-av-ph.m { background: linear-gradient(135deg, #2c6bb3, #163a66); }   /* أزرق داكن */
+.pnode-av-ph.f { background: linear-gradient(135deg, #c85a90, #8a2c5c); }   /* وردي داكن */
+
+/* عدّاد إجمالي من تحت الشخص */
+.pnode-count {
+  margin-inline-start: 4px; flex-shrink: 0;
+  font-size: .72rem; font-weight: 800; color: #fff;
+  background: var(--primary); border-radius: 999px; padding: 2px 9px;
+  white-space: nowrap;
+}
 
 .pnode-info { display: flex; flex-direction: column; line-height: 1.35; min-width: 0; }
 .pnode-name { font-weight: 700; color: var(--primary-dark); font-size: .95rem; }
