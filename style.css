@@ -953,6 +953,20 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
 /* صفّ "رقم المعرف الخاص بك" — عنوان أطول من بقية العناوين */
 .pn-label-self { min-width: auto; white-space: nowrap; }
 
+/* ===== جمع البيانات: معاينة الفروع ===== */
+.collect-title { font-weight: 800; color: var(--primary-dark); margin-bottom: 10px; }
+.collect-branch-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px;
+  background: #fff; margin-bottom: 8px;
+}
+.collect-branch-row b { color: var(--primary-dark); }
+.collect-branch-row span {
+  font-size: .85rem; font-weight: 700; color: var(--gold-dark);
+  background: var(--gold-light); border: 1px solid var(--accent);
+  border-radius: 999px; padding: 2px 12px;
+}
+
 /* ===== البطاقات التعريفية ===== */
 .cards-filter { display: flex; align-items: center; gap: 8px; margin: 4px 0 6px; flex-wrap: wrap; }
 .cards-filter-label { font-size: .85rem; color: var(--muted); font-weight: 700; }

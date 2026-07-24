@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>لوحة تحكم المدير - عائلة الماجد</title>
-<link rel="stylesheet" href="style.css?v=65">
+<link rel="stylesheet" href="style.css?v=66">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -39,6 +39,7 @@
       <button class="tab-btn" id="tab-btn-persons">كل الأشخاص</button>
       <button class="tab-btn" id="tab-btn-tree">🌳 شجرة العائلة</button>
       <button class="tab-btn" id="tab-btn-cards">🪪 البطاقات التعريفية</button>
+      <button class="tab-btn" id="tab-btn-collect">📊 جمع البيانات</button>
     </div>
 
     <!-- تبويب الطلبات -->
@@ -106,6 +107,20 @@
         كل بطاقة تعرض الاسم الثلاثي + «الماجد» والرقم التعريفي. اختر الجنس ثم اضغط «طباعة / حفظ PDF» — تُطبع البطاقات المعروضة فقط.
       </p>
       <div id="id-cards-print" class="id-cards-grid"></div>
+    </div>
+
+    <!-- تبويب جمع البيانات (تصدير Excel مقسّم بالفروع) -->
+    <div class="tab-panel" id="tab-panel-collect">
+      <div class="panel-toolbar">
+        <div style="font-size:.9rem; color:var(--muted);">تقسيم الشجرة إلى فروع كملف Excel لتوزيع مهام جمع البيانات والتأكّد منها.</div>
+        <button class="btn btn-primary btn-sm" id="download-collect-xlsx-btn">📊 تنزيل ملف Excel (مقسّم بالفروع)</button>
+      </div>
+      <p style="font-size:.82rem; color:var(--muted); margin:6px 0 14px; line-height:1.9;">
+        كل <b>فرع</b> يظهر في <b>ورقة منفصلة</b> داخل الملف — وزّع كل ورقة على المسؤول عن ذلك الفرع (يعرف أفراده أسرع).
+        يحتوي كل صف: الرقم التعريفي، الاسم الأول، اسم الأب، اسم الجد، الجنس، رقم التواصل، تاريخ الميلاد (فارغ للتعبئة)،
+        الحالة، الحالة الاجتماعية، اسم عائلة الزوجة، ومعرّف الأب (للربط). ويحتوي الملف ورقتَي «تعليمات» و«ملخّص الفروع».
+      </p>
+      <div id="collect-branches-preview"></div>
     </div>
   </div>
 </div>
@@ -435,6 +450,6 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
 <script src="firebase-config.js"></script>
-<script src="admin.js?v=63"></script>
+<script src="admin.js?v=64"></script>
 </body>
 </html>

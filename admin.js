@@ -103,6 +103,141 @@ function switchTab(tabName) {
     setTimeout(() => { adminTreeCenteredOnce = false; centerAdminTreeOnRootSoon(); }, 80);
   }
   if (tabName === 'cards') renderIdCards();
+  if (tabName === 'collect') renderCollectPreview();
+}
+
+// ---------------------------------------------------------------------
+// جمع البيانات: تقسيم الشجرة إلى فروع + تصدير Excel
+// ---------------------------------------------------------------------
+function isNumericParent(pk) { return pk != null && /^\d+$/.test(String(pk)); }
+
+// «رأس الفرع» = الابن المباشر للجذر الذي ينحدر منه هذا الشخص
+function branchHeadOf(person) {
+  const byId = personsByDisplayIdAdmin;
+  let cur = person, guard = 0;
+  while (guard++ < 500) {
+    const pk = String(cur.parentKey || '');
+    if (!pk || pk.startsWith('v') || !byId[pk]) return cur;   // cur جذر بذاته
+    const parent = byId[pk];
+    const ppk = String(parent.parentKey || '');
+    if (!ppk || ppk.startsWith('v') || !byId[ppk]) return cur; // والد cur هو الجذر ⇒ cur رأس فرع
+    cur = parent;
+  }
+  return cur;
+}
+
+// يجمع الأفراد في فروع حسب رأس كل فرع، مرتّبة
+function computeBranches() {
+  const groups = new Map();
+  allPersonsAdmin.forEach(p => {
+    const head = branchHeadOf(p);
+    const key = String(head.displayId);
+    if (!groups.has(key)) groups.set(key, { head, members: [] });
+    groups.get(key).members.push(p);
+  });
+  const arr = Array.from(groups.values());
+  arr.forEach(g => g.members.sort((a, b) => (Number(a.displayId) || 0) - (Number(b.displayId) || 0)));
+  arr.sort((a, b) => (Number(a.head.displayId) || 0) - (Number(b.head.displayId) || 0));
+  return arr;
+}
+
+// معاينة الفروع في التبويب
+function renderCollectPreview() {
+  const box = document.getElementById('collect-branches-preview');
+  if (!box) return;
+  if (!allPersonsAdmin.length) { box.innerHTML = '<div class="empty-state">لا توجد بيانات بعد.</div>'; return; }
+  const branches = computeBranches();
+  box.innerHTML = `<div class="collect-title">الفروع (${branches.length}) — كل فرع ورقة منفصلة في الملف:</div>` +
+    branches.map(b => `<div class="collect-branch-row"><b>فرع ${escapeHtml(b.head.firstName)} (#${b.head.displayId})</b><span>${b.members.length} فرد</span></div>`).join('');
+}
+
+const COLLECT_COLS = ['الرقم التعريفي', 'الاسم الأول', 'اسم الأب', 'اسم الجد', 'الجنس', 'رقم التواصل', 'تاريخ الميلاد', 'الحالة', 'الحالة الاجتماعية', 'اسم عائلة الزوجة', 'معرّف الأب (للربط)'];
+
+function collectPersonRow(p) {
+  const anc = ancestorsOfAdmin(p, 2);
+  const father = anc[0], grandfather = anc[1];
+  const wives = personFamiliesAdmin(p).concat((Array.isArray(p.spouseLinks) ? p.spouseLinks : []).map(s => s.name)).filter(Boolean);
+  return {
+    'الرقم التعريفي': p.displayId,
+    'الاسم الأول': p.firstName || '',
+    'اسم الأب': father ? father.firstName : '',
+    'اسم الجد': grandfather ? grandfather.firstName : '',
+    'الجنس': p.gender === 'female' ? 'أنثى' : 'ذكر',
+    'رقم التواصل': p.phone || '',
+    'تاريخ الميلاد': '',
+    'الحالة': p.status === 'death' ? 'متوفى' : 'على قيد الحياة',
+    'الحالة الاجتماعية': p.maritalStatus === 'married'
+      ? (p.gender === 'female' ? 'متزوجة' : 'متزوج')
+      : (p.gender === 'female' ? 'غير متزوجة' : 'غير متزوج'),
+    'اسم عائلة الزوجة': wives.join('، '),
+    'معرّف الأب (للربط)': isNumericParent(p.parentKey) ? Number(p.parentKey) : ''
+  };
+}
+
+function sheetSafeName(name, used) {
+  let n = String(name).replace(/[\\\/\?\*\[\]:]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 28);
+  if (!n) n = 'فرع';
+  let base = n, i = 1;
+  while (used.has(n)) { n = (base.slice(0, 24) + ' ' + (++i)); }
+  used.add(n);
+  return n;
+}
+
+async function downloadCollectionXlsx(btnEl) {
+  if (!allPersonsAdmin.length) { alert('لا توجد بيانات لتصديرها.'); return; }
+  const original = btnEl ? btnEl.textContent : '';
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'جارٍ التجهيز...'; }
+  try {
+    await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+    const XLSX = window.XLSX;
+    const branches = computeBranches();
+
+    const wb = XLSX.utils.book_new();
+    wb.Workbook = { Views: [{ RTL: true }] };   // عرض من اليمين لليسار
+
+    // ورقة التعليمات
+    const instr = [
+      ['تعليمات جمع البيانات — عائلة الماجد'],
+      [''],
+      ['• كل ورقة في هذا الملف تمثّل «فرعاً» من العائلة. وزّع كل ورقة على الشخص المسؤول عن ذلك الفرع.'],
+      ['• الهدف: التأكّد من البيانات الحالية وتعبئة الناقص (مثل تاريخ الميلاد ورقم التواصل).'],
+      ['• لا تُغيّر عمودَي «الرقم التعريفي» و«معرّف الأب (للربط)» — يُستخدمان لربط الأشخاص في الموقع.'],
+      ['• عبّئ الأعمدة الفارغة وصحّح أي خطأ في الأسماء أو الحالة.'],
+      ['• الجنس: ذكر / أنثى. الحالة: على قيد الحياة / متوفى. الحالة الاجتماعية: متزوج / غير متزوج.'],
+      ['• تاريخ الميلاد: اكتبه بصيغة يوم/شهر/سنة (اتفقوا على هجري أو ميلادي).'],
+      ['• بعد التعبئة أعِد الملف للمدير لإدخال/تحديث البيانات في الموقع.'],
+      [''],
+      ['راجع ورقة «ملخّص الفروع» لتوزيع المسؤوليات.']
+    ];
+    const instrWs = XLSX.utils.aoa_to_sheet(instr);
+    instrWs['!cols'] = [{ wch: 90 }];
+    XLSX.utils.book_append_sheet(wb, instrWs, 'تعليمات');
+
+    // ورقة ملخّص الفروع
+    const sumData = [['الفرع', 'عدد الأفراد', 'المسؤول (اكتب الاسم)']]
+      .concat(branches.map(b => [`فرع ${b.head.firstName} (#${b.head.displayId})`, b.members.length, '']));
+    const sumWs = XLSX.utils.aoa_to_sheet(sumData);
+    sumWs['!cols'] = [{ wch: 30 }, { wch: 12 }, { wch: 26 }];
+    XLSX.utils.book_append_sheet(wb, sumWs, 'ملخّص الفروع');
+
+    // ورقة لكل فرع
+    const used = new Set(['تعليمات', 'ملخّص الفروع']);
+    const widths = [{ wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 7 }, { wch: 15 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 20 }, { wch: 14 }];
+    branches.forEach(b => {
+      const rows = b.members.map(collectPersonRow);
+      const ws = XLSX.utils.json_to_sheet(rows, { header: COLLECT_COLS });
+      ws['!cols'] = widths;
+      ws['!views'] = [{ RTL: true }];
+      XLSX.utils.book_append_sheet(wb, ws, sheetSafeName(`فرع ${b.head.firstName} ${b.head.displayId}`, used));
+    });
+
+    XLSX.writeFile(wb, 'بيانات_عائلة_الماجد.xlsx');
+  } catch (err) {
+    console.error(err);
+    alert('حدث خطأ أثناء إنشاء ملف Excel: ' + err.message);
+  } finally {
+    if (btnEl) { btnEl.disabled = false; btnEl.textContent = original; }
+  }
 }
 
 // الاسم الثلاثي + «الماجد» للبطاقة التعريفية
@@ -506,6 +641,7 @@ function listenToPersonsAdmin() {
     renderPersonsList(allPersonsAdmin);
     renderAdminTree();
     renderIdCards();
+    renderCollectPreview();
   }, err => console.error(err));
 }
 
@@ -1984,6 +2120,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('tab-btn-persons').addEventListener('click', () => switchTab('persons'));
   document.getElementById('tab-btn-tree').addEventListener('click', () => switchTab('tree'));
   document.getElementById('tab-btn-cards').addEventListener('click', () => switchTab('cards'));
+  document.getElementById('tab-btn-collect').addEventListener('click', () => switchTab('collect'));
+  const dlXlsxBtn = document.getElementById('download-collect-xlsx-btn');
+  if (dlXlsxBtn) dlXlsxBtn.addEventListener('click', (e) => downloadCollectionXlsx(e.currentTarget));
   const printCardsBtn = document.getElementById('print-id-cards-btn');
   if (printCardsBtn) printCardsBtn.addEventListener('click', () => window.print());
   document.querySelectorAll('.cards-filter-btn').forEach(b => {
