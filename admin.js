@@ -139,7 +139,7 @@ function protoNodeHtml(p, childrenOf, depth, descOf) {
   const countBadge = total > 0 ? `<span class="pnode-count" title="إجمالي من تحته (أبناء وأحفاد...)">👥 ${total}</span>` : '';
   let html =
     `<li class="${collapsed.trim()}">` +
-      `<div class="pnode ${female ? 'female' : 'male'}${dead ? ' dead' : ''}"${dead ? ' title="متوفى"' : ''}>` +
+      `<div class="pnode ${female ? 'female' : 'male'}${dead ? ' dead' : ''}" data-pid="${p.displayId}"${dead ? ' title="متوفى"' : ''}>` +
         chev + av +
         `<span class="pnode-info">` +
           `<span class="pnode-name">${escapeHtml(p.firstName || '')} <b class="pnode-id">#${p.displayId}</b></span>` +
@@ -148,7 +148,7 @@ function protoNodeHtml(p, childrenOf, depth, descOf) {
         countBadge +
       `</div>`;
   if (kids.length) {
-    html += '<ul>' + kids.map(k => protoNodeHtml(k, childrenOf, depth + 1, descOf)).join('') + '</ul>';
+    html += '<ul>' + protoSortSiblings(kids).map(k => protoNodeHtml(k, childrenOf, depth + 1, descOf)).join('') + '</ul>';
   }
   html += '</li>';
   return html;
@@ -169,8 +169,22 @@ function renderProtoTree() {
     for (const k of kids) c += descOf(k.displayId);
     memo[id] = c; return c;
   };
-  box.innerHTML = '<ul class="ptree">' + roots.map(r => protoNodeHtml(r, childrenOf, 0, descOf)).join('') + '</ul>';
+  box.innerHTML = '<ul class="ptree">' + protoSortSiblings(roots).map(r => protoNodeHtml(r, childrenOf, 0, descOf)).join('') + '</ul>';
   applyProtoZoom();
+  setTimeout(centerProtoOnRoot, 60);   // توسيط المعرّف 1
+}
+
+// توسيط المعرّف 1 (أو أول جذر) أفقياً في وسط الإطار
+function centerProtoOnRoot() {
+  const wrap = document.getElementById('proto-tree');
+  if (!wrap) return;
+  const node = wrap.querySelector('.pnode[data-pid="1"]') || wrap.querySelector('.ptree > li > .pnode');
+  if (!node) return;
+  const wr = wrap.getBoundingClientRect();
+  const nr = node.getBoundingClientRect();
+  const centerInContent = (nr.left - wr.left) + wrap.scrollLeft + nr.width / 2;
+  wrap.scrollLeft = Math.max(0, centerInContent - wrap.clientWidth / 2);
+  wrap.scrollTop = 0;
 }
 
 // تكبير/تصغير النموذج (10% إلى 100%، الافتراضي 50%)
@@ -184,6 +198,18 @@ function applyProtoZoom() {
 function setProtoZoom(z) {
   protoZoom = Math.max(0.1, Math.min(1, Math.round(z * 10) / 10));
   applyProtoZoom();
+  setTimeout(centerProtoOnRoot, 30);
+}
+
+// ملء الشاشة للنموذج
+function toggleProtoFullscreen() {
+  const panel = document.getElementById('tab-panel-proto');
+  if (!panel) return;
+  const on = panel.classList.toggle('proto-fs');
+  const btn = document.getElementById('proto-fullscreen');
+  if (btn) btn.textContent = on ? '✕ خروج من ملء الشاشة' : '⛶ ملء الشاشة';
+  document.body.style.overflow = on ? 'hidden' : '';
+  setTimeout(centerProtoOnRoot, 80);
 }
 
 function protoSetAll(collapsed) {
@@ -225,6 +251,12 @@ function computeBranches() {
   arr.forEach(g => g.members.sort((a, b) => (Number(a.displayId) || 0) - (Number(b.displayId) || 0)));
   arr.sort((a, b) => (Number(a.head.displayId) || 0) - (Number(b.head.displayId) || 0));
   return arr;
+}
+
+// ترتيب الأشقّاء: تنازلي بالمعرّف حتى يظهر (في هيكل LTR) الأصغر على اليمين —
+// مطابقاً لترتيب الشجرة الرئيسية RTL (الأصغر يمين)
+function protoSortSiblings(list) {
+  return list.slice().sort((a, b) => (Number(b.displayId) || 0) - (Number(a.displayId) || 0));
 }
 
 // معاينة الفروع في التبويب
@@ -2229,7 +2261,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const pzOut = document.getElementById('proto-zoom-out');
   if (pzOut) pzOut.addEventListener('click', () => setProtoZoom(protoZoom - 0.1));
   const pzReset = document.getElementById('proto-zoom-reset');
-  if (pzReset) pzReset.addEventListener('click', () => setProtoZoom(0.5));
+  if (pzReset) pzReset.addEventListener('click', () => { setProtoZoom(0.5); setTimeout(centerProtoOnRoot, 30); });
+  const pFs = document.getElementById('proto-fullscreen');
+  if (pFs) pFs.addEventListener('click', toggleProtoFullscreen);
   const printCardsBtn = document.getElementById('print-id-cards-btn');
   if (printCardsBtn) printCardsBtn.addEventListener('click', () => window.print());
   document.querySelectorAll('.cards-filter-btn').forEach(b => {
