@@ -1,0 +1,1769 @@
+:root {
+  --primary: #175939;
+  --primary-dark: #092a1b;
+  --accent: #cf9a2e;
+  --gold-light: #fbeab0;
+  --gold-dark: #8a5c14;
+  --bg: #f6f4ef;
+  --card-bg: #ffffff;
+  --text: #2b2b2b;
+  --muted: #6b6b6b;
+  --danger: #b23b3b;
+  --male: #175939;
+  --female: #b2793b;
+  --border: #e2ddd0;
+  --radius: 12px;
+  --shadow: 0 2px 10px rgba(0,0,0,.06);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Tajawal', 'Segoe UI', Tahoma, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  direction: rtl;
+}
+
+/* ===== الترويسة والشعار ===== */
+header.site-header {
+  position: relative;
+  /* نفس خلفية الشعار تماماً حتى يندمج بلا إطار ويبقى بالجودة الأصلية */
+  background: var(--bg);
+  border-bottom: 3px solid var(--accent);
+  color: var(--text);
+  padding: 18px 24px 26px;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+
+.logo-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.site-logo {
+  width: 100%;
+  max-width: 430px;
+  height: auto;
+  display: block;
+}
+
+header.site-header h1 {
+  margin: 12px 0 2px;
+  /* يكبر على الشاشات الواسعة ويصغر تلقائياً على الجوال حتى لا ينكسر السطر */
+  font-size: clamp(34px, 5vw, 52px);
+  color: var(--primary-dark);
+  font-weight: 800;
+}
+
+header.site-header p {
+  margin: 0 auto;
+  max-width: 560px;
+  color: var(--muted);
+  font-size: .9rem;
+}
+
+.header-topleft {
+  position: absolute;
+  top: 16px;
+  left: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  z-index: 5;
+}
+
+header.site-header .admin-link {
+  color: var(--primary-dark);
+  background: #fff;
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: .8rem;
+  text-decoration: none;
+  box-shadow: var(--shadow);
+}
+header.site-header .admin-link:hover { border-color: var(--accent); }
+
+/* بطاقة "إعداد" مع صورة ورقم واتساب */
+.prepared-by {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(180deg, #ffffff, #fdfbf6);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px 14px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.09);
+  max-width: 290px;
+  overflow: hidden;
+  transition: box-shadow .2s ease, transform .2s ease;
+}
+/* شريط ذهبي علوي يعطي البطاقة طابع الشعار */
+.prepared-by::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--gold-dark), var(--accent), var(--gold-light), var(--accent), var(--gold-dark));
+}
+.prepared-by:hover { box-shadow: 0 6px 22px rgba(0,0,0,.14); transform: translateY(-1px); }
+
+.prepared-by .pb-photo-wrap {
+  flex-shrink: 0;
+  padding: 2px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--gold-light), var(--gold-dark));
+}
+.prepared-by .pb-photo {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #fff;
+  background: #eee;
+  display: block;
+}
+
+.prepared-by .pb-info { text-align: right; min-width: 0; }
+.prepared-by .pb-label {
+  font-size: .64rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 1px;
+}
+.prepared-by .pb-name {
+  font-size: .84rem;
+  font-weight: 800;
+  color: var(--primary-dark);
+  margin-bottom: 7px;
+  line-height: 1.25;
+}
+.prepared-by .pb-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+/* زر المعرّف: ينقل المستخدم إلى موقع صاحب البطاقة في الشجرة */
+.prepared-by .pb-id-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: inherit;
+  font-size: .76rem;
+  font-weight: 800;
+  color: var(--primary-dark);
+  background: var(--gold-light);
+  border: 1px solid var(--accent);
+  border-radius: 14px;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.prepared-by .pb-id-btn:hover { background: var(--accent); color: #fff; }
+.prepared-by .pb-id-btn:active { transform: scale(.97); }
+
+.prepared-by .pb-wa {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #128c3e;
+  background: #eafaf0;
+  border: 1px solid #b7e6c8;
+  border-radius: 14px;
+  padding: 3px 10px;
+  font-size: .78rem;
+  font-weight: 800;
+  text-decoration: none;
+  transition: background .15s ease;
+}
+.prepared-by .pb-wa:hover { background: #d6f5e2; }
+.prepared-by .pb-wa svg { color: #25D366; }
+
+@media (max-width: 640px) {
+  .header-topleft { position: static; align-items: center; margin: 0 auto 12px; }
+  .prepared-by { max-width: 290px; }
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* ===== لافتة تثبيت التطبيق ===== */
+.install-banner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: linear-gradient(135deg, #eef6f0, #ffffff);
+  border: 1px solid var(--primary);
+  border-right: 5px solid var(--primary);
+  border-radius: 14px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 16px rgba(23,89,57,.14);
+}
+.install-ico { font-size: 1.7rem; line-height: 1; flex-shrink: 0; }
+.install-text { flex: 1; min-width: 0; }
+.install-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--primary-dark);
+  margin-bottom: 2px;
+}
+.install-sub { font-size: .84rem; color: var(--muted); line-height: 1.5; }
+.install-banner .btn { flex-shrink: 0; }
+.install-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.install-close:hover { color: var(--danger); }
+
+@media (max-width: 700px) {
+  .install-banner { flex-wrap: wrap; }
+  .install-banner .btn { width: 100%; }
+}
+
+/* ===== شريط التنبيه: تعليمات الاستخدام الرئيسية ===== */
+.cta-banner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: linear-gradient(135deg, #fff8e4 0%, #fffdf8 60%);
+  border: 1px solid var(--accent);
+  border-right: 5px solid var(--accent);
+  border-radius: 14px;
+  padding: 15px 18px;
+  margin-bottom: 22px;
+  box-shadow: 0 4px 16px rgba(207, 154, 46, .20);
+  overflow: hidden;
+}
+
+/* لمعة خفيفة تمرّ مرّة واحدة عند فتح الصفحة لجذب الانتباه */
+.cta-banner::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 45%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.75), transparent);
+  transform: translateX(-120%);
+  animation: ctaShine 1.5s ease-out .5s 2;
+  pointer-events: none;
+}
+@keyframes ctaShine {
+  to { transform: translateX(320%); }
+}
+
+.cta-icon {
+  font-size: 1.7rem;
+  line-height: 1;
+  flex-shrink: 0;
+  animation: ctaTap 2.4s ease-in-out infinite;
+}
+@keyframes ctaTap {
+  0%, 68%, 100% { transform: translateY(0); }
+  78%           { transform: translateY(-6px); }
+  88%           { transform: translateY(0); }
+}
+
+.cta-text { flex: 1; min-width: 0; }
+.cta-title {
+  font-size: 1.02rem;
+  font-weight: 800;
+  color: var(--primary-dark);
+  margin-bottom: 3px;
+}
+.cta-sub { font-size: .87rem; color: #6d5c33; line-height: 1.5; }
+
+.cta-note {
+  flex-shrink: 0;
+  font-size: .75rem;
+  font-weight: 700;
+  color: var(--gold-dark);
+  background: var(--gold-light);
+  border: 1px solid var(--accent);
+  border-radius: 20px;
+  padding: 6px 12px;
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .cta-banner { flex-direction: column; text-align: center; gap: 10px; }
+  .cta-note { white-space: normal; }
+}
+
+/* احترام تفضيل تقليل الحركة */
+@media (prefers-reduced-motion: reduce) {
+  .cta-icon { animation: none; }
+  .cta-banner::after { animation: none; display: none; }
+}
+
+/* ===== Stats bar ===== */
+.stats-bar {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+/* صفّ يضم صندوقي العوائل جنباً إلى جنب (الأسماء يميناً والرسم يساراً) */
+.families-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .families-row { grid-template-columns: 1fr; }
+}
+
+/* بطاقة عرض العوائل */
+.families-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.05);
+  padding: 16px 18px 18px;
+  position: relative;
+  overflow: hidden;
+}
+.families-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--gold-dark), var(--accent), var(--gold-light), var(--accent));
+}
+.families-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.families-head .stat-icon {
+  width: 42px;
+  height: 42px;
+  margin: 0;
+  box-shadow: none;
+}
+.families-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--primary-dark);
+}
+.families-sub {
+  font-size: .78rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+/* صندوق أسماء العوائل (شارات) */
+.families-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-content: flex-start;
+  max-height: 187px;
+  overflow-y: auto;
+  padding-left: 6px;
+}
+.family-chip {
+  font-size: .85rem;
+  font-weight: 700;
+  color: var(--gold-dark);
+  background: var(--gold-light);
+  border: 1px solid var(--accent);
+  border-radius: 20px;
+  padding: 6px 14px;
+  height: fit-content;
+}
+
+/* رسم بياني أفقي: أول ٥ عوائل ظاهرة والباقي بالتمرير.
+   شبكة من ٣ أعمدة: الترتيب / الاسم / الشريط.
+   عمود الاسم بعرض max-content أي أنه يتمدّد تلقائياً ليسع أطول اسم
+   في القائمة مهما أُضيف مستقبلاً — بلا أي قياس بالجافاسكربت. */
+.families-bars {
+  display: grid;
+  grid-template-columns: auto max-content minmax(0, 1fr);
+  gap: 7px 10px;
+  align-items: center;
+  max-height: 187px;
+  overflow-y: auto;
+  padding-left: 6px;
+}
+/* الصف يذوب في الشبكة حتى تتوحّد أعمدة كل الصفوف */
+.family-bar-row { display: contents; }
+
+.families-chips::-webkit-scrollbar,
+.families-bars::-webkit-scrollbar { width: 8px; }
+.families-chips::-webkit-scrollbar-thumb,
+.families-bars::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 8px;
+}
+.families-chips::-webkit-scrollbar-thumb:hover,
+.families-bars::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+.fb-rank {
+  width: 20px;
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-align: center;
+}
+/* الاسم كامل دائماً: بلا عرض ثابت وبلا اقتطاع */
+.fb-name {
+  font-size: .84rem;
+  font-weight: 700;
+  color: var(--primary-dark);
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+}
+.fb-track {
+  min-width: 0;
+  background: #f1ede2;
+  border-radius: 7px;
+  overflow: hidden;
+}
+.fb-fill {
+  height: 26px;
+  border-radius: 7px;
+  background: linear-gradient(90deg, var(--gold-dark), var(--accent));
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 9px;
+  transition: width .35s ease;
+}
+.fb-val {
+  font-size: .8rem;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,.25);
+}
+
+@media (max-width: 640px) {
+  /* عند إخفاء عمود الترتيب يجب تقليل أعمدة الشبكة إلى اثنين،
+     وإلا انزاحت العناصر إلى أعمدة خاطئة واختلّ الانتظام. */
+  .families-bars { grid-template-columns: max-content minmax(0, 1fr); }
+  .fb-rank { display: none; }
+  .fb-name { font-size: .78rem; }
+}
+
+/* تنبيه داخل صندوقي العوائل يشرح أن الأسماء قابلة للضغط */
+.families-hint {
+  margin: 0 0 10px;
+  padding: 7px 11px;
+  font-size: .79rem;
+  font-weight: 700;
+  color: var(--gold-dark);
+  background: var(--gold-light);
+  border: 1px dashed var(--accent);
+  border-radius: 9px;
+  line-height: 1.5;
+}
+
+/* أسماء العوائل قابلة للضغط لعرض الأفراد المرتبطين بها */
+.family-chip {
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .15s ease, transform .12s ease;
+}
+.family-chip:hover { background: var(--accent); color: #fff; transform: translateY(-1px); }
+
+button.fb-name {
+  font-family: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: right;
+  cursor: pointer;
+  transition: color .15s ease;
+}
+button.fb-name:hover { color: var(--accent); text-decoration: underline; }
+
+/* نافذة أفراد العائلة المنتسبة */
+.family-members-sub {
+  margin: -4px 0 12px;
+  font-size: .82rem;
+  color: var(--muted);
+}
+.family-members-list {
+  display: block;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.sr-rel {
+  display: inline-block;
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--gold-dark);
+  background: var(--gold-light);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  padding: 1px 7px;
+  margin-right: 6px;
+}
+
+/* رقم التواصل المسجّل: يظهر مخفياً مع زر للتغيير */
+.phone-current {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f5f2e9;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.pc-mask {
+  flex: 1;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  color: var(--primary-dark);
+}
+
+/* تنقّل الأب والأبناء داخل نافذة الشخص (مهم على الجوال) */
+.person-nav {
+  background: #f7f9f7;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+.pn-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.pn-group:last-child { margin-bottom: 0; }
+.pn-label {
+  font-size: .74rem;
+  font-weight: 800;
+  color: var(--muted);
+  padding-top: 5px;
+  min-width: 40px;
+}
+.pn-items { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+.pn-chip {
+  font-family: inherit;
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--primary-dark);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 4px 11px;
+  cursor: pointer;
+}
+.pn-chip:hover { border-color: var(--primary); background: #eef6f0; }
+.pn-chip-static { cursor: default; background: #f4f8f5; color: var(--primary); }
+.pn-chip-static:hover { border-color: var(--border); background: #f4f8f5; }
+
+.copy-link-btn { width: 100%; margin-bottom: 12px; }
+
+/* تلميح أسفل حقل الإدخال */
+.field-hint {
+  margin: 6px 0 0;
+  font-size: .76rem;
+  color: var(--muted);
+}
+/* الاسم الكامل بسلسلة الآباء داخل نافذة اختيار الإجراء */
+.choice-full-name {
+  background: linear-gradient(135deg, #fff8e4, #fffdf8);
+  border: 1px solid var(--accent);
+  border-right: 5px solid var(--accent);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 4px 0 16px;
+}
+.cfn-label {
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+.cfn-value {
+  font-size: 1.02rem;
+  font-weight: 800;
+  color: var(--primary-dark);
+  line-height: 1.6;
+  word-break: break-word;
+}
+.cfn-meta {
+  font-size: .74rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* نتائج البحث: المعرّف ثم الاسم مع الأب والجد */
+.sr-name { flex: 1; min-width: 0; }
+.sr-id {
+  color: var(--gold-dark);
+  background: var(--gold-light);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  padding: 1px 8px;
+  font-size: .78rem;
+  margin-left: 6px;
+}
+
+/* حقل إدخال عدة أسماء عوائل داخل النوافذ */
+.family-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.family-input-row input { flex: 1; min-width: 0; }
+.family-input-row .btn { flex-shrink: 0; white-space: nowrap; }
+
+.family-chips-edit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.family-chip-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .84rem;
+  font-weight: 700;
+  color: var(--gold-dark);
+  background: var(--gold-light);
+  border: 1px solid var(--accent);
+  border-radius: 18px;
+  padding: 4px 10px;
+}
+.family-chip-remove {
+  background: none;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  font-size: .8rem;
+  line-height: 1;
+  padding: 0;
+}
+.family-chip-remove:hover { color: #7a1e1e; }
+
+.family-hint {
+  margin: 6px 0 0;
+  font-size: .76rem;
+  color: var(--muted);
+}
+
+.families-empty {
+  font-size: .84rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.stat-card {
+  position: relative;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.05);
+  padding: 20px 12px 16px;
+  text-align: center;
+  overflow: hidden;
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+/* شريط لوني علوي يختلف بحسب نوع الإحصائية */
+.stat-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: var(--stat-color, var(--primary));
+}
+.stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(0,0,0,.11);
+}
+
+.stat-icon {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 10px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--stat-color, var(--primary));
+  background: var(--stat-soft, rgba(23,89,57,.10));
+  box-shadow: 0 0 0 5px var(--stat-ring, rgba(23,89,57,.06));
+}
+.stat-icon svg { width: 26px; height: 26px; }
+
+/* ألوان كل بطاقة */
+.stat-card:has(.stat-icon.total)  { --stat-color: #175939; --stat-soft: rgba(23,89,57,.12);  --stat-ring: rgba(23,89,57,.06); }
+.stat-card:has(.stat-icon.male)   { --stat-color: #1d6b8c; --stat-soft: rgba(29,107,140,.12); --stat-ring: rgba(29,107,140,.06); }
+.stat-card:has(.stat-icon.female) { --stat-color: #b2793b; --stat-soft: rgba(178,121,59,.14); --stat-ring: rgba(178,121,59,.07); }
+.stat-card:has(.stat-icon.alive)  { --stat-color: #2e9d5b; --stat-soft: rgba(46,157,91,.13);  --stat-ring: rgba(46,157,91,.06); }
+.stat-card:has(.stat-icon.dead)   { --stat-color: #7a7a7a; --stat-soft: rgba(122,122,122,.12); --stat-ring: rgba(122,122,122,.06); }
+.stat-card:has(.stat-icon.families) { --stat-color: #8a5c14; --stat-soft: rgba(207,154,46,.16); --stat-ring: rgba(207,154,46,.08); }
+
+/* بديل للمتصفحات التي لا تدعم :has */
+.stat-icon.total  { color: #175939; background: rgba(23,89,57,.12); }
+.stat-icon.male   { color: #1d6b8c; background: rgba(29,107,140,.12); }
+.stat-icon.female { color: #b2793b; background: rgba(178,121,59,.14); }
+.stat-icon.alive  { color: #2e9d5b; background: rgba(46,157,91,.13); }
+.stat-icon.dead   { color: #7a7a7a; background: rgba(122,122,122,.12); }
+.stat-icon.families { color: #8a5c14; background: rgba(207,154,46,.16); }
+
+.stat-card .num {
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--primary-dark);
+  font-feature-settings: 'tnum';
+}
+.stat-card .label {
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+@media (max-width: 1000px) {
+  .stats-bar { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 700px) {
+  .stats-bar { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .stat-card { padding: 16px 8px 12px; }
+  .stat-card .num { font-size: 1.6rem; }
+  .stat-icon { width: 44px; height: 44px; }
+  .stat-icon svg { width: 22px; height: 22px; }
+}
+
+/* ===== صف البحث وحاسبة القرابة جنباً إلى جنب ===== */
+.finder-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 24px;
+  align-items: start;
+}
+.finder-row .search-section,
+.finder-row .relation-finder {
+  margin-bottom: 0;
+}
+@media (max-width: 800px) {
+  .finder-row { grid-template-columns: 1fr; }
+}
+
+/* ===== قائمة الأفراد المُضافين في نفس جلسة النافذة ===== */
+.added-members-list {
+  background: #eef6f0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+}
+.added-members-title { font-size: .82rem; font-weight: 700; color: var(--primary-dark); margin-bottom: 6px; }
+.added-member-chip {
+  font-size: .85rem;
+  padding: 5px 8px;
+  color: var(--text);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.added-member-chip span { color: var(--muted); flex: 1; }
+.chip-remove {
+  background: none;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  font-size: .95rem;
+  padding: 0 4px;
+  line-height: 1;
+}
+.chip-remove:hover { color: #7a1e1e; }
+
+/* ===== البحث ===== */
+.search-section {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.05);
+  padding: 18px 20px 20px;
+  margin-bottom: 24px;
+  position: relative;
+}
+.search-section h2 {
+  margin: 0 0 14px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--primary-dark);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search-form { display: flex; gap: 10px; }
+.search-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: .95rem;
+  font-family: inherit;
+  background: #fcfbf8;
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.search-form input:focus,
+.relation-form input:focus {
+  outline: none;
+  background: #fff;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(23,89,57,.14);
+}
+
+.search-results {
+  display: none;
+  position: relative;
+  margin-top: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  max-height: 260px;
+  overflow-y: auto;
+  background: #fff;
+}
+.search-result-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+}
+.search-result-item:last-child { border-bottom: none; }
+.search-result-item:hover { background: #f5f2e9; }
+.search-result-item img {
+  width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: #ddd;
+}
+.search-no-results { padding: 10px 12px; color: var(--muted); font-size: .88rem; }
+
+/* ===== Relationship finder ===== */
+.relation-finder {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.05);
+  padding: 18px 20px 20px;
+  margin-bottom: 24px;
+}
+
+.relation-finder h2 {
+  margin: 0 0 14px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--primary-dark);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.relation-form { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+/* حاوية الحقل مع قائمة الاقتراحات */
+.rel-picker { position: relative; flex: 1; min-width: 140px; }
+
+.relation-form input,
+.rel-picker input {
+  width: 100%;
+  min-width: 110px;
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: .95rem;
+  font-family: inherit;
+  background: #fcfbf8;
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+
+/* قائمة اختيار الأم */
+.mother-select {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: .95rem;
+  font-family: inherit;
+  background: #fcfbf8;
+}
+.mother-select:disabled { background: #f0eee8; color: var(--muted); }
+
+/* نتيجة صلة القرابة: المباشرة أولاً ثم ناحية الأب */
+.rel-direct {
+  background: #eef6f0;
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  color: var(--primary-dark);
+}
+.rel-paternal-title { font-weight: 700; margin-top: 4px; color: var(--muted); font-size: .9rem; }
+.rel-extra-title { font-weight: 800; margin-top: 10px; color: var(--gold-dark); font-size: .92rem; }
+.rel-extra { margin-top: 4px; padding: 6px 10px; background: rgba(207,154,46,.10); border-radius: 8px; }
+
+/* شريحة اسم الشخص القابلة للنقر داخل نتيجة الصلة */
+.rel-person {
+  display: inline-block;
+  font-family: inherit;
+  font-size: .9rem;
+  font-weight: 700;
+  color: var(--gold-dark);
+  background: var(--gold-light);
+  border: 1px solid var(--accent);
+  border-radius: 7px;
+  padding: 1px 8px;
+  margin: 0 2px;
+  cursor: pointer;
+  transition: background .15s ease, transform .15s ease;
+}
+.rel-person:hover { background: var(--accent); color: #fff; transform: translateY(-1px); }
+
+/* صفّ "رقم المعرف الخاص بك" — عنوان أطول من بقية العناوين */
+.pn-label-self { min-width: auto; white-space: nowrap; }
+
+/* ===== نموذج شجرة العائلة (تصميم مقترح: مخطّط أفقي من الأعلى للأسفل) ===== */
+.proto-tree-wrap {
+  background:
+    radial-gradient(rgba(232,181,60,.06) 1px, transparent 1px),
+    radial-gradient(1100px 560px at 50% -8%, #1a5040 0%, #0e3227 46%, #071d17 100%);
+  background-size: 24px 24px, 100% 100%;
+  border: 1px solid #0a2019;
+  border-radius: 16px;
+  padding: 24px 16px;
+  max-height: 72vh;
+  overflow: auto;
+}
+/* وضع ملء الشاشة للنموذج */
+#tab-panel-proto.proto-fs { position: fixed; inset: 0; z-index: 9998; background: #071d17; overflow: hidden; }
+#tab-panel-proto.proto-fs > .panel-toolbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+  margin: 0; padding: 8px 12px; background: #fff; box-shadow: 0 1px 8px rgba(0,0,0,.15);
+}
+#tab-panel-proto.proto-fs > .panel-toolbar > div:first-child { display: none; }
+#tab-panel-proto.proto-fs > p { display: none; }
+#tab-panel-proto.proto-fs .proto-tree-wrap {
+  position: fixed; inset: 56px 0 0 0; max-height: none; height: auto;
+  width: 100%; border: 0; border-radius: 0; margin: 0;
+}
+
+.ptree, .ptree ul { list-style: none; margin: 0; padding: 0; }
+/* هيكل الشجرة LTR (البطاقات تبقى RTL للنص) */
+.ptree, .ptree ul, .ptree li { direction: ltr; }
+.ptree { position: relative; display: inline-flex; justify-content: center; align-items: flex-start; min-width: 100%; padding: 6px; }
+.ptree ul { display: flex; justify-content: center; align-items: flex-start; padding-top: 46px; position: relative; }
+.ptree li {
+  position: relative; display: flex; flex-direction: column; align-items: center;
+  padding: 46px 16px 0;
+}
+.ptree li:only-child { padding-top: 46px; }
+.ptree > li { padding-top: 0; }
+/* الخطوط تُرسم كمنحنيات SVG — نُخفي خطوط CSS القديمة */
+.ptree li::before, .ptree li::after, .ptree ul::before { display: none !important; }
+/* طبقة الخطوط المنحنية خلف البطاقات */
+svg.ptree-links { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 0; overflow: visible; }
+
+/* بطاقة الشخص — زجاجية على خلفية داكنة */
+.pnode {
+  position: relative; z-index: 1;
+  direction: rtl;
+  display: inline-flex; align-items: center; gap: 12px;
+  margin: 0; padding: 10px 16px 10px 12px;
+  background: rgba(255,255,255,.07);
+  -webkit-backdrop-filter: blur(9px); backdrop-filter: blur(9px);
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.10);
+  color: #eef4f0;
+  cursor: pointer; transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+  max-width: 340px;
+}
+.pnode:hover {
+  transform: translateY(-3px);
+  border-color: rgba(232,181,60,.7);
+  box-shadow: 0 16px 34px rgba(0,0,0,.5), 0 0 22px rgba(232,181,60,.28);
+}
+/* المتوفّى: شارة رمادية في ركن البطاقة + خفوت خفيف */
+.pnode.dead { opacity: .74; border-top-left-radius: 0; overflow: hidden; }
+.pnode.dead::after {
+  content: ''; position: absolute; top: 0; left: 0;
+  border-style: solid; border-width: 16px 16px 0 0;
+  border-color: #cfd4d0 transparent transparent transparent;
+}
+
+/* الأفاتار: إطار حسب الجنس + هالة ذهبية */
+.pnode-av {
+  width: 48px; height: 48px; border-radius: 50%; object-fit: cover;
+  flex-shrink: 0; background: #2a3b34;
+  border: 3px solid #4a9be0;
+  box-shadow: 0 0 0 2px rgba(255,255,255,.15), 0 0 0 4px rgba(232,181,60,.55), 0 3px 8px rgba(0,0,0,.4);
+}
+.pnode.female .pnode-av { border-color: #e0679f; }
+.pnode-av-ph {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 800; color: #fff; font-size: 1.2rem;
+}
+.pnode-av-ph.m { background: linear-gradient(135deg, #4a9be0, #1d4e89); }
+.pnode-av-ph.f { background: linear-gradient(135deg, #e879b0, #a8386b); }
+
+/* عدّاد إجمالي من تحت الشخص (ذهبي متوهّج) */
+.pnode-count {
+  margin-inline-start: 4px; flex-shrink: 0;
+  font-size: .72rem; font-weight: 800; color: #3a2903;
+  background: linear-gradient(135deg, #f2cd69, #d9a63a);
+  border: 1px solid rgba(255,220,140,.6);
+  border-radius: 999px; padding: 2px 10px;
+  box-shadow: 0 0 10px rgba(232,181,60,.4);
+  white-space: nowrap;
+}
+
+.pnode-info { display: flex; flex-direction: column; line-height: 1.4; min-width: 0; }
+.pnode-name { font-weight: 800; color: #f4f8f4; font-size: 1rem; letter-spacing: .2px; }
+.pnode-id {
+  color: #f0d38a; font-weight: 700; font-size: .68rem;
+  background: rgba(232,181,60,.16); border: 1px solid rgba(232,181,60,.4);
+  border-radius: 6px; padding: 0 5px; margin-inline-start: 3px;
+}
+.pnode-meta { font-size: .72rem; color: #a9c6b8; margin-top: 1px; }
+
+.pnode-chev {
+  color: #ffe6a6; font-size: .78rem; width: 18px; height: 18px; line-height: 18px;
+  text-align: center; background: rgba(232,181,60,.18); border-radius: 50%;
+  transition: transform .15s ease; flex-shrink: 0;
+}
+.ptree li.collapsed > .pnode .pnode-chev { transform: rotate(-90deg); }
+.pnode-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.35); flex-shrink: 0; }
+
+.ptree li.collapsed > ul { display: none; }
+
+/* ===== جمع البيانات: معاينة الفروع ===== */
+.collect-title { font-weight: 800; color: var(--primary-dark); margin-bottom: 10px; }
+.collect-branch-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px;
+  background: #fff; margin-bottom: 8px;
+}
+.collect-branch-row b { color: var(--primary-dark); }
+.collect-branch-row span {
+  font-size: .85rem; font-weight: 700; color: var(--gold-dark);
+  background: var(--gold-light); border: 1px solid var(--accent);
+  border-radius: 999px; padding: 2px 12px;
+}
+
+/* ===== البطاقات التعريفية ===== */
+.cards-filter { display: flex; align-items: center; gap: 8px; margin: 4px 0 6px; flex-wrap: wrap; }
+.cards-filter-label { font-size: .85rem; color: var(--muted); font-weight: 700; }
+.cards-filter-btn {
+  font-family: inherit; font-size: .85rem; font-weight: 700;
+  padding: 6px 16px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--border); background: #fff; color: var(--primary-dark);
+  transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+.cards-filter-btn:hover { border-color: var(--primary); }
+.cards-filter-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+.id-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 14px;
+}
+.id-card {
+  position: relative;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--accent);
+  border-radius: 12px;
+  padding: 16px 14px 14px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.id-card-logo { width: 46px; height: 46px; object-fit: contain; border-radius: 8px; }
+.id-card-family { font-size: .82rem; font-weight: 700; color: var(--gold-dark); }
+.id-card-name {
+  font-size: 1.18rem; font-weight: 800; color: var(--primary-dark);
+  line-height: 1.5; margin: 2px 0;
+}
+.id-card-idrow {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 4px; font-size: .82rem; color: var(--muted);
+}
+.id-card-num {
+  font-size: 1.1rem; font-weight: 800; color: var(--primary-dark);
+  background: var(--gold-light); border: 1px solid var(--accent);
+  border-radius: 8px; padding: 2px 12px; letter-spacing: 1px;
+}
+
+/* وضع الطباعة: نُظهر البطاقات فقط ونرتّبها للقصّ */
+@media print {
+  @page { margin: 10mm; }
+  body * { visibility: hidden !important; }
+  #id-cards-print, #id-cards-print * { visibility: visible !important; }
+  #tab-panel-cards { display: block !important; }
+  #id-cards-print {
+    position: absolute; inset: 0; width: 100%;
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6mm;
+  }
+  .id-card {
+    break-inside: avoid;
+    box-shadow: none !important;
+    border: 1px dashed #bbb;
+    border-top: 4px solid var(--accent);
+  }
+  .no-print { display: none !important; }
+}
+
+/* تفصيل التغييرات في طلبات التحديث (قبل ← بعد) */
+.req-diff-title { font-weight: 800; color: var(--primary-dark); margin: 6px 0 2px; font-size: .9rem; }
+.diff-old { color: #9a2a2a; text-decoration: line-through; text-decoration-color: rgba(154,42,42,.5); }
+.diff-new { color: var(--primary-dark); font-weight: 700; background: #eef6f0; border-radius: 5px; padding: 0 5px; }
+
+/* سؤال: هل الزوج/الزوجة من عائلة الماجد؟ */
+.spouse-section-label { display: block; font-weight: 800; color: var(--primary-dark); margin-bottom: 4px; }
+.spouse-origin { margin: 10px 0 12px; }
+.spouse-origin-label,
+.spouse-link-label { display: block; margin-bottom: 6px; font-weight: 700; color: var(--primary-dark); }
+#update-spouse-link-block { margin-top: 6px; }
+
+/* قائمة كل الزوجات المضافة (النوعان معاً) */
+.spouse-all-chips { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.spouse-all-chips .family-chips-edit:empty { display: none; }
+
+/* شارة "من العائلة" على روابط الأزواج داخل الشجرة */
+.chip-origin-badge {
+  display: inline-block;
+  font-size: .68rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  margin-inline-end: 5px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+}
+.spouse-chip-link { background: #eef6f0; border-color: var(--primary); }
+
+/* قائمة اقتراحات الأشخاص أسفل الحقل */
+.rel-suggestions {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  z-index: 30;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(0,0,0,.12);
+}
+/* الفاصل "و" بين الحقلين */
+.relation-form > span {
+  font-weight: 800;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+/* أيقونة العنوان داخل دائرة ملوّنة */
+.card-ico {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(23,89,57,.10);
+  color: var(--primary);
+}
+.card-ico svg { width: 17px; height: 17px; }
+.relation-finder .card-ico { background: rgba(207,154,46,.16); color: var(--gold-dark); }
+
+.relation-result {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #eef6f0;
+  color: var(--primary-dark);
+  font-weight: 600;
+  display: none;
+}
+.relation-result.error { background: #fbeaea; color: var(--danger); }
+.relation-result .link-person-line { margin-top: 6px; font-weight: 500; font-size: .9rem; }
+
+/* ===== الشجرة ===== */
+.tree-section {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+}
+
+.tree-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin-bottom: 6px;
+}
+.tree-header h2 { margin: 0; color: var(--primary-dark); text-align: center; }
+
+.zoom-controls {
+  position: absolute;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.zoom-controls button {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--primary-dark);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.zoom-controls button:hover { border-color: var(--accent); background: #f5f2e9; }
+.zoom-controls #zoom-level,
+.zoom-controls #admin-zoom-level { font-size: .82rem; color: var(--muted); min-width: 42px; text-align: center; }
+
+/* زر عرض الشجرة كاملة */
+.zoom-controls button.zoom-fit-btn {
+  width: auto;
+  padding: 0 12px;
+  font-size: .82rem;
+  font-weight: 700;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+@media (max-width: 640px) {
+  .tree-header { flex-direction: column; gap: 8px; }
+  .zoom-controls { position: static; }
+}
+
+.tree-hint {
+  margin: 0 0 10px;
+  font-size: .8rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.tree-viewport {
+  overflow: auto;
+  max-height: 78vh;
+  -webkit-overflow-scrolling: touch;
+  /* السحب باليد للتنقل داخل الشجرة */
+  cursor: grab;
+  touch-action: pan-x pan-y;
+  overscroll-behavior: contain;
+}
+.tree-viewport.panning {
+  cursor: grabbing;
+  user-select: none;
+}
+.tree-viewport.panning * { user-select: none; }
+
+/* إطار شجرة لوحة التحكم */
+#admin-tree-viewport {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  max-height: 72vh;
+}
+
+#admin-tree-search-results {
+  display: none;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  max-height: 240px;
+  overflow: auto;
+}
+#admin-tree-search-results .search-result-item {
+  width: 100%;
+  text-align: right;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  font-family: inherit;
+  font-size: .9rem;
+  color: var(--text);
+}
+
+.tree-forest {
+  display: flex;
+  justify-content: center;
+  gap: 60px;
+  padding: 20px 10px 10px;
+  min-width: max-content;
+}
+
+ul.tree-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  position: relative;
+}
+
+/* مساحة علوية لرسم الوصلات لكل مجموعة أبناء */
+ul.tree-list:not(.root-list) { padding-top: 26px; }
+
+ul.tree-list li {
+  position: relative;
+  padding: 26px 16px 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+ul.tree-list.root-list > li { padding-top: 0; }
+
+/* نصفا الخط الأفقي الواصل بين الأشقّاء (border-top) + وصلة رأسية لكل طفل (border-left على ::after) */
+ul.tree-list:not(.root-list) li::before,
+ul.tree-list:not(.root-list) li::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 50%;
+  width: 50%;
+  height: 26px;
+  border-top: 2px solid var(--accent);
+}
+ul.tree-list:not(.root-list) li::after {
+  right: auto;
+  left: 50%;
+  border-left: 2px solid var(--accent);
+}
+
+/* أطراف الصف (في وضع RTL: أول عنصر يظهر يميناً وآخر عنصر يظهر يساراً) —
+   نُزيل النصف الأفقي الخارجي فقط مع إبقاء الوصلة الرأسية لكل طفل */
+ul.tree-list:not(.root-list) li:first-child::after { border-top: 0 none; } /* أقصى اليمين: احذف النصف الخارجي، أبقِ الوصلة الرأسية */
+ul.tree-list:not(.root-list) li:last-child::before { border: 0 none; }     /* أقصى اليسار: احذف النصف الخارجي */
+
+/* طفل وحيد (يجب أن تأتي هذه القواعد بعد قواعد first/last-child لأن الطفل الوحيد
+   هو أيضاً last-child فتُلغى وصلته لولا ترتيبها هنا): خط رأسي متصل من الأب إلى الطفل */
+ul.tree-list:not(.root-list) li:only-child { padding-top: 26px; }
+ul.tree-list:not(.root-list) li:only-child::after { display: none; }
+ul.tree-list:not(.root-list) li:only-child::before {
+  display: block;
+  content: '';
+  right: auto;
+  left: 50%;
+  width: 0;
+  height: 26px;
+  border-top: 0 none;
+  border-right: 0 none;
+  border-left: 2px solid var(--accent);
+}
+
+/* الخط الرأسي النازل من بطاقة الأب إلى منتصف صف الأبناء */
+ul.tree-list:not(.root-list)::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 26px;
+  border-left: 2px solid var(--accent);
+}
+
+.person-node {
+  position: relative;
+  background: linear-gradient(180deg, #fffdf7, var(--card-bg));
+  border: 2px solid var(--accent);
+  border-radius: 18px;
+  padding: 12px 14px;
+  width: 150px;
+  cursor: pointer;
+  transition: transform .15s, box-shadow .15s;
+  box-shadow: var(--shadow);
+}
+
+.person-node:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(200,151,58,.35); }
+
+.person-node.male { border-color: var(--male); }
+.person-node.female { border-color: var(--female); }
+.person-node.deceased { opacity: .82; }
+.person-node.deceased .person-photo { filter: grayscale(0.35); }
+
+.person-node.highlighted {
+  animation: pulseHighlight 1.1s ease-in-out 2;
+}
+@keyframes pulseHighlight {
+  0%   { box-shadow: 0 0 0 0 rgba(200,151,58,.7); }
+  70%  { box-shadow: 0 0 0 14px rgba(200,151,58,0); }
+  100% { box-shadow: 0 0 0 0 rgba(200,151,58,0); }
+}
+
+.photo-wrap {
+  position: relative;
+  width: 84px;
+  height: 84px;
+  margin: 0 auto 8px;
+}
+.person-photo {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  background: #ddd;
+  border: 2px solid var(--border);
+}
+
+/* شريطة الحداد السوداء على صورة المتوفى */
+.mourning-ribbon {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  pointer-events: none;
+}
+.mourning-ribbon::before {
+  content: '';
+  position: absolute;
+  left: 15px;
+  top: 15px;
+  width: 72px;
+  height: 14px;
+  margin-left: -36px;
+  margin-top: -7px;
+  background: linear-gradient(180deg, #333, #000);
+  transform: rotate(135deg);
+  transform-origin: center;
+  box-shadow: 0 1px 2px rgba(0,0,0,.45);
+}
+
+.person-name { font-size: .92rem; font-weight: 700; }
+.person-id { font-size: .74rem; color: var(--muted); margin-top: 2px; }
+
+.empty-state {
+  text-align: center;
+  color: var(--muted);
+  padding: 40px 10px;
+}
+
+/* ===== Modal ===== */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+}
+.modal-overlay.open { display: flex; }
+
+.modal-box {
+  background: #fff;
+  border-radius: var(--radius);
+  padding: 22px;
+  width: 100%;
+  max-width: 420px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-box h3 { margin-top: 0; color: var(--primary-dark); }
+
+/* نافذة اختيار الإجراء */
+.choice-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 18px;
+}
+.choice-btn {
+  padding: 16px;
+  font-size: 1rem;
+}
+
+.hint-text {
+  font-size: .78rem;
+  color: var(--muted);
+  margin: -6px 0 10px;
+}
+
+.relation-choices {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.relation-choices button {
+  padding: 12px 6px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  font-size: .95rem;
+  font-family: inherit;
+}
+.relation-choices button.selected,
+.relation-choices button:hover { border-color: var(--primary); background: #eef6f0; }
+
+/* تنبيه "عربي فقط" أسفل حقل الاسم */
+.arabic-warning {
+  margin-top: 6px;
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--danger);
+  background: #fbeaea;
+  border: 1px solid #f0c9c9;
+  border-radius: 6px;
+  padding: 6px 9px;
+}
+input.input-invalid {
+  border-color: var(--danger) !important;
+  background: #fffafa;
+}
+
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; margin-bottom: 5px; font-size: .88rem; font-weight: 600; }
+.form-group input[type=text],
+.form-group input[type=tel],
+.form-group select {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: .92rem;
+}
+
+.status-toggle { display: flex; gap: 10px; }
+.status-toggle label {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  text-align: center;
+  cursor: pointer;
+  font-weight: 500;
+}
+.status-toggle input { display: none; }
+.status-toggle input:checked + span { color: var(--primary-dark); font-weight: 700; }
+.status-toggle label:has(input:checked) { border-color: var(--primary); background: #eef6f0; }
+
+.btn {
+  display: inline-block;
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: .92rem;
+  font-weight: 600;
+}
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-secondary { background: #eee; color: var(--text); }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn:disabled { opacity: .6; cursor: not-allowed; }
+
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+
+.close-x {
+  position: absolute;
+  left: 16px;
+  top: 16px;
+  background: none;
+  border: none;
+  font-size: 1.3rem;
+  cursor: pointer;
+  color: var(--muted);
+}
+.modal-box { position: relative; }
+
+.toast {
+  position: fixed;
+  bottom: 20px;
+  right: 50%;
+  transform: translateX(50%);
+  background: var(--primary-dark);
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  z-index: 200;
+  display: none;
+}
+.toast.show { display: block; }
+.toast.error { background: var(--danger); }
+
+footer.site-footer {
+  text-align: center;
+  color: var(--muted);
+  font-size: .82rem;
+  padding: 24px 10px;
+}
+
+a.back-to-site { text-decoration: none; white-space: nowrap; display: inline-flex; align-items: center; }
+.panel-toolbar a.btn { text-decoration: none; display: inline-flex; align-items: center; }
+
+a.admin-link { color: var(--primary-dark); opacity: .85; font-size: .82rem; text-decoration: none; }
+a.admin-link:hover { opacity: 1; text-decoration: underline; }
+
+/* ===== Admin page ===== */
+.login-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.login-box {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 30px;
+  width: 100%;
+  max-width: 340px;
+  text-align: center;
+}
+
+.login-box h2 { color: var(--primary-dark); margin-top: 0; }
+
+.login-box input {
+  width: 100%;
+  padding: 12px;
+  font-size: 1.2rem;
+  text-align: center;
+  letter-spacing: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 14px 0;
+}
+
+.error-text { color: var(--danger); font-size: .85rem; margin-bottom: 10px; display: none; }
+
+.back-link { display: block; margin-top: 14px; color: var(--muted); font-size: .85rem; text-decoration: none; }
+
+.admin-header {
+  background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+  color: #fff;
+  padding: 18px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tabs { display: flex; gap: 8px; margin-bottom: 18px; }
+.tab-btn {
+  padding: 10px 20px;
+  border: none;
+  background: #eee;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: .92rem;
+}
+.tab-btn.active { background: var(--primary); color: #fff; }
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+.request-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.req-photo {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #ddd;
+}
+
+.req-info { flex: 1; min-width: 200px; }
+.req-name { font-weight: 700; }
+.req-meta { font-size: .82rem; color: var(--muted); margin-top: 2px; }
+.req-actions { display: flex; gap: 8px; }
+
+.btn-sm { padding: 7px 14px; font-size: .85rem; }
+
+.persons-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--card-bg);
+}
+.persons-table th, .persons-table td {
+  padding: 10px 12px;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+  font-size: .9rem;
+}
+.persons-table th { background: #f0ede4; color: var(--primary-dark); }
+
+.search-bar { display: flex; gap: 10px; margin-bottom: 14px; }
+.search-bar input {
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: 200px;
+}
+
+.panel-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
