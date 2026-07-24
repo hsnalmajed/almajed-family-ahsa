@@ -191,8 +191,8 @@ function drawProtoCurves() {
   svg.setAttribute('viewBox', `0 0 ${localW} ${localH}`);
   const defs = document.createElementNS(NS, 'defs');
   defs.innerHTML = '<linearGradient id="ptLink" x1="0" y1="0" x2="0" y2="1">' +
-    '<stop offset="0" stop-color="#f0d38a" stop-opacity="0.9"/>' +
-    '<stop offset="1" stop-color="#cf9a2e" stop-opacity="0.45"/></linearGradient>';
+    '<stop offset="0" stop-color="#d9a63a" stop-opacity="0.95"/>' +
+    '<stop offset="1" stop-color="#b5842a" stop-opacity="0.75"/></linearGradient>';
   svg.appendChild(defs);
   const pos = el => {
     const r = el.getBoundingClientRect();
@@ -219,7 +219,7 @@ function drawProtoCurves() {
   path.setAttribute('stroke', 'url(#ptLink)');
   path.setAttribute('stroke-width', '2.5');
   path.setAttribute('stroke-linecap', 'round');
-  path.style.filter = 'drop-shadow(0 0 3px rgba(232,181,60,.45))';
+  path.style.filter = 'drop-shadow(0 1px 1px rgba(20,40,60,.15))';
   svg.appendChild(path);
   ptree.insertBefore(svg, ptree.firstChild);
 }
