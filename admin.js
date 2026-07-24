@@ -113,17 +113,20 @@ function idCardName(person) {
   return names.join(' ') + ' الماجد';
 }
 
-// بطاقات تعريفية للأحياء فقط (اسم ثلاثي + معرّف) — للطباعة
+// فلتر الجنس للبطاقات: all | male | female
+let idCardsGenderFilter = 'all';
+
+// بطاقات تعريفية للأحياء فقط (اسم ثلاثي + معرّف) — للطباعة، مع فلتر الجنس
 function renderIdCards() {
   const box = document.getElementById('id-cards-print');
   const countEl = document.getElementById('id-cards-count');
   if (!box) return;
   const living = allPersonsAdmin
-    .filter(p => p.status === 'alive')
+    .filter(p => p.status === 'alive' && (idCardsGenderFilter === 'all' || p.gender === idCardsGenderFilter))
     .sort((a, b) => (Number(a.displayId) || 0) - (Number(b.displayId) || 0));
   if (countEl) countEl.textContent = living.length;
   if (!living.length) {
-    box.innerHTML = '<div class="empty-state">لا يوجد أفراد أحياء لعرض بطاقاتهم.</div>';
+    box.innerHTML = '<div class="empty-state">لا يوجد أفراد مطابقون لعرض بطاقاتهم.</div>';
     return;
   }
   box.innerHTML = living.map(p => `
@@ -1983,6 +1986,14 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('tab-btn-cards').addEventListener('click', () => switchTab('cards'));
   const printCardsBtn = document.getElementById('print-id-cards-btn');
   if (printCardsBtn) printCardsBtn.addEventListener('click', () => window.print());
+  document.querySelectorAll('.cards-filter-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      idCardsGenderFilter = b.dataset.cardGender || 'all';
+      document.querySelectorAll('.cards-filter-btn').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      renderIdCards();
+    });
+  });
 
   // حفظ الشجرة كاملة PDF
   document.getElementById('save-tree-pdf-btn').addEventListener('click', (e) => saveTreeAsPdf(e.currentTarget));

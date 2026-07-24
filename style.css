@@ -954,6 +954,17 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
 .pn-label-self { min-width: auto; white-space: nowrap; }
 
 /* ===== البطاقات التعريفية ===== */
+.cards-filter { display: flex; align-items: center; gap: 8px; margin: 4px 0 6px; flex-wrap: wrap; }
+.cards-filter-label { font-size: .85rem; color: var(--muted); font-weight: 700; }
+.cards-filter-btn {
+  font-family: inherit; font-size: .85rem; font-weight: 700;
+  padding: 6px 16px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--border); background: #fff; color: var(--primary-dark);
+  transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+.cards-filter-btn:hover { border-color: var(--primary); }
+.cards-filter-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
 .id-cards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
