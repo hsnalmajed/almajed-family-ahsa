@@ -124,42 +124,17 @@ function protoRootsAndChildren() {
   return { roots, childrenOf };
 }
 
-function protoNodeHtml(p, childrenOf, depth, descOf) {
-  const kids = childrenOf[String(p.displayId)] || [];
-  const female = p.gender === 'female';
-  const dead = p.status === 'death';
-  const collapsed = kids.length && depth >= 2 ? ' collapsed' : '';
-  const av = p.photoURL
-    ? `<img class="pnode-av" src="${p.photoURL}" alt="">`
-    : `<span class="pnode-av pnode-av-ph ${female ? 'f' : 'm'}">${escapeHtml((p.firstName || '؟').slice(0, 1))}</span>`;
-  const chev = kids.length ? '<span class="pnode-chev">▾</span>' : '<span class="pnode-dot"></span>';
-  const total = descOf(p.displayId);           // إجمالي من تحته (كل الذريّة)
-  const metaBits = [female ? 'أنثى' : 'ذكر'];
-  if (dead) metaBits.push('متوفى');
-  const countBadge = total > 0 ? `<span class="pnode-count" title="إجمالي من تحته (أبناء وأحفاد...)">👥 ${total}</span>` : '';
-  let html =
-    `<li class="${collapsed.trim()}">` +
-      `<div class="pnode ${female ? 'female' : 'male'}${dead ? ' dead' : ''}" data-pid="${p.displayId}"${dead ? ' title="متوفى"' : ''}>` +
-        chev + av +
-        `<span class="pnode-info">` +
-          `<span class="pnode-name">${escapeHtml(p.firstName || '')} <b class="pnode-id">#${p.displayId}</b></span>` +
-          `<span class="pnode-meta">${metaBits.join(' • ')}</span>` +
-        `</span>` +
-        countBadge +
-      `</div>`;
-  if (kids.length) {
-    html += '<ul>' + protoSortSiblings(kids).map(k => protoNodeHtml(k, childrenOf, depth + 1, descOf)).join('') + '</ul>';
-  }
-  html += '</li>';
-  return html;
+// ===== مستكشف تفاعلي بالتركيز (Focus Explorer) =====
+let protoFocusId = null;
+let protoZoom = 1;
+
+// ترتيب الأشقّاء تصاعدياً (الأصغر أولاً ⇒ يظهر يميناً في RTL كالشجرة الرئيسية)
+function protoSortSiblingsAsc(list) {
+  return list.slice().sort((a, b) => (Number(a.displayId) || 0) - (Number(b.displayId) || 0));
 }
 
-function renderProtoTree() {
-  const box = document.getElementById('proto-tree');
-  if (!box) return;
-  if (!allPersonsAdmin.length) { box.innerHTML = '<div class="empty-state">لا توجد بيانات بعد.</div>'; return; }
+function protoBuildData() {
   const { roots, childrenOf } = protoRootsAndChildren();
-  // عدّاد إجمالي الذريّة تحت كل شخص (مع تخزين مؤقّت)
   const memo = {};
   const descOf = (id) => {
     id = String(id);
@@ -169,104 +144,205 @@ function renderProtoTree() {
     for (const k of kids) c += descOf(k.displayId);
     memo[id] = c; return c;
   };
-  box.innerHTML = '<ul class="ptree">' + protoSortSiblings(roots).map(r => protoNodeHtml(r, childrenOf, 0, descOf)).join('') + '</ul>';
-  applyProtoZoom();
-  setTimeout(() => { drawProtoCurves(); centerProtoOnRoot(); }, 60);
+  return { roots, childrenOf, descOf };
 }
 
-// رسم خطوط ربط منحنية (SVG Bézier) بين كل أب وأبنائه
+function protoFatherOf(p) {
+  const pk = String((p && p.parentKey) || '');
+  if (!pk || pk.startsWith('v')) return null;
+  return personsByDisplayIdAdmin[pk] || null;
+}
+
+function protoAvatar(p) {
+  const female = p.gender === 'female';
+  if (p.photoURL) return `<img src="${p.photoURL}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'pex-ph ${female ? 'f' : 'm'}',textContent:'${escapeHtml((p.firstName || '؟').slice(0, 1))}'}))">`;
+  return `<span class="pex-ph ${female ? 'f' : 'm'}">${escapeHtml((p.firstName || '؟').slice(0, 1))}</span>`;
+}
+
+function protoDefaultFocus(roots) {
+  if (personsByDisplayIdAdmin['1']) return 1;
+  return (roots[0] && roots[0].displayId) || null;
+}
+
+function setProtoFocus(id) {
+  if (!personsByDisplayIdAdmin[String(id)]) return;
+  protoFocusId = Number(id);
+  renderProtoTree();
+}
+function protoGoHome() {
+  const { roots } = protoRootsAndChildren();
+  protoFocusId = protoDefaultFocus(roots);
+  renderProtoTree();
+}
+
+// يُستدعى من معالج اللقطة وعند فتح التبويب
+function renderProtoTree() {
+  const box = document.getElementById('proto-tree');
+  if (!box) return;
+  if (!allPersonsAdmin.length) { box.innerHTML = '<div class="empty-state">لا توجد بيانات بعد.</div>'; return; }
+  const { roots, childrenOf, descOf } = protoBuildData();
+  if (protoFocusId == null || !personsByDisplayIdAdmin[String(protoFocusId)]) protoFocusId = protoDefaultFocus(roots);
+  const focus = personsByDisplayIdAdmin[String(protoFocusId)];
+  if (!focus) { box.innerHTML = '<div class="empty-state">لا توجد بيانات بعد.</div>'; return; }
+
+  const father = protoFatherOf(focus);
+  const kids = protoSortSiblingsAsc(childrenOf[String(focus.displayId)] || []);
+  const female = focus.gender === 'female';
+  const dead = focus.status === 'death';
+  const total = descOf(focus.displayId);
+  const direct = (childrenOf[String(focus.displayId)] || []).length;
+  const sub = father ? `${female ? 'ابنة' : 'ابن'} ${escapeHtml(father.firstName || '')}` : 'الجذر — رأس العائلة';
+
+  // مسار الأجداد (من الجذر إلى التركيز)
+  const path = [];
+  let cur = focus, guard = 0;
+  while (cur && guard++ < 200) { path.unshift(cur); cur = protoFatherOf(cur); }
+  const crumbs = path.map((pp, i) => {
+    const isCur = pp.displayId === focus.displayId;
+    return (i > 0 ? '<span class="pex-crumb-sep">‹</span>' : '') +
+      `<span class="pex-crumb${isCur ? ' current' : ''}" data-pid="${pp.displayId}">${escapeHtml(pp.firstName || '؟')}</span>`;
+  }).join('');
+
+  // منطقة الأب
+  let parentHtml;
+  if (father) {
+    const pf = father.gender === 'female';
+    parentHtml = `<div class="pex-parent-row"><div class="pex-parent ${pf ? 'female' : 'male'}" data-pid="${father.displayId}">
+        <span class="pex-updot">↑</span>
+        <span class="pex-pav">${protoAvatar(father)}</span>
+        <span style="display:flex;flex-direction:column;text-align:start;">
+          <span class="pex-mini-label">الأب</span>
+          <b style="font-size:.9rem;color:#1e3b2f;">${escapeHtml(father.firstName || '')} <span style="color:#9bb3a7;font-weight:600;">#${father.displayId}</span></b>
+        </span>
+      </div></div>`;
+  } else {
+    parentHtml = `<div class="pex-root-badge">👑 الجذر — رأس عائلة الماجد</div>`;
+  }
+
+  // البطاقة المركزية
+  const ribbon = dead ? `<span class="pex-dead-ribbon">🕊 متوفّى</span>` : '';
+  const focusHtml = `<div class="pex-focus ${female ? 'female' : 'male'}${dead ? ' dead' : ''}" data-pid="${focus.displayId}">
+      ${ribbon}
+      <div class="pex-av">${protoAvatar(focus)}</div>
+      <div class="pex-name">${escapeHtml(focus.firstName || '')}</div>
+      <div class="pex-sub">${sub}</div>
+      <div class="pex-id">المعرّف #${focus.displayId}</div>
+      <div class="pex-stats">
+        <span class="pex-stat">👥 <b>${total}</b> إجمالي الذرية</span>
+        <span class="pex-stat">🌿 <b>${direct}</b> أبناء</span>
+        <span class="pex-stat">${female ? '♀ أنثى' : '♂ ذكر'}</span>
+      </div>
+    </div>`;
+
+  // الأبناء
+  let childrenHtml;
+  if (kids.length) {
+    const centered = kids.length <= 3 ? ' centered' : '';
+    childrenHtml = `<div class="pex-children-label">الأبناء (${kids.length}) — اضغط للانتقال</div>
+      <div class="pex-children${centered}">` +
+      kids.map(k => {
+        const kf = k.gender === 'female';
+        const kd = k.status === 'death';
+        const kt = descOf(k.displayId);
+        return `<div class="pex-child ${kf ? 'female' : 'male'}${kd ? ' dead' : ''}" data-pid="${k.displayId}">
+            ${kt > 0 ? `<span class="pex-ccount">👥 ${kt}</span>` : ''}
+            ${kd ? '<span class="pex-cdead">🕊</span>' : ''}
+            <div class="pex-cav">${protoAvatar(k)}</div>
+            <div class="pex-cname">${escapeHtml(k.firstName || '')}</div>
+            <div class="pex-cid">#${k.displayId}</div>
+            ${kt > 0 ? `<div class="pex-cmore">▾ له ذرية</div>` : ''}
+          </div>`;
+      }).join('') + `</div>`;
+  } else {
+    childrenHtml = `<div class="pex-no-children">— لا يوجد أبناء مسجّلون —</div>`;
+  }
+
+  box.innerHTML = `<div class="pex">
+      <div class="pex-breadcrumb">${crumbs}</div>
+      <div class="pex-stage">${parentHtml}${focusHtml}${childrenHtml}</div>
+    </div>`;
+
+  applyProtoZoom();
+  box.scrollTop = 0;
+  setTimeout(drawProtoCurves, 30);
+}
+
+// رسم خطوط ربط منحنية بين الأب ← التركيز ← الأبناء
 function drawProtoCurves() {
-  const wrap = document.getElementById('proto-tree');
-  const ptree = wrap && wrap.querySelector('.ptree');
-  if (!ptree) return;
-  const oldSvg = ptree.querySelector('svg.ptree-links');
-  if (oldSvg) oldSvg.remove();
+  const box = document.getElementById('proto-tree');
+  const stage = box && box.querySelector('.pex-stage');
+  if (!stage) return;
+  stage.querySelectorAll('svg.pex-links').forEach(s => s.remove());
   const z = protoZoom || 1;
-  const ptRect = ptree.getBoundingClientRect();
-  const localW = ptRect.width / z, localH = ptRect.height / z;
+  const sRect = stage.getBoundingClientRect();
+  const W = sRect.width / z, H = sRect.height / z;
   const NS = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(NS, 'svg');
-  svg.setAttribute('class', 'ptree-links');
-  svg.setAttribute('width', localW); svg.setAttribute('height', localH);
-  svg.setAttribute('viewBox', `0 0 ${localW} ${localH}`);
+  svg.setAttribute('class', 'pex-links');
+  svg.setAttribute('width', W); svg.setAttribute('height', H);
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('preserveAspectRatio', 'none');
   const defs = document.createElementNS(NS, 'defs');
-  defs.innerHTML = '<linearGradient id="ptLink" x1="0" y1="0" x2="0" y2="1">' +
-    '<stop offset="0" stop-color="#f0d38a" stop-opacity="0.9"/>' +
-    '<stop offset="1" stop-color="#cf9a2e" stop-opacity="0.45"/></linearGradient>';
+  defs.innerHTML = '<linearGradient id="pexLink" x1="0" y1="0" x2="0" y2="1">' +
+    '<stop offset="0" stop-color="#7fae99" stop-opacity="0.85"/>' +
+    '<stop offset="1" stop-color="#d9a63a" stop-opacity="0.6"/></linearGradient>';
   svg.appendChild(defs);
   const pos = el => {
     const r = el.getBoundingClientRect();
-    return { x: (r.left - ptRect.left) / z, y: (r.top - ptRect.top) / z, w: r.width / z, h: r.height / z };
+    return { x: (r.left - sRect.left) / z, y: (r.top - sRect.top) / z, w: r.width / z, h: r.height / z };
   };
+  const focus = stage.querySelector('.pex-focus');
   let d = '';
-  ptree.querySelectorAll('li').forEach(li => {
-    if (li.classList.contains('collapsed')) return;
-    const ul = li.querySelector(':scope > ul');
-    const parent = li.querySelector(':scope > .pnode');
-    if (!ul || !parent) return;
-    const pp = pos(parent);
-    const px = pp.x + pp.w / 2, py = pp.y + pp.h;
-    ul.querySelectorAll(':scope > li > .pnode').forEach(cn => {
-      const cp = pos(cn);
-      const cx = cp.x + cp.w / 2, cy = cp.y;
-      const my = py + (cy - py) * 0.5;
-      d += `M ${px} ${py} C ${px} ${my}, ${cx} ${my}, ${cx} ${cy} `;
+  const parent = stage.querySelector('.pex-parent');
+  if (parent && focus) {
+    const a = pos(parent), b = pos(focus);
+    const x1 = a.x + a.w / 2, y1 = a.y + a.h, x2 = b.x + b.w / 2, y2 = b.y;
+    const my = (y1 + y2) / 2;
+    d += `M ${x1} ${y1} C ${x1} ${my}, ${x2} ${my}, ${x2} ${y2} `;
+  }
+  if (focus) {
+    const b = pos(focus);
+    const fx = b.x + b.w / 2, fy = b.y + b.h;
+    stage.querySelectorAll('.pex-child').forEach(ch => {
+      const c = pos(ch);
+      const cx = c.x + c.w / 2, cy = c.y;
+      const my = (fy + cy) / 2;
+      d += `M ${fx} ${fy} C ${fx} ${my}, ${cx} ${my}, ${cx} ${cy} `;
     });
-  });
-  const path = document.createElementNS(NS, 'path');
-  path.setAttribute('d', d);
-  path.setAttribute('fill', 'none');
-  path.setAttribute('stroke', 'url(#ptLink)');
-  path.setAttribute('stroke-width', '2.5');
-  path.setAttribute('stroke-linecap', 'round');
-  path.style.filter = 'drop-shadow(0 0 3px rgba(232,181,60,.45))';
-  svg.appendChild(path);
-  ptree.insertBefore(svg, ptree.firstChild);
+  }
+  const p = document.createElementNS(NS, 'path');
+  p.setAttribute('d', d);
+  p.setAttribute('fill', 'none');
+  p.setAttribute('stroke', 'url(#pexLink)');
+  p.setAttribute('stroke-width', '2.4');
+  p.setAttribute('stroke-linecap', 'round');
+  p.style.filter = 'drop-shadow(0 1px 2px rgba(31,71,55,.12))';
+  svg.appendChild(p);
+  stage.insertBefore(svg, stage.firstChild);
 }
 
-// توسيط المعرّف 1 (أو أول جذر) أفقياً في وسط الإطار
-function centerProtoOnRoot() {
-  const wrap = document.getElementById('proto-tree');
-  if (!wrap) return;
-  const node = wrap.querySelector('.pnode[data-pid="1"]') || wrap.querySelector('.ptree > li > .pnode');
-  if (!node) return;
-  const wr = wrap.getBoundingClientRect();
-  const nr = node.getBoundingClientRect();
-  const centerInContent = (nr.left - wr.left) + wrap.scrollLeft + nr.width / 2;
-  wrap.scrollLeft = Math.max(0, centerInContent - wrap.clientWidth / 2);
-  wrap.scrollTop = 0;
-}
-
-// تكبير/تصغير النموذج (10% إلى 100%، الافتراضي 50%)
-let protoZoom = 0.5;
+// تكبير/تصغير (60% إلى 160%، الافتراضي 100%)
 function applyProtoZoom() {
-  const t = document.querySelector('#proto-tree .ptree');
-  if (t) t.style.zoom = protoZoom;
+  const pex = document.querySelector('#proto-tree .pex');
+  if (pex) pex.style.zoom = protoZoom;
   const lbl = document.getElementById('proto-zoom-level');
   if (lbl) lbl.textContent = Math.round(protoZoom * 100) + '%';
 }
 function setProtoZoom(z) {
-  protoZoom = Math.max(0.1, Math.min(1, Math.round(z * 10) / 10));
+  protoZoom = Math.max(0.6, Math.min(1.6, Math.round(z * 10) / 10));
   applyProtoZoom();
-  setTimeout(() => { drawProtoCurves(); centerProtoOnRoot(); }, 30);
+  setTimeout(drawProtoCurves, 30);
 }
 
-// ملء الشاشة للنموذج
+// ملء الشاشة
 function toggleProtoFullscreen() {
   const panel = document.getElementById('tab-panel-proto');
   if (!panel) return;
   const on = panel.classList.toggle('proto-fs');
   const btn = document.getElementById('proto-fullscreen');
-  if (btn) btn.textContent = on ? '✕ خروج من ملء الشاشة' : '⛶ ملء الشاشة';
+  if (btn) btn.textContent = on ? '✕ خروج' : '⛶ ملء الشاشة';
   document.body.style.overflow = on ? 'hidden' : '';
-  setTimeout(() => { drawProtoCurves(); centerProtoOnRoot(); }, 80);
-}
-
-function protoSetAll(collapsed) {
-  document.querySelectorAll('#proto-tree li').forEach(li => {
-    if (li.querySelector(':scope > ul')) li.classList.toggle('collapsed', collapsed);
-  });
-  setTimeout(drawProtoCurves, 0);
+  setTimeout(drawProtoCurves, 80);
 }
 
 // ---------------------------------------------------------------------
@@ -2298,21 +2374,18 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('tab-btn-proto').addEventListener('click', () => switchTab('proto'));
   const protoBox = document.getElementById('proto-tree');
   if (protoBox) protoBox.addEventListener('click', (e) => {
-    const node = e.target.closest('.pnode');
-    if (!node) return;
-    const li = node.parentElement;
-    if (li && li.querySelector(':scope > ul')) { li.classList.toggle('collapsed'); setTimeout(drawProtoCurves, 0); }
+    const t = e.target.closest('[data-pid]');
+    if (!t) return;
+    setProtoFocus(t.getAttribute('data-pid'));
   });
-  const pExpand = document.getElementById('proto-expand-all');
-  if (pExpand) pExpand.addEventListener('click', () => protoSetAll(false));
-  const pCollapse = document.getElementById('proto-collapse-all');
-  if (pCollapse) pCollapse.addEventListener('click', () => protoSetAll(true));
+  const pHome = document.getElementById('proto-home');
+  if (pHome) pHome.addEventListener('click', protoGoHome);
   const pzIn = document.getElementById('proto-zoom-in');
   if (pzIn) pzIn.addEventListener('click', () => setProtoZoom(protoZoom + 0.1));
   const pzOut = document.getElementById('proto-zoom-out');
   if (pzOut) pzOut.addEventListener('click', () => setProtoZoom(protoZoom - 0.1));
   const pzReset = document.getElementById('proto-zoom-reset');
-  if (pzReset) pzReset.addEventListener('click', () => { setProtoZoom(0.5); setTimeout(centerProtoOnRoot, 30); });
+  if (pzReset) pzReset.addEventListener('click', () => setProtoZoom(1));
   const pFs = document.getElementById('proto-fullscreen');
   if (pFs) pFs.addEventListener('click', toggleProtoFullscreen);
   const printCardsBtn = document.getElementById('print-id-cards-btn');
