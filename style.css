@@ -1006,8 +1006,12 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
 .pnode:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.1); }
 .pnode.male   { border-right-color: #1d4e89; }     /* أزرق داكن */
 .pnode.female { border-right-color: #a8386b; }     /* وردي داكن */
-/* المتوفّى: شريط أسود على الحافة المقابلة */
-.pnode.dead { border-left: 6px solid #141414; background: #fbfbfa; }
+/* المتوفّى: شريط أسود واضح بجانب الاسم */
+.pnode.dead { background: #f6f6f4; }
+.pnode-deadbar {
+  align-self: stretch; width: 5px; flex-shrink: 0;
+  background: #111; border-radius: 3px;
+}
 
 .pnode-av {
   width: 38px; height: 38px; border-radius: 50%; object-fit: cover;
@@ -1023,8 +1027,10 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
 /* عدّاد إجمالي من تحت الشخص */
 .pnode-count {
   margin-inline-start: 4px; flex-shrink: 0;
-  font-size: .72rem; font-weight: 800; color: #fff;
-  background: var(--primary); border-radius: 999px; padding: 2px 9px;
+  font-size: .72rem; font-weight: 800; color: #4a3407;
+  background: linear-gradient(135deg, #e8b53c, #cf9a2e);   /* ذهبي */
+  border: 1px solid #c69128;
+  border-radius: 999px; padding: 2px 9px;
   white-space: nowrap;
 }
 

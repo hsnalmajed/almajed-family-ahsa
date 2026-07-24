@@ -141,6 +141,7 @@ function protoNodeHtml(p, childrenOf, depth, descOf) {
     `<li class="${collapsed.trim()}">` +
       `<div class="pnode ${female ? 'female' : 'male'}${dead ? ' dead' : ''}">` +
         chev + av +
+        (dead ? '<span class="pnode-deadbar" title="متوفى"></span>' : '') +
         `<span class="pnode-info">` +
           `<span class="pnode-name">${escapeHtml(p.firstName || '')} <b class="pnode-id">#${p.displayId}</b></span>` +
           `<span class="pnode-meta">${metaBits.join(' • ')}</span>` +
