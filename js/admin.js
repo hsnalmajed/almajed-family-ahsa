@@ -175,54 +175,11 @@ function renderProtoTree() {
   setTimeout(() => { drawProtoCurves(); centerProtoOnRoot(); }, 60);
 }
 
-// رسم خطوط ربط منحنية (SVG Bézier) بين كل أب وأبنائه
+// الخطوط الآن عبر CSS — الدالة تُبقى كمُنظّف فقط لأي طبقة SVG قديمة
 function drawProtoCurves() {
   const wrap = document.getElementById('proto-tree');
-  const ptree = wrap && wrap.querySelector('.ptree');
-  if (!ptree) return;
-  const oldSvg = ptree.querySelector('svg.ptree-links');
-  if (oldSvg) oldSvg.remove();
-  const z = protoZoom || 1;
-  const ptRect = ptree.getBoundingClientRect();
-  const localW = ptRect.width / z, localH = ptRect.height / z;
-  const NS = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(NS, 'svg');
-  svg.setAttribute('class', 'ptree-links');
-  svg.setAttribute('width', localW); svg.setAttribute('height', localH);
-  svg.setAttribute('viewBox', `0 0 ${localW} ${localH}`);
-  const defs = document.createElementNS(NS, 'defs');
-  defs.innerHTML = '<linearGradient id="ptLink" x1="0" y1="0" x2="0" y2="1">' +
-    '<stop offset="0" stop-color="#d9a63a" stop-opacity="0.95"/>' +
-    '<stop offset="1" stop-color="#b5842a" stop-opacity="0.75"/></linearGradient>';
-  svg.appendChild(defs);
-  const pos = el => {
-    const r = el.getBoundingClientRect();
-    return { x: (r.left - ptRect.left) / z, y: (r.top - ptRect.top) / z, w: r.width / z, h: r.height / z };
-  };
-  let d = '';
-  ptree.querySelectorAll('li').forEach(li => {
-    if (li.classList.contains('collapsed')) return;
-    const ul = li.querySelector(':scope > ul');
-    const parent = li.querySelector(':scope > .pnode');
-    if (!ul || !parent) return;
-    const pp = pos(parent);
-    const px = pp.x + pp.w / 2, py = pp.y + pp.h;
-    ul.querySelectorAll(':scope > li > .pnode').forEach(cn => {
-      const cp = pos(cn);
-      const cx = cp.x + cp.w / 2, cy = cp.y;
-      const my = py + (cy - py) * 0.5;
-      d += `M ${px} ${py} C ${px} ${my}, ${cx} ${my}, ${cx} ${cy} `;
-    });
-  });
-  const path = document.createElementNS(NS, 'path');
-  path.setAttribute('d', d);
-  path.setAttribute('fill', 'none');
-  path.setAttribute('stroke', 'url(#ptLink)');
-  path.setAttribute('stroke-width', '2.5');
-  path.setAttribute('stroke-linecap', 'round');
-  path.style.filter = 'drop-shadow(0 1px 1px rgba(20,40,60,.15))';
-  svg.appendChild(path);
-  ptree.insertBefore(svg, ptree.firstChild);
+  if (!wrap) return;
+  wrap.querySelectorAll('svg.ptree-links, svg.pex-links').forEach(s => s.remove());
 }
 
 // توسيط المعرّف 1 (أو أول جذر) أفقياً في وسط الإطار
