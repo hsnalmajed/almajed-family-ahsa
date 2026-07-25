@@ -956,17 +956,17 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
 /* ===== نموذج شجرة العائلة (تصميم مقترح: مخطّط أفقي من الأعلى للأسفل) ===== */
 .proto-tree-wrap {
   background:
-    radial-gradient(rgba(31,71,55,.045) 1px, transparent 1px),
-    radial-gradient(900px 460px at 50% -6%, #ffffff 0%, #eef2f6 55%, #e3e9f0 100%);
-  background-size: 24px 24px, 100% 100%;
-  border: 1px solid #dbe2ea;
+    radial-gradient(rgba(23,89,57,.05) 1px, transparent 1px),
+    var(--bg);
+  background-size: 22px 22px, 100% 100%;
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 24px 16px;
   max-height: 72vh;
   overflow: auto;
 }
 /* وضع ملء الشاشة للنموذج */
-#tab-panel-proto.proto-fs { position: fixed; inset: 0; z-index: 9998; background: #eef2f6; overflow: hidden; }
+#tab-panel-proto.proto-fs { position: fixed; inset: 0; z-index: 9998; background: var(--bg); overflow: hidden; }
 #tab-panel-proto.proto-fs > .panel-toolbar {
   position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
   margin: 0; padding: 8px 12px; background: #fff; box-shadow: 0 1px 8px rgba(0,0,0,.15);
@@ -1013,19 +1013,22 @@ svg.ptree-links { position: absolute; top: 0; left: 0; pointer-events: none; z-i
   border-color: rgba(217,166,58,.85);
   box-shadow: 0 14px 30px rgba(20,40,60,.16), 0 0 0 3px rgba(232,181,60,.18);
 }
-/* المتوفّى: شارة رمادية في ركن البطاقة + خفوت خفيف */
-.pnode.dead { opacity: .72; border-top-left-radius: 0; overflow: hidden; }
-.pnode.dead::after {
-  content: ''; position: absolute; top: 0; left: 0;
-  border-style: solid; border-width: 16px 16px 0 0;
-  border-color: #98a2a8 transparent transparent transparent;
+/* المتوفّى: شريط جانبي على الصورة + تعتيم خفيف */
+.pnode.dead { opacity: .9; }
+.pnode.dead .pnode-av { filter: grayscale(.85); }
+.pnode-avwrap { position: relative; display: inline-flex; flex-shrink: 0; }
+.pnode.dead .pnode-avwrap::before {
+  content: ''; position: absolute; top: 3px; bottom: 3px; inset-inline-start: -7px;
+  width: 5px; border-radius: 3px;
+  background: linear-gradient(#404a46, #1f2a26);
+  box-shadow: 0 1px 3px rgba(0,0,0,.35);
 }
 
 /* الأفاتار: إطار حسب الجنس + هالة ذهبية */
 .pnode-av {
   width: 48px; height: 48px; border-radius: 50%; object-fit: cover;
   flex-shrink: 0; background: #eef2f6;
-  border: 3px solid #3f8ad6;
+  border: 3px solid #2f74c0;
   box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px rgba(232,181,60,.5), 0 2px 7px rgba(20,40,60,.18);
 }
 .pnode.female .pnode-av { border-color: #d6568f; }
@@ -1033,8 +1036,8 @@ svg.ptree-links { position: absolute; top: 0; left: 0; pointer-events: none; z-i
   display: inline-flex; align-items: center; justify-content: center;
   font-weight: 800; color: #fff; font-size: 1.2rem;
 }
-.pnode-av-ph.m { background: linear-gradient(135deg, #4a9be0, #245c9e); }
-.pnode-av-ph.f { background: linear-gradient(135deg, #ec7fb1, #b64277); }
+.pnode-av-ph.m { background: linear-gradient(135deg, #4a9be0, #2f74c0); }
+.pnode-av-ph.f { background: linear-gradient(135deg, #ec7fb1, #d6568f); }
 
 /* عدّاد إجمالي من تحت الشخص (ذهبي) */
 .pnode-count {
@@ -1049,12 +1052,16 @@ svg.ptree-links { position: absolute; top: 0; left: 0; pointer-events: none; z-i
 
 .pnode-info { display: flex; flex-direction: column; line-height: 1.4; min-width: 0; }
 .pnode-name { font-weight: 800; color: #1e2e3a; font-size: 1rem; letter-spacing: .2px; }
+/* المعرّف: حبة ذهبية ممتلئة مميزة */
 .pnode-id {
-  color: #7a5a10; font-weight: 700; font-size: .68rem;
-  background: #fbeecb; border: 1px solid #e7cf86;
-  border-radius: 6px; padding: 0 5px; margin-inline-start: 3px;
+  color: #4a3400; font-weight: 800; font-size: .66rem;
+  background: linear-gradient(135deg, #f6d576, #d9a63a);
+  border: 1px solid #e7cf86;
+  border-radius: 999px; padding: 1px 9px; margin-inline-start: 5px;
+  box-shadow: 0 1px 5px rgba(217,166,58,.45);
+  display: inline-block;
 }
-.pnode-meta { font-size: .72rem; color: #6b7d86; margin-top: 1px; }
+.pnode-meta { font-size: .72rem; color: #6b7d86; margin-top: 2px; }
 
 .pnode-chev {
   color: #9a7b1f; font-size: .78rem; width: 18px; height: 18px; line-height: 18px;
