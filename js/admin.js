@@ -128,19 +128,20 @@ function protoNodeHtml(p, childrenOf, depth, descOf) {
   const kids = childrenOf[String(p.displayId)] || [];
   const female = p.gender === 'female';
   const dead = p.status === 'death';
-  const collapsed = kids.length && depth >= 2 ? ' collapsed' : '';
+  // مطويّة من الأعلى: كل من له أبناء يبدأ مطويّاً ويظهر أبناؤه بالضغط
+  const collapsed = kids.length ? ' collapsed' : '';
   const av = p.photoURL
     ? `<img class="pnode-av" src="${p.photoURL}" alt="">`
     : `<span class="pnode-av pnode-av-ph ${female ? 'f' : 'm'}">${escapeHtml((p.firstName || '؟').slice(0, 1))}</span>`;
   const chev = kids.length ? '<span class="pnode-chev">▾</span>' : '<span class="pnode-dot"></span>';
   const total = descOf(p.displayId);           // إجمالي من تحته (كل الذريّة)
   const metaBits = [female ? 'أنثى' : 'ذكر'];
-  if (dead) metaBits.push('متوفى');
+  if (dead) metaBits.push('رحمه الله');
   const countBadge = total > 0 ? `<span class="pnode-count" title="إجمالي من تحته (أبناء وأحفاد...)">👥 ${total}</span>` : '';
   let html =
     `<li class="${collapsed.trim()}">` +
-      `<div class="pnode ${female ? 'female' : 'male'}${dead ? ' dead' : ''}" data-pid="${p.displayId}"${dead ? ' title="متوفى"' : ''}>` +
-        chev + av +
+      `<div class="pnode ${female ? 'female' : 'male'}${dead ? ' dead' : ''}" data-pid="${p.displayId}"${dead ? ' title="متوفى — رحمه الله"' : ''}>` +
+        chev + `<span class="pnode-avwrap">` + av + `</span>` +
         `<span class="pnode-info">` +
           `<span class="pnode-name">${escapeHtml(p.firstName || '')} <b class="pnode-id">#${p.displayId}</b></span>` +
           `<span class="pnode-meta">${metaBits.join(' • ')}</span>` +
@@ -2301,7 +2302,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const node = e.target.closest('.pnode');
     if (!node) return;
     const li = node.parentElement;
-    if (li && li.querySelector(':scope > ul')) { li.classList.toggle('collapsed'); setTimeout(drawProtoCurves, 0); }
+    const hasKids = li && li.querySelector(':scope > ul');
+    // ضغطة أولى: إظهار الأبناء إن كانوا مخفيّين
+    if (hasKids && li.classList.contains('collapsed')) {
+      li.classList.remove('collapsed');
+      setTimeout(drawProtoCurves, 0);
+      return;
+    }
+    // ضغطة ثانية (أو لا أبناء له): فتح بطاقة الشخص (معلومات/تحديث/إضافة)
+    const person = personsByDisplayIdAdmin[String(node.getAttribute('data-pid'))];
+    if (person && typeof openAdminNodeModal === 'function') openAdminNodeModal(person);
   });
   const pExpand = document.getElementById('proto-expand-all');
   if (pExpand) pExpand.addEventListener('click', () => protoSetAll(false));
