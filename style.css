@@ -1038,18 +1038,18 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
 .pnode.dead { opacity: 1; }
 .pnode-avwrap { position: relative; display: inline-flex; flex-shrink: 0; }
 .pnode.dead .pnode-avwrap::after {
-  content: ''; position: absolute; left: 50%; bottom: -3px; transform: translateX(-50%);
-  width: 32px; height: 9px; border-radius: 5px; z-index: 3;
-  background: #131313; border: 1.5px solid #fff;
-  box-shadow: 0 2px 5px rgba(0,0,0,.5);
+  content: ''; position: absolute; left: 50%; bottom: 5px; transform: translateX(-50%);
+  width: 46px; height: 11px; border-radius: 2px; z-index: 5;
+  background: #0d0d0d; border: 1.5px solid #fff;
+  box-shadow: 0 2px 5px rgba(0,0,0,.55);
 }
 
-/* الأفاتار: إطار حسب الجنس + هالة ذهبية */
+/* الأفاتار: حلقة واحدة فقط بلون الجنس */
 .pnode-av {
-  width: 48px; height: 48px; border-radius: 50%; object-fit: cover;
+  width: 50px; height: 50px; border-radius: 50%; object-fit: cover;
   flex-shrink: 0; background: #eef2f6;
   border: 3px solid #2f74c0;
-  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px rgba(232,181,60,.5), 0 2px 7px rgba(20,40,60,.18);
+  box-shadow: 0 2px 7px rgba(20,40,60,.22);
 }
 .pnode.female .pnode-av { border-color: #d6568f; }
 .pnode-av-ph {
@@ -1092,6 +1092,20 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
 .pnode-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(31,71,55,.3); flex-shrink: 0; }
 
 .ptree li.collapsed > ul { display: none; }
+
+/* ===== شرائح الأقارب القابلة للضغط في بطاقة المدير ===== */
+.rel-jump-label { font-size: .78rem; color: var(--muted); margin: 4px 0 8px; text-align: center; }
+.rel-jump-wrap { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 14px; }
+.rel-jump {
+  cursor: pointer; font-family: inherit; font-size: .82rem; font-weight: 700;
+  color: #1f4536; background: #fff;
+  border: 1px solid #cfe0d6; border-radius: 999px; padding: 6px 13px;
+  transition: all .15s ease;
+}
+.rel-jump b { color: var(--gold-dark); }
+.rel-jump:hover { border-color: var(--accent); background: var(--gold-light); transform: translateY(-1px); }
+.rel-jump.rel-ext { cursor: default; color: var(--muted); background: #f4f2ec; }
+.rel-jump.rel-ext:hover { transform: none; border-color: #cfe0d6; background: #f4f2ec; }
 
 /* ===== جمع البيانات: معاينة الفروع ===== */
 .collect-title { font-weight: 800; color: var(--primary-dark); margin-bottom: 10px; }
