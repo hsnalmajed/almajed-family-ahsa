@@ -875,9 +875,37 @@ function resizeImageToBase64Admin(file, maxSize, quality) {
 function openAdminNodeModal(person) {
   selectedAdminTargetPerson = person;
   document.getElementById('admin-node-modal-title').textContent = `${person.firstName} (#${person.displayId}) — ماذا تريد أن تفعل؟`;
+  renderAdminNodeRelatives(person);
   document.getElementById('admin-node-choice-buttons').style.display = 'flex';
   document.getElementById('admin-delete-confirm').style.display = 'none';
   document.getElementById('admin-node-modal').classList.add('open');
+}
+
+// الأب/الأم/الأبناء كشرائح قابلة للضغط تفتح بطاقة ذلك الشخص
+function renderAdminNodeRelatives(person) {
+  const box = document.getElementById('admin-node-relatives');
+  if (!box) return;
+  const byId = personsByDisplayIdAdmin;
+  const chip = (p, label) => `<button type="button" class="rel-jump" data-jump="${p.displayId}">${label}: ${escapeHtml(p.firstName || '')} <b>#${p.displayId}</b></button>`;
+  let rows = '';
+  const father = byId[String(person.parentKey || '')];
+  if (father) rows += chip(father, 'الأب');
+  const mother = person.motherId ? byId[String(person.motherId)] : null;
+  if (mother) rows += chip(mother, 'الأم');
+  else if (person.motherName) rows += `<span class="rel-jump rel-ext">الأم: ${escapeHtml(person.motherName)} (من خارج العائلة)</span>`;
+  const kids = allPersonsAdmin
+    .filter(k => String(k.parentKey) === String(person.displayId))
+    .sort((a, b) => (Number(a.displayId) || 0) - (Number(b.displayId) || 0));
+  kids.forEach(k => { rows += chip(k, 'ابن/بنت'); });
+  box.innerHTML = rows
+    ? `<div class="rel-jump-label">اضغط على أي قريب للانتقال إليه:</div><div class="rel-jump-wrap">${rows}</div>`
+    : '';
+  box.querySelectorAll('.rel-jump[data-jump]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = byId[String(btn.getAttribute('data-jump'))];
+      if (p) openAdminNodeModal(p);
+    });
+  });
 }
 function closeAdminNodeModal() {
   document.getElementById('admin-node-modal').classList.remove('open');
