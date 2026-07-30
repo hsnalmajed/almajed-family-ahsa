@@ -1034,14 +1034,13 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
   border-color: rgba(217,166,58,.85);
   box-shadow: 0 14px 30px rgba(20,40,60,.16), 0 0 0 3px rgba(232,181,60,.18);
 }
-/* المتوفّى: صورة واضحة + شريط أسود مميّز على الصورة */
+/* المتوفّى: صورة واضحة + شريط أسود على الاسم */
 .pnode.dead { opacity: 1; }
 .pnode-avwrap { position: relative; display: inline-flex; flex-shrink: 0; }
-.pnode.dead .pnode-avwrap::after {
-  content: ''; position: absolute; left: 50%; bottom: 5px; transform: translateX(-50%);
-  width: 46px; height: 11px; border-radius: 2px; z-index: 5;
-  background: #0d0d0d; border: 1.5px solid #fff;
-  box-shadow: 0 2px 5px rgba(0,0,0,.55);
+.pnode.dead .pnode-name::before {
+  content: ''; display: inline-block; width: 7px; height: 15px;
+  background: #111; border-radius: 2px; margin-inline-end: 7px; vertical-align: -2px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.4);
 }
 
 /* الأفاتار: حلقة واحدة فقط بلون الجنس */
@@ -1071,7 +1070,8 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
 }
 
 .pnode-info { display: flex; flex-direction: column; line-height: 1.4; min-width: 0; }
-.pnode-name { font-weight: 800; color: #1e2e3a; font-size: 1rem; letter-spacing: .2px; }
+.pnode-name { font-weight: 800; color: #1e2e3a; font-size: 1rem; letter-spacing: .2px; cursor: pointer; border-radius: 6px; padding: 1px 4px; margin: -1px -4px; transition: background .15s ease; }
+.pnode-name:hover { background: rgba(232,181,60,.18); text-decoration: underline; text-decoration-color: var(--accent); }
 /* المعرّف: حبة ذهبية ممتلئة مميزة */
 .pnode-id {
   color: #4a3400; font-weight: 800; font-size: .66rem;
