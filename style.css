@@ -1029,30 +1029,29 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
 /* حدود البطاقة بلون الجنس */
 .pnode.male   { border: 2px solid #2f74c0; }
 .pnode.female { border: 2px solid #d6568f; }
-/* أيقونة التحديث/الإضافة (أعلى-يمين) */
+/* صفّ الإجراءات: العدّاد + أيقونة التحديث/الإضافة بجانب بعض */
+.pnode-actions { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 9px; }
 .pnode-gear {
-  position: absolute; top: 8px; right: 8px; z-index: 4;
-  width: 27px; height: 27px; border-radius: 50%; cursor: pointer;
+  width: 30px; height: 30px; border-radius: 50%; cursor: pointer; flex-shrink: 0;
   border: 1px solid #e7cf86; background: linear-gradient(135deg, #f6d576, #d9a63a);
-  color: #4a3400; font-size: .82rem; line-height: 1;
+  color: #4a3400; font-size: .9rem; line-height: 1;
   display: inline-flex; align-items: center; justify-content: center;
   box-shadow: 0 2px 6px rgba(217,166,58,.4); transition: transform .15s ease, box-shadow .15s ease;
 }
 .pnode-gear:hover { transform: scale(1.12); box-shadow: 0 3px 10px rgba(217,166,58,.65); }
 
-/* المتوفّى: شريط وفاة احترافي في زاوية الصورة (مقصوص على الدائرة) */
+/* المتوفّى: شريط أسود قطري على زاوية الصورة (عنصر حقيقي) */
 .pnode.dead { opacity: 1; }
 .pnode-avwrap {
   position: relative; display: inline-flex; flex-shrink: 0; margin-bottom: 4px;
 }
-/* شريط الوفاة: شريطة سوداء قطرية واضحة على زاوية الصورة */
-.pnode.dead .pnode-avwrap::after {
-  content: ''; position: absolute; z-index: 6;
-  top: 9px; left: -7px; width: 42px; height: 12px;
+.pnode-death {
+  position: absolute; z-index: 6; top: 10px; left: -8px;
+  width: 46px; height: 13px; display: block;
   background: linear-gradient(180deg, #2b2b2b, #000);
   transform: rotate(-45deg);
-  border: 1px solid rgba(255,255,255,.45);
-  box-shadow: 0 1px 4px rgba(0,0,0,.55);
+  border: 1px solid rgba(255,255,255,.5);
+  box-shadow: 0 1px 4px rgba(0,0,0,.6);
 }
 
 /* الأفاتار: كبير بحلقة واحدة بلون الجنس */
@@ -1083,7 +1082,7 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
 
 /* عدّاد الذرية (ذهبي) */
 .pnode-count {
-  margin-top: 8px; font-size: .7rem; font-weight: 800; color: #5a4207;
+  font-size: .72rem; font-weight: 800; color: #5a4207;
   background: linear-gradient(135deg, #f2cd69, #d9a63a); border: 1px solid #e7cf86;
   border-radius: 999px; padding: 2px 11px; box-shadow: 0 2px 7px rgba(217,166,58,.35);
   white-space: nowrap;
