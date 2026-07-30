@@ -649,6 +649,10 @@ function openChoiceModal(person) {
     fullBox.style.display = 'block';
   }
 
+  // «إضافة فرد جديد» تظهر للذكور فقط (الأبناء يُضافون تحت الأب)
+  const addBtn = document.getElementById('choice-add-btn');
+  if (addBtn) addBtn.style.display = (person.gender === 'female') ? 'none' : '';
+
   renderPersonNav(person);
   document.getElementById('choice-modal').classList.add('open');
 }
