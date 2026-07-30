@@ -1015,7 +1015,7 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
 .ptree > li { padding-top: 0; }
 .ptree > li::before, .ptree > li::after { display: none; }
 
-/* بطاقة الشخص — عمودية أنيقة بأركان خضراء */
+/* بطاقة الشخص — عمودية أنيقة بحدود بلون الجنس */
 .pnode {
   position: relative; z-index: 1; direction: rtl;
   display: flex; flex-direction: column; align-items: center; gap: 2px;
@@ -1029,14 +1029,6 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
 /* حدود البطاقة بلون الجنس */
 .pnode.male   { border: 2px solid #2f74c0; }
 .pnode.female { border: 2px solid #d6568f; }
-/* أركان خضراء زخرفية: أعلى-يسار + أسفل-يمين */
-.pnode::before, .pnode::after {
-  content: ''; position: absolute; width: 20px; height: 20px; pointer-events: none;
-  border: 2.5px solid var(--primary);
-}
-.pnode::before { top: 7px; left: 7px; border-right: 0; border-bottom: 0; border-radius: 8px 0 0 0; }
-.pnode::after  { bottom: 7px; right: 7px; border-left: 0; border-top: 0; border-radius: 0 0 8px 0; }
-
 /* أيقونة التحديث/الإضافة (أعلى-يمين) */
 .pnode-gear {
   position: absolute; top: 8px; right: 8px; z-index: 4;
@@ -1078,9 +1070,16 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
 .pnode-av-ph.m { background: linear-gradient(135deg, #4a9be0, #2f74c0); }
 .pnode-av-ph.f { background: linear-gradient(135deg, #ec7fb1, #d6568f); }
 
-.pnode-name { font-weight: 800; color: #143d2a; font-size: 1.05rem; letter-spacing: .2px; cursor: pointer; border-radius: 6px; padding: 1px 8px; transition: background .15s ease; }
+.pnode-name { margin-top: 6px; font-weight: 800; color: #143d2a; font-size: 1.08rem; letter-spacing: .2px; cursor: pointer; border-radius: 6px; padding: 1px 8px; transition: background .15s ease; }
 .pnode-name:hover { background: rgba(232,181,60,.18); text-decoration: underline; text-decoration-color: var(--accent); }
-.pnode-meta { font-size: .74rem; color: #7a8a83; margin-top: 1px; }
+/* المعرّف: حبة ذهبية مميّزة ID: 51 */
+.pnode-id {
+  margin-top: 7px; font-size: .68rem; font-weight: 800; color: #4a3400;
+  background: linear-gradient(135deg, #f6d576, #d9a63a);
+  border: 1px solid #e7cf86; border-radius: 999px; padding: 2px 13px;
+  box-shadow: 0 2px 6px rgba(217,166,58,.4); letter-spacing: .3px;
+}
+.pnode-meta { font-size: .73rem; color: #7a8a83; margin-top: 6px; }
 
 /* عدّاد الذرية (ذهبي) */
 .pnode-count {
