@@ -2053,7 +2053,8 @@ async function renumberAllIds(btnEl) {
 
   const count = allPersonsAdmin.length;
   const ok = confirm(
-    'سيتم إعادة ترقيم جميع المعرّفات لتصبح متسلسلة من 1 إلى ' + count + '.\n\n' +
+    'سيتم إعادة ترقيم جميع المعرّفات حسب ترتيب الشجرة (الجذر ثم فروعه فرعاً فرعاً) لتصبح متسلسلة من 1 إلى ' + count + '.\n' +
+    'ميزة هذا الترتيب: رقم كل أب أصغر من ذريّته، وكل فرع تكون أرقامه متتالية.\n\n' +
     'سيتم تحديث جميع الروابط تلقائياً: الآباء، الأبناء، الأزواج المرتبطون من العائلة، والأمهات.\n' +
     '⚠️ تنبيه للسلامة: أي رابط كان يشير إلى شخص محذوف سابقاً سيُزال. يُنصح بمراجعة الروابط بعد الترقيم.\n' +
     'لا يمكن التراجع عن هذا الإجراء — يُفضّل تنفيذه بعد الانتهاء من إدخال جميع الأفراد.\n\n' +
@@ -2071,13 +2072,39 @@ async function renumberAllIds(btnEl) {
     snap.forEach(doc => people.push({ id: doc.id, ...doc.data() }));
     people.sort((a, b) => (Number(a.displayId) || 0) - (Number(b.displayId) || 0));
 
-    // خريطة: المعرّف القديم -> المعرّف الجديد
+    // ترقيم منطقي حسب ترتيب الشجرة (عمقي pre-order):
+    // الجذر أولاً ثم كامل فرعه، فكل أب رقمه أصغر من ذريّته وكل فرع أرقامه متتالية
+    const byId = {};
+    people.forEach(p => { byId[String(p.displayId)] = p; });
+    const childrenOf = {};
+    const roots = [];
+    people.forEach(p => {
+      const pk = String(p.parentKey || '');
+      if (!pk || pk.startsWith('v') || !byId[pk]) roots.push(p);
+      else (childrenOf[pk] = childrenOf[pk] || []).push(p);
+    });
+    const byOldId = (a, b) => (Number(a.displayId) || 0) - (Number(b.displayId) || 0);
+    roots.sort(byOldId);
+    Object.keys(childrenOf).forEach(k => childrenOf[k].sort(byOldId));
+
+    // خريطة: المعرّف القديم -> المعرّف الجديد (بترتيب الزيارة العمقية)
     const idMap = {};
-    people.forEach((p, i) => { idMap[String(p.displayId)] = i + 1; });
+    let seq = 0;
+    const seen = {};
+    const visit = (p) => {
+      const key = String(p.displayId);
+      if (seen[key]) return;            // حماية من أي حلقة
+      seen[key] = true;
+      idMap[key] = ++seq;
+      (childrenOf[key] || []).forEach(visit);
+    };
+    roots.forEach(visit);
+    // أي فرد لم تصله الزيارة (حالة نادرة) يُرقّم في النهاية
+    people.forEach(p => { const k = String(p.displayId); if (idMap[k] == null) idMap[k] = ++seq; });
 
     let orphans = 0;
-    const updates = people.map((p, i) => {
-      const newId = i + 1;
+    const updates = people.map((p) => {
+      const newId = idMap[String(p.displayId)];
       const oldKey = String(p.parentKey || '');
       let newParentKey;
       if (oldKey.startsWith('v')) {
