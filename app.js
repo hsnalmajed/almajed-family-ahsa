@@ -1583,13 +1583,27 @@ function handleSearch(evt) {
   });
 }
 
-function scrollToPerson(displayId) {
+// يفتح كل الفروع فوق الشخص (وفرعه) حتى يظهر في الشجرة المطويّة
+function revealPersonInTree(displayId) {
   const el = document.getElementById('person-node-' + displayId);
+  if (!el) return null;
+  let li = el.closest('li');
+  while (li) {
+    li.classList.remove('collapsed');
+    const parent = li.parentElement;
+    li = parent ? parent.closest('li') : null;
+  }
+  return el;
+}
+
+function scrollToPerson(displayId) {
+  const el = revealPersonInTree(displayId);
   if (!el) {
     showToast('تعذر إيجاد هذا الشخص في الشجرة المعروضة', true);
     return;
   }
-  el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+  // ننتظر قليلاً حتى تُفتح الفروع ويكتمل التخطيط قبل التمرير
+  setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' }), 60);
   el.classList.add('highlighted');
   setTimeout(() => el.classList.remove('highlighted'), 2200);
 

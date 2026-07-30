@@ -143,6 +143,20 @@ function computeDirectRelation(personA, personB, personsByDisplayId) {
   const fatherB = isNumericKey(personB.parentKey) ? String(personB.parentKey) : null;
   const motherB = personB.motherId != null ? String(personB.motherId) : null;
 
+  // زوج/زوجة: عبر رابط الزواج المباشر (spouseLinks) أو المشاركة في ابن
+  const linksA = Array.isArray(personA.spouseLinks) ? personA.spouseLinks.map(l => String(l.id)) : [];
+  const linksB = Array.isArray(personB.spouseLinks) ? personB.spouseLinks.map(l => String(l.id)) : [];
+  let isSpouse = linksA.indexOf(Bid) !== -1 || linksB.indexOf(Aid) !== -1;
+  if (!isSpouse) {
+    for (const k in P) {
+      const c = P[k];
+      const f = isNumericKey(c.parentKey) ? String(c.parentKey) : null;
+      const m = c.motherId != null ? String(c.motherId) : null;
+      if ((f === Aid && m === Bid) || (f === Bid && m === Aid)) { isSpouse = true; break; }
+    }
+  }
+  if (isSpouse) return bMale ? 'زوجها' : 'زوجته';
+
   // والدا A
   if (fatherA === Bid) return aMale ? 'أبوه' : 'أبوها';
   if (motherA === Bid) return aMale ? 'أمه' : 'أمها';
