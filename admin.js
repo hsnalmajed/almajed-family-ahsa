@@ -128,24 +128,26 @@ function protoNodeHtml(p, childrenOf, depth, descOf) {
   const kids = childrenOf[String(p.displayId)] || [];
   const female = p.gender === 'female';
   const dead = p.status === 'death';
-  const collapsed = kids.length && depth >= 2 ? ' collapsed' : '';
+  // مطويّة من الأعلى: كل من له أبناء يبدأ مطويّاً ويظهر أبناؤه بالضغط
+  const collapsed = kids.length ? ' collapsed' : '';
   const av = p.photoURL
     ? `<img class="pnode-av" src="${p.photoURL}" alt="">`
     : `<span class="pnode-av pnode-av-ph ${female ? 'f' : 'm'}">${escapeHtml((p.firstName || '؟').slice(0, 1))}</span>`;
-  const chev = kids.length ? '<span class="pnode-chev">▾</span>' : '<span class="pnode-dot"></span>';
   const total = descOf(p.displayId);           // إجمالي من تحته (كل الذريّة)
-  const metaBits = [female ? 'أنثى' : 'ذكر'];
-  if (dead) metaBits.push('متوفى');
-  const countBadge = total > 0 ? `<span class="pnode-count" title="إجمالي من تحته (أبناء وأحفاد...)">👥 ${total}</span>` : '';
+  const married = p.maritalStatus === 'married';
+  const metaTxt = married ? (female ? 'متزوجة' : 'متزوج') : '';   // بدون الجنس وبدون كلمة متوفى
+  const countBadge = total > 0 ? `<span class="pnode-count" title="إجمالي الذرية (أبناء وأحفاد)">👥 ${total}</span>` : '';
+  const death = dead ? '<i class="pnode-death" aria-hidden="true"></i>' : '';
   let html =
     `<li class="${collapsed.trim()}">` +
-      `<div class="pnode ${female ? 'female' : 'male'}${dead ? ' dead' : ''}" data-pid="${p.displayId}"${dead ? ' title="متوفى"' : ''}>` +
-        chev + av +
-        `<span class="pnode-info">` +
-          `<span class="pnode-name">${escapeHtml(p.firstName || '')} <b class="pnode-id">#${p.displayId}</b></span>` +
-          `<span class="pnode-meta">${metaBits.join(' • ')}</span>` +
+      `<div class="pnode ${female ? 'female' : 'male'}${dead ? ' dead' : ''}" data-pid="${p.displayId}"${dead ? ' title="متوفى — رحمه الله"' : ''}>` +
+        `<span class="pnode-avwrap">` + av + death + `</span>` +
+        `<span class="pnode-name">${escapeHtml(p.firstName || '')}</span>` +
+        `<span class="pnode-id">ID: ${p.displayId}</span>` +
+        (metaTxt ? `<span class="pnode-meta">${metaTxt}</span>` : '') +
+        `<span class="pnode-actions">` + countBadge +
+          `<button class="pnode-gear" title="تحديث البيانات أو إضافة فرد" aria-label="تحديث أو إضافة">✎</button>` +
         `</span>` +
-        countBadge +
       `</div>`;
   if (kids.length) {
     html += '<ul>' + protoSortSiblings(kids).map(k => protoNodeHtml(k, childrenOf, depth + 1, descOf)).join('') + '</ul>';
@@ -171,7 +173,14 @@ function renderProtoTree() {
   };
   box.innerHTML = '<ul class="ptree">' + protoSortSiblings(roots).map(r => protoNodeHtml(r, childrenOf, 0, descOf)).join('') + '</ul>';
   applyProtoZoom();
-  setTimeout(centerProtoOnRoot, 60);   // توسيط المعرّف 1
+  setTimeout(() => { drawProtoCurves(); centerProtoOnRoot(); }, 60);
+}
+
+// الخطوط الآن عبر CSS — الدالة تُبقى كمُنظّف فقط لأي طبقة SVG قديمة
+function drawProtoCurves() {
+  const wrap = document.getElementById('proto-tree');
+  if (!wrap) return;
+  wrap.querySelectorAll('svg.ptree-links, svg.pex-links').forEach(s => s.remove());
 }
 
 // توسيط المعرّف 1 (أو أول جذر) أفقياً في وسط الإطار
@@ -198,7 +207,7 @@ function applyProtoZoom() {
 function setProtoZoom(z) {
   protoZoom = Math.max(0.1, Math.min(1, Math.round(z * 10) / 10));
   applyProtoZoom();
-  setTimeout(centerProtoOnRoot, 30);
+  setTimeout(() => { drawProtoCurves(); centerProtoOnRoot(); }, 30);
 }
 
 // ملء الشاشة للنموذج
@@ -209,13 +218,14 @@ function toggleProtoFullscreen() {
   const btn = document.getElementById('proto-fullscreen');
   if (btn) btn.textContent = on ? '✕ خروج من ملء الشاشة' : '⛶ ملء الشاشة';
   document.body.style.overflow = on ? 'hidden' : '';
-  setTimeout(centerProtoOnRoot, 80);
+  setTimeout(() => { drawProtoCurves(); centerProtoOnRoot(); }, 80);
 }
 
 function protoSetAll(collapsed) {
   document.querySelectorAll('#proto-tree li').forEach(li => {
     if (li.querySelector(':scope > ul')) li.classList.toggle('collapsed', collapsed);
   });
+  setTimeout(drawProtoCurves, 0);
 }
 
 // ---------------------------------------------------------------------
@@ -866,9 +876,37 @@ function resizeImageToBase64Admin(file, maxSize, quality) {
 function openAdminNodeModal(person) {
   selectedAdminTargetPerson = person;
   document.getElementById('admin-node-modal-title').textContent = `${person.firstName} (#${person.displayId}) — ماذا تريد أن تفعل؟`;
+  renderAdminNodeRelatives(person);
   document.getElementById('admin-node-choice-buttons').style.display = 'flex';
   document.getElementById('admin-delete-confirm').style.display = 'none';
   document.getElementById('admin-node-modal').classList.add('open');
+}
+
+// الأب/الأم/الأبناء كشرائح قابلة للضغط تفتح بطاقة ذلك الشخص
+function renderAdminNodeRelatives(person) {
+  const box = document.getElementById('admin-node-relatives');
+  if (!box) return;
+  const byId = personsByDisplayIdAdmin;
+  const chip = (p, label) => `<button type="button" class="rel-jump" data-jump="${p.displayId}">${label}: ${escapeHtml(p.firstName || '')} <b>#${p.displayId}</b></button>`;
+  let rows = '';
+  const father = byId[String(person.parentKey || '')];
+  if (father) rows += chip(father, 'الأب');
+  const mother = person.motherId ? byId[String(person.motherId)] : null;
+  if (mother) rows += chip(mother, 'الأم');
+  else if (person.motherName) rows += `<span class="rel-jump rel-ext">الأم: ${escapeHtml(person.motherName)} (من خارج العائلة)</span>`;
+  const kids = allPersonsAdmin
+    .filter(k => String(k.parentKey) === String(person.displayId))
+    .sort((a, b) => (Number(a.displayId) || 0) - (Number(b.displayId) || 0));
+  kids.forEach(k => { rows += chip(k, 'ابن/بنت'); });
+  box.innerHTML = rows
+    ? `<div class="rel-jump-label">اضغط على أي قريب للانتقال إليه:</div><div class="rel-jump-wrap">${rows}</div>`
+    : '';
+  box.querySelectorAll('.rel-jump[data-jump]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = byId[String(btn.getAttribute('data-jump'))];
+      if (p) openAdminNodeModal(p);
+    });
+  });
 }
 function closeAdminNodeModal() {
   document.getElementById('admin-node-modal').classList.remove('open');
@@ -2249,8 +2287,18 @@ document.addEventListener('DOMContentLoaded', () => {
   if (protoBox) protoBox.addEventListener('click', (e) => {
     const node = e.target.closest('.pnode');
     if (!node) return;
+    const person = personsByDisplayIdAdmin[String(node.getAttribute('data-pid'))];
+    // الضغط على الأيقونة ⚙ → فتح بطاقة التحديث/الإضافة
+    if (e.target.closest('.pnode-gear')) {
+      if (person && typeof openAdminNodeModal === 'function') openAdminNodeModal(person);
+      return;
+    }
+    // الضغط على الاسم أو باقي البطاقة → إظهار/إخفاء الأبناء
     const li = node.parentElement;
-    if (li && li.querySelector(':scope > ul')) li.classList.toggle('collapsed');
+    const hasKids = li && li.querySelector(':scope > ul');
+    if (hasKids) { li.classList.toggle('collapsed'); setTimeout(drawProtoCurves, 0); return; }
+    // شخص بلا أبناء → فتح بطاقته مباشرة
+    if (person && typeof openAdminNodeModal === 'function') openAdminNodeModal(person);
   });
   const pExpand = document.getElementById('proto-expand-all');
   if (pExpand) pExpand.addEventListener('click', () => protoSetAll(false));

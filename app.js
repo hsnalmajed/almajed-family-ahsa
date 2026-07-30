@@ -265,6 +265,18 @@ function renderTree() {
     childrenByParentKey[key].push(p);
   });
 
+  // عدّاد إجمالي الذرية تحت كل شخص (مع تخزين مؤقّت)
+  const descMemo = {};
+  const descOf = (id) => {
+    id = String(id);
+    if (descMemo[id] != null) return descMemo[id];
+    const ks = childrenByParentKey[id] || [];
+    let c = ks.length;
+    for (const k of ks) c += descOf(k.displayId);
+    descMemo[id] = c; return c;
+  };
+  renderTree._descOf = descOf;
+
   // تحديد الجذور الافتراضية (تبدأ بـ v) ثم عرض كل مجموعة كشجرة منفصلة
   const virtualRootKeys = Object.keys(childrenByParentKey)
     .filter(k => k.startsWith('v'))
@@ -332,12 +344,19 @@ function centerTreeOnRootSoon() {
 
 function buildPersonNode(person, childrenByParentKey) {
   const li = document.createElement('li');
+  const kids = childrenByParentKey[String(person.displayId)] || [];
+  if (kids.length > 0) li.className = 'collapsed';   // مطويّ من الأعلى: يُفتح بالضغط على البطاقة
 
   const node = document.createElement('div');
   const isDead = person.status === 'death';
+  const female = person.gender === 'female';
   node.className = `person-node ${person.gender}${isDead ? ' deceased' : ''}`;
   node.id = 'person-node-' + person.displayId;
-  node.onclick = () => openChoiceModal(person);
+  // الضغط على البطاقة/الاسم → إظهار/إخفاء الأبناء (أو فتح البطاقة إن لم يكن له أبناء)
+  node.addEventListener('click', () => {
+    if (kids.length) li.classList.toggle('collapsed');
+    else openChoiceModal(person);
+  });
 
   const photoWrap = document.createElement('div');
   photoWrap.className = 'photo-wrap';
@@ -358,17 +377,43 @@ function buildPersonNode(person, childrenByParentKey) {
   nameEl.textContent = person.firstName;
   node.appendChild(nameEl);
 
+  // المعرّف داخل حبة ذهبية: ID: 147
   const idEl = document.createElement('div');
   idEl.className = 'person-id';
-  const marital = person.maritalStatus === 'married'
-    ? (person.gender === 'female' ? ' • متزوجة' : ' • متزوج')
-    : '';
-  idEl.textContent = `#${person.displayId}` + (person.status === 'death' ? ' • متوفى' : '') + marital;
+  idEl.textContent = 'ID: ' + person.displayId;
   node.appendChild(idEl);
+
+  // الحالة الاجتماعية فقط (بدون ذكر الجنس أو كلمة متوفى)
+  const marital = person.maritalStatus === 'married' ? (female ? 'متزوجة' : 'متزوج') : '';
+  if (marital) {
+    const m = document.createElement('div');
+    m.className = 'person-meta';
+    m.textContent = marital;
+    node.appendChild(m);
+  }
+
+  // صفّ الإجراءات: عدّاد الذرية الذهبي + أيقونة فتح الصفحة المنفردة
+  const total = (typeof renderTree._descOf === 'function') ? renderTree._descOf(person.displayId) : kids.length;
+  const actions = document.createElement('div');
+  actions.className = 'person-actions';
+  if (total > 0) {
+    const count = document.createElement('span');
+    count.className = 'person-count';
+    count.title = 'إجمالي الذرية (أبناء وأحفاد)';
+    count.textContent = '👥 ' + total;
+    actions.appendChild(count);
+  }
+  const gear = document.createElement('button');
+  gear.type = 'button';
+  gear.className = 'person-gear';
+  gear.title = 'عرض / تحديث البيانات / إضافة فرد';
+  gear.textContent = '✎';
+  gear.addEventListener('click', (e) => { e.stopPropagation(); openChoiceModal(person); });
+  actions.appendChild(gear);
+  node.appendChild(actions);
 
   li.appendChild(node);
 
-  const kids = childrenByParentKey[String(person.displayId)] || [];
   if (kids.length > 0) {
     const ul = document.createElement('ul');
     ul.className = 'tree-list';
