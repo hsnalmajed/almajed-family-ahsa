@@ -1025,7 +1025,10 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
   color: #22303a; text-align: center; cursor: pointer;
   transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
 }
-.pnode:hover { transform: translateY(-3px); border-color: rgba(217,166,58,.6); box-shadow: 0 14px 30px rgba(20,40,60,.16); }
+.pnode:hover { transform: translateY(-3px); box-shadow: 0 14px 30px rgba(20,40,60,.16); }
+/* حدود البطاقة بلون الجنس */
+.pnode.male   { border: 2px solid #2f74c0; }
+.pnode.female { border: 2px solid #d6568f; }
 /* أركان خضراء زخرفية: أعلى-يسار + أسفل-يمين */
 .pnode::before, .pnode::after {
   content: ''; position: absolute; width: 20px; height: 20px; pointer-events: none;
@@ -1049,16 +1052,15 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
 .pnode.dead { opacity: 1; }
 .pnode-avwrap {
   position: relative; display: inline-flex; flex-shrink: 0; margin-bottom: 4px;
-  border-radius: 50%; overflow: hidden;
-  box-shadow: 0 3px 10px rgba(20,40,60,.2);
 }
+/* شريط الوفاة: شريطة سوداء قطرية واضحة على زاوية الصورة */
 .pnode.dead .pnode-avwrap::after {
   content: ''; position: absolute; z-index: 6;
-  left: -15px; top: 17px; width: 64px; height: 13px;
-  background: linear-gradient(180deg, #2a2a2a, #050505);
+  top: 9px; left: -7px; width: 42px; height: 12px;
+  background: linear-gradient(180deg, #2b2b2b, #000);
   transform: rotate(-45deg);
-  border-top: 1px solid rgba(255,255,255,.5);
-  box-shadow: 0 1px 3px rgba(0,0,0,.55);
+  border: 1px solid rgba(255,255,255,.45);
+  box-shadow: 0 1px 4px rgba(0,0,0,.55);
 }
 
 /* الأفاتار: كبير بحلقة واحدة بلون الجنس */
@@ -1066,6 +1068,7 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
   width: 78px; height: 78px; border-radius: 50%; object-fit: cover;
   flex-shrink: 0; background: #eef2f6;
   border: 3px solid #2f74c0; display: block;
+  box-shadow: 0 3px 10px rgba(20,40,60,.2);
 }
 .pnode.female .pnode-av { border-color: #d6568f; }
 .pnode-av-ph {
