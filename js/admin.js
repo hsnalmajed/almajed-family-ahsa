@@ -133,20 +133,21 @@ function protoNodeHtml(p, childrenOf, depth, descOf) {
   const av = p.photoURL
     ? `<img class="pnode-av" src="${p.photoURL}" alt="">`
     : `<span class="pnode-av pnode-av-ph ${female ? 'f' : 'm'}">${escapeHtml((p.firstName || '؟').slice(0, 1))}</span>`;
-  const chev = kids.length ? '<span class="pnode-chev">▾</span>' : '<span class="pnode-dot"></span>';
   const total = descOf(p.displayId);           // إجمالي من تحته (كل الذريّة)
-  const metaBits = [female ? 'أنثى' : 'ذكر'];
-  if (dead) metaBits.push('رحمه الله');
+  const married = p.maritalStatus === 'married';
+  const metaBits = ['#' + p.displayId];
+  if (dead) metaBits.push('متوفى');
+  metaBits.push(married ? (female ? 'متزوجة' : 'متزوج') : (female ? 'غير متزوجة' : 'أعزب'));
   const countBadge = total > 0 ? `<span class="pnode-count" title="إجمالي من تحته (أبناء وأحفاد...)">👥 ${total}</span>` : '';
+  const chev = kids.length ? '<span class="pnode-chev" title="اضغط الاسم لعرض الأبناء">▾</span>' : '';
   let html =
     `<li class="${collapsed.trim()}">` +
       `<div class="pnode ${female ? 'female' : 'male'}${dead ? ' dead' : ''}" data-pid="${p.displayId}"${dead ? ' title="متوفى — رحمه الله"' : ''}>` +
-        chev + `<span class="pnode-avwrap">` + av + `</span>` +
-        `<span class="pnode-info">` +
-          `<span class="pnode-name">${escapeHtml(p.firstName || '')} <b class="pnode-id">#${p.displayId}</b></span>` +
-          `<span class="pnode-meta">${metaBits.join(' • ')}</span>` +
-        `</span>` +
-        countBadge +
+        `<button class="pnode-gear" title="تحديث البيانات أو إضافة فرد" aria-label="تحديث أو إضافة">⚙</button>` +
+        `<span class="pnode-avwrap">` + av + `</span>` +
+        `<span class="pnode-name">${escapeHtml(p.firstName || '')}</span>` +
+        `<span class="pnode-meta">${metaBits.join(' • ')}</span>` +
+        countBadge + chev +
       `</div>`;
   if (kids.length) {
     html += '<ul>' + protoSortSiblings(kids).map(k => protoNodeHtml(k, childrenOf, depth + 1, descOf)).join('') + '</ul>';
@@ -2287,12 +2288,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const node = e.target.closest('.pnode');
     if (!node) return;
     const person = personsByDisplayIdAdmin[String(node.getAttribute('data-pid'))];
-    // الضغط على الاسم → فتح بطاقة التحديث/الإضافة (كالصفحة الرئيسية)
-    if (e.target.closest('.pnode-name')) {
+    // الضغط على الأيقونة ⚙ → فتح بطاقة التحديث/الإضافة
+    if (e.target.closest('.pnode-gear')) {
       if (person && typeof openAdminNodeModal === 'function') openAdminNodeModal(person);
       return;
     }
-    // الضغط على باقي البطاقة → إظهار/إخفاء الأبناء
+    // الضغط على الاسم أو باقي البطاقة → إظهار/إخفاء الأبناء
     const li = node.parentElement;
     const hasKids = li && li.querySelector(':scope > ul');
     if (hasKids) { li.classList.toggle('collapsed'); setTimeout(drawProtoCurves, 0); return; }
