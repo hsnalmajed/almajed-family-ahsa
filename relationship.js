@@ -298,7 +298,7 @@ function computeExtraRelations(personA, personB, P) {
     const maternal = (u.term === 'خال' || u.term === 'خالة');
     const viaMotherOnB = !bPater.has(uk);       // وصله من جهة أمّ في نسب الطرف الآخر
     if (!maternal && !viaMotherOnB) return;     // علاقة أبوية بحتة مغطّاة مسبقاً
-    out.push(`@{${Bid}} هو ${descK(u.term, d, bMale)}: @{${u.id}}`);
+    out.push(`@{${Bid}} ${bMale ? 'هو' : 'هي'} ${descK(u.term, d, bMale)}: @{${u.id}}`);
   });
 
   // (II) أنت تنحدر من أحد أخوال/أعمام الطرف الآخر عبر رابط أمّي
@@ -343,7 +343,7 @@ function computeRelationship(id1, id2, personsByDisplayId) {
   let linkPerson = null;
   if (lca) {
     const relText = describeRelationship(personA, personB, lca.d1, lca.d2);
-    paternalText = `@{${key2}} هو ${relText} بالنسبة إلى @{${key1}}`;
+    paternalText = `@{${key2}} ${personB.gender === 'male' ? 'هو' : 'هي'} ${relText} بالنسبة إلى @{${key1}}`;
     // الشخص الذي "يربط" بينهما هو أقرب جد مشترك إن كان مسجّلاً كفرد حقيقي
     if (!lca.lcaKey.startsWith('v') && personsByDisplayId[lca.lcaKey]) {
       const lp = personsByDisplayId[lca.lcaKey];
@@ -363,7 +363,7 @@ function computeRelationship(id1, id2, personsByDisplayId) {
     directTerm: directTerm || null,
     paternalText,                                   // قد تكون null
     extras: extras || [],
-    text: paternalText || (directTerm ? `@{${key2}} هو ${directTerm} بالنسبة إلى @{${key1}}` : ''),
+    text: paternalText || (directTerm ? `@{${key2}} ${personB.gender === 'male' ? 'هو' : 'هي'} ${directTerm} بالنسبة إلى @{${key1}}` : ''),
     linkPerson
   };
 }
