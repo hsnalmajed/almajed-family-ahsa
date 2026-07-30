@@ -135,19 +135,19 @@ function protoNodeHtml(p, childrenOf, depth, descOf) {
     : `<span class="pnode-av pnode-av-ph ${female ? 'f' : 'm'}">${escapeHtml((p.firstName || '؟').slice(0, 1))}</span>`;
   const total = descOf(p.displayId);           // إجمالي من تحته (كل الذريّة)
   const married = p.maritalStatus === 'married';
-  const metaBits = ['#' + p.displayId];
+  const metaBits = [];   // بدون ذكر الجنس
   if (dead) metaBits.push('متوفى');
   metaBits.push(married ? (female ? 'متزوجة' : 'متزوج') : (female ? 'غير متزوجة' : 'أعزب'));
   const countBadge = total > 0 ? `<span class="pnode-count" title="إجمالي من تحته (أبناء وأحفاد...)">👥 ${total}</span>` : '';
-  const chev = kids.length ? '<span class="pnode-chev" title="اضغط الاسم لعرض الأبناء">▾</span>' : '';
   let html =
     `<li class="${collapsed.trim()}">` +
-      `<div class="pnode ${female ? 'female' : 'male'}${dead ? ' dead' : ''}" data-pid="${p.displayId}"${dead ? ' title="متوفى — رحمه الله"' : ''}>` +
-        `<button class="pnode-gear" title="تحديث البيانات أو إضافة فرد" aria-label="تحديث أو إضافة">⚙</button>` +
+      `<div class="pnode ${female ? 'female' : 'male'}${dead ? ' dead' : ''}" data-pid="${p.displayId}"${dead ? ' title="متوفى"' : ''}>` +
+        `<button class="pnode-gear" title="تحديث البيانات أو إضافة فرد" aria-label="تحديث أو إضافة">✎</button>` +
         `<span class="pnode-avwrap">` + av + `</span>` +
         `<span class="pnode-name">${escapeHtml(p.firstName || '')}</span>` +
-        `<span class="pnode-meta">${metaBits.join(' • ')}</span>` +
-        countBadge + chev +
+        `<span class="pnode-id">ID: ${p.displayId}</span>` +
+        (metaBits.length ? `<span class="pnode-meta">${metaBits.join(' • ')}</span>` : '') +
+        countBadge +
       `</div>`;
   if (kids.length) {
     html += '<ul>' + protoSortSiblings(kids).map(k => protoNodeHtml(k, childrenOf, depth + 1, descOf)).join('') + '</ul>';
