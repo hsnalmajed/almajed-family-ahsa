@@ -2286,16 +2286,17 @@ document.addEventListener('DOMContentLoaded', () => {
   if (protoBox) protoBox.addEventListener('click', (e) => {
     const node = e.target.closest('.pnode');
     if (!node) return;
-    const li = node.parentElement;
-    const hasKids = li && li.querySelector(':scope > ul');
-    // ضغطة أولى: إظهار الأبناء إن كانوا مخفيّين
-    if (hasKids && li.classList.contains('collapsed')) {
-      li.classList.remove('collapsed');
-      setTimeout(drawProtoCurves, 0);
+    const person = personsByDisplayIdAdmin[String(node.getAttribute('data-pid'))];
+    // الضغط على الاسم → فتح بطاقة التحديث/الإضافة (كالصفحة الرئيسية)
+    if (e.target.closest('.pnode-name')) {
+      if (person && typeof openAdminNodeModal === 'function') openAdminNodeModal(person);
       return;
     }
-    // ضغطة ثانية (أو لا أبناء له): فتح بطاقة الشخص (معلومات/تحديث/إضافة)
-    const person = personsByDisplayIdAdmin[String(node.getAttribute('data-pid'))];
+    // الضغط على باقي البطاقة → إظهار/إخفاء الأبناء
+    const li = node.parentElement;
+    const hasKids = li && li.querySelector(':scope > ul');
+    if (hasKids) { li.classList.toggle('collapsed'); setTimeout(drawProtoCurves, 0); return; }
+    // شخص بلا أبناء → فتح بطاقته مباشرة
     if (person && typeof openAdminNodeModal === 'function') openAdminNodeModal(person);
   });
   const pExpand = document.getElementById('proto-expand-all');
