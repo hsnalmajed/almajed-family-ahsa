@@ -4,7 +4,7 @@
 // =====================================================================
 
 // عند كل تحديث للموقع نرفع هذا الرقم ليُحذف المخزون القديم تلقائياً
-const CACHE_VERSION = 'almajed-v1';
+const CACHE_VERSION = 'almajed-v3';
 
 // الملفات الأساسية التي تُخزَّن عند أول فتح
 const CORE_ASSETS = [
@@ -73,10 +73,10 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // الصفحات وملفات JS/CSS: من الشبكة أولاً حتى تصل التحديثات فوراً،
-  // ونرجع للمخزون فقط عند انقطاع الإنترنت.
+  // الصفحات وملفات JS/CSS: من الشبكة دائماً بلا أي تخزين مؤقّت للمتصفح
+  // (no-store) حتى تصل كل التحديثات فوراً، ونرجع للمخزون فقط عند انقطاع الإنترنت.
   event.respondWith(
-    fetch(req)
+    fetch(url.href, { cache: 'no-store' })
       .then(res => {
         if (res && res.ok) {
           const copy = res.clone();
