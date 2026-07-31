@@ -11,6 +11,8 @@ let selectedPhotoFile = null;     // صورة طلب الإضافة
 let selectedUpdatePhotoFile = null; // صورة طلب التحديث
 let urlPersonOpened = false;
 let pendingMembers = []; // قائمة الأفراد المُجهّزين لإرسالهم ضمن طلب واحد
+let updateBirthPicker = null; // منتقي تاريخ الميلاد (نافذة التحديث)
+let addBirthPicker = null;    // منتقي تاريخ الميلاد (نافذة الإضافة)
 
 const RELATION_LABELS = {
   son: 'ابن',
@@ -691,9 +693,17 @@ function openUpdateModal(person) {
   const phoneMask = document.getElementById('phone-mask');
   const phoneHint = document.getElementById('update-phone-hint');
 
-  // تاريخ الميلاد: يُعبّأ بالقيمة المسجّلة (تظهر للإدارة فقط)
-  const birthInput = document.getElementById('update-birthdate');
-  if (birthInput) birthInput.value = person.birthDate || '';
+  // تاريخ الميلاد: منتقي تقويم (هجري/ميلادي) يُعبّأ بالقيمة المسجّلة (تظهر للإدارة فقط)
+  if (window.Birthdate) {
+    if (!updateBirthPicker) updateBirthPicker = window.Birthdate.create('update-birthdate-mount');
+    if (updateBirthPicker) {
+      if (person.birthDate || person.birthDateHijri) {
+        updateBirthPicker.setValue({ birthDate: person.birthDate, birthDateHijri: person.birthDateHijri, birthDateCal: person.birthDateCal });
+      } else {
+        updateBirthPicker.clear();
+      }
+    }
+  }
 
   phoneInput.value = '';
   if (person.phone) {
@@ -819,7 +829,10 @@ async function submitUpdateInfo(evt) {
   const phoneEl = document.getElementById('update-phone');
   const phoneTouched = phoneChangeRequested || phoneEl.style.display !== 'none';
   const phone = phoneTouched ? phoneEl.value.trim() : null;
-  const birthDate = (document.getElementById('update-birthdate')?.value || '').trim();
+  const bd = (updateBirthPicker && updateBirthPicker.getValue()) || null;
+  const birthDate = bd ? bd.birthDate : '';
+  const birthDateHijri = bd ? bd.birthDateHijri : '';
+  const birthDateCal = bd ? bd.birthDateCal : '';
   const status = document.querySelector('input[name="update-status"]:checked')?.value;
 
   if (!status) {
@@ -855,6 +868,8 @@ async function submitUpdateInfo(evt) {
       targetPersonName: selectedTargetPerson.firstName,
       photoURL: photoURL || '',
       birthDate,
+      birthDateHijri,
+      birthDateCal,
       status,
       maritalStatus: (document.querySelector('input[name="update-marital"]:checked')?.value) || 'single',
       spouseFamilies: spouseFamilyVals,
@@ -1202,6 +1217,11 @@ function chooseRelationType(type, btnEl) {
   document.querySelectorAll('.relation-choices button').forEach(b => b.classList.remove('selected'));
   btnEl.classList.add('selected');
   document.getElementById('add-member-form').style.display = 'block';
+  // منتقي تاريخ الميلاد (يُنشأ مرة واحدة عند أول ظهور)
+  if (window.Birthdate) {
+    if (!addBirthPicker) addBirthPicker = window.Birthdate.create('input-birthdate-mount');
+    else addBirthPicker.clear();
+  }
   // ابن/أخ ← صيغة المذكر وعائلة الزوجة، ابنة/أخت ← صيغة المؤنث وعائلة الزوج
   const female = RELATION_TO_GENDER[type] === 'female';
   applyMaritalLabels(document.getElementById('add-modal'), RELATION_TO_GENDER[type]);
@@ -1240,7 +1260,10 @@ async function stashCurrentMember(showErrors) {
     return false;
   }
   const phone = document.getElementById('input-phone').value.trim();
-  const birthDate = (document.getElementById('input-birthdate')?.value || '').trim();
+  const abd = (addBirthPicker && addBirthPicker.getValue()) || null;
+  const birthDate = abd ? abd.birthDate : '';
+  const birthDateHijri = abd ? abd.birthDateHijri : '';
+  const birthDateCal = abd ? abd.birthDateCal : '';
   const gender = RELATION_TO_GENDER[selectedRelationType];
 
   let photoURL = '';
@@ -1268,11 +1291,12 @@ async function stashCurrentMember(showErrors) {
   const motherName = (motherOpt && motherOpt.value) ? (motherOpt.dataset.mname || '') : '';
 
   pendingMembers.push({
-    firstName, gender, phone, birthDate, photoURL,
+    firstName, gender, phone, birthDate, birthDateHijri, birthDateCal, photoURL,
     relationType: selectedRelationType, parentKey,
     maritalStatus, spouseFamilies, spouseLinks, spouseInFamily, motherId, motherName
   });
   renderPendingMembers();
+  if (addBirthPicker) addBirthPicker.clear();
 
   // تفريغ النموذج استعداداً للفرد التالي
   document.getElementById('add-member-form').reset();

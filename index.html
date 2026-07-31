@@ -249,9 +249,9 @@
       </div>
 
       <div class="form-group">
-        <label for="update-birthdate">تاريخ الميلاد</label>
-        <input type="text" id="update-birthdate" placeholder="مثال: 1990/05/15 أو 1410/11/03 هـ" dir="ltr">
-        <p class="field-hint">يظهر للإدارة فقط ولا يُعرض في الشجرة العامة. اكتبه ميلادي أو هجري.</p>
+        <label>تاريخ الميلاد</label>
+        <div id="update-birthdate-mount"></div>
+        <p class="field-hint">اختر هجري أو ميلادي — يُحوَّل تلقائياً. يظهر للإدارة فقط ولا يُعرض في الشجرة العامة.</p>
       </div>
 
       <div class="form-group">
@@ -363,9 +363,9 @@
       </div>
 
       <div class="form-group">
-        <label for="input-birthdate">تاريخ الميلاد (اختياري)</label>
-        <input type="text" id="input-birthdate" placeholder="مثال: 1990/05/15 أو 1410/11/03 هـ" dir="ltr">
-        <p class="field-hint">يظهر للإدارة فقط ولا يُعرض في الشجرة العامة.</p>
+        <label>تاريخ الميلاد (اختياري)</label>
+        <div id="input-birthdate-mount"></div>
+        <p class="field-hint">اختر هجري أو ميلادي — يُحوَّل تلقائياً. يظهر للإدارة فقط.</p>
       </div>
 
       <div class="form-group" id="input-mother-group">
@@ -437,8 +437,9 @@
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
 <script src="firebase-config.js"></script>
+<script src="birthdate.js?v=1"></script>
 <script src="relationship.js?v=6"></script>
-<script src="app.js?v=70"></script>
+<script src="app.js?v=71"></script>
 
 <!-- زر تثبيت التطبيق -->
 <script>
