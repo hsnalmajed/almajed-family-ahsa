@@ -2118,8 +2118,8 @@ async function renumberAllIds(btnEl) {
 
   const count = allPersonsAdmin.length;
   const ok = confirm(
-    'سيتم إعادة ترقيم جميع المعرّفات حسب الأجيال (الجيل الأعلى أولاً ثم الذي يليه) لتصبح متسلسلة من 1 إلى ' + count + '.\n' +
-    'ميزة هذا الترتيب: لا يسبق أي فرد من هو أعلى منه جيلاً، ورقم كل أب أصغر من أبنائه وأحفاده.\n\n' +
+    'سيتم إعادة ترقيم المعرّفات لتصبح متسلسلة من 1 إلى ' + count + ' بدون أي فراغات، مع الحفاظ على الترتيب الحالي للأشخاص.\n' +
+    'يملأ هذا الإجراء أي أرقام فارغة (نتجت عن حذف أشخاص) دون تغيير ترتيب بقية الأفراد.\n\n' +
     'سيتم تحديث جميع الروابط تلقائياً: الآباء، الأبناء، الأزواج المرتبطون من العائلة، والأمهات.\n' +
     '⚠️ تنبيه للسلامة: أي رابط كان يشير إلى شخص محذوف سابقاً سيُزال. يُنصح بمراجعة الروابط بعد الترقيم.\n' +
     'لا يمكن التراجع عن هذا الإجراء — يُفضّل تنفيذه بعد الانتهاء من إدخال جميع الأفراد.\n\n' +
@@ -2137,39 +2137,12 @@ async function renumberAllIds(btnEl) {
     snap.forEach(doc => people.push({ id: doc.id, ...doc.data() }));
     people.sort((a, b) => (Number(a.displayId) || 0) - (Number(b.displayId) || 0));
 
-    // ترقيم طبيعي حسب الأجيال (BFS مستوى-مستوى، تصاعدي):
-    // يُرقَّم الجيل بأكمله حسب ترتيب أفراده قبل الجيل الذي تحته، فلا يسبق أي فرد من هو أعلى منه جيلاً،
-    // ورقم كل أب أصغر من أرقام أبنائه وأحفاده
-    const byId = {};
-    people.forEach(p => { byId[String(p.displayId)] = p; });
-    const childrenOf = {};
-    const roots = [];
-    people.forEach(p => {
-      const pk = String(p.parentKey || '');
-      if (!pk || pk.startsWith('v') || !byId[pk]) roots.push(p);
-      else (childrenOf[pk] = childrenOf[pk] || []).push(p);
-    });
-    // ترتيب طبيعي تصاعدي للأشقّاء والجذور حسب المعرّف القديم
-    const byOldId = (a, b) => (Number(a.displayId) || 0) - (Number(b.displayId) || 0);
-    roots.sort(byOldId);
-    Object.keys(childrenOf).forEach(k => childrenOf[k].sort(byOldId));
-
-    // خريطة: المعرّف القديم -> المعرّف الجديد (بترتيب الأجيال BFS)
+    // ترقيم متسلسل بلا أي فراغات مع الحفاظ التام على الترتيب الحالي:
+    // الأفراد مُرتَّبون تصاعدياً بمعرّفاتهم الحالية (السطر أعلاه)، فنُعطي كل فرد رقماً
+    // متتابعاً 1..N بحسب ترتيبه الحالي — هذا يملأ أي فجوات نتجت عن الحذف دون تغيير
+    // ترتيب الأشخاص أو نقل أرقامهم بشكل كبير. مضمون: لا يبقى أي رقم فارغ.
     const idMap = {};
-    let seq = 0;
-    const seen = {};
-    const queue = roots.slice();       // كل الجذور أولاً (الجيل الأعلى)
-    let head = 0;
-    while (head < queue.length) {
-      const p = queue[head++];
-      const key = String(p.displayId);
-      if (seen[key]) continue;          // حماية من أي حلقة
-      seen[key] = true;
-      idMap[key] = ++seq;
-      (childrenOf[key] || []).forEach(c => queue.push(c));   // أبناؤهم يأتون في الجيل التالي
-    }
-    // أي فرد لم تصله الزيارة (حالة نادرة) يُرقّم في النهاية
-    people.forEach(p => { const k = String(p.displayId); if (idMap[k] == null) idMap[k] = ++seq; });
+    people.forEach((p, i) => { idMap[String(p.displayId)] = i + 1; });
 
     let orphans = 0;
     const updates = people.map((p) => {
