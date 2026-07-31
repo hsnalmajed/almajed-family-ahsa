@@ -2084,7 +2084,8 @@ async function renumberAllIds(btnEl) {
       if (!pk || pk.startsWith('v') || !byId[pk]) roots.push(p);
       else (childrenOf[pk] = childrenOf[pk] || []).push(p);
     });
-    const byOldId = (a, b) => (Number(a.displayId) || 0) - (Number(b.displayId) || 0);
+    // اتجاه معكوس: ترتيب تنازلي للأشقّاء والجذور حتى تأخذ الجهة المقابلة للترتيب الحالي الأرقام الأصغر
+    const byOldId = (a, b) => (Number(b.displayId) || 0) - (Number(a.displayId) || 0);
     roots.sort(byOldId);
     Object.keys(childrenOf).forEach(k => childrenOf[k].sort(byOldId));
 
