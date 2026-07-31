@@ -2053,8 +2053,8 @@ async function renumberAllIds(btnEl) {
 
   const count = allPersonsAdmin.length;
   const ok = confirm(
-    'سيتم إعادة ترقيم جميع المعرّفات حسب الأجيال (الجيل الأعلى أولاً ثم الذي يليه) لتصبح متسلسلة من 1 إلى ' + count + '.\n' +
-    'ميزة هذا الترتيب: لا يسبق أي فرد من هو أعلى منه جيلاً، ورقم كل أب أصغر من أبنائه وأحفاده.\n\n' +
+    'سيتم إعادة ترقيم جميع المعرّفات لتصبح متسلسلة من 1 إلى ' + count + '، مع تقديم فرعك (حسن) ليأخذ الأرقام الأولى.\n' +
+    'ميزة هذا الترتيب: كل فرع يُرقَّم كاملاً قبل الفرع التالي، ورقم كل أب أصغر من أبنائه وأحفاده.\n\n' +
     'سيتم تحديث جميع الروابط تلقائياً: الآباء، الأبناء، الأزواج المرتبطون من العائلة، والأمهات.\n' +
     '⚠️ تنبيه للسلامة: أي رابط كان يشير إلى شخص محذوف سابقاً سيُزال. يُنصح بمراجعة الروابط بعد الترقيم.\n' +
     'لا يمكن التراجع عن هذا الإجراء — يُفضّل تنفيذه بعد الانتهاء من إدخال جميع الأفراد.\n\n' +
@@ -2072,9 +2072,9 @@ async function renumberAllIds(btnEl) {
     snap.forEach(doc => people.push({ id: doc.id, ...doc.data() }));
     people.sort((a, b) => (Number(a.displayId) || 0) - (Number(b.displayId) || 0));
 
-    // ترقيم منطقي حسب الأجيال (BFS مستوى-مستوى):
-    // يُرقَّم الجيل بأكمله قبل الجيل الذي تحته، فلا يسبق أي فرد من هو أعلى منه جيلاً،
-    // ويكون رقم الأب دائماً أصغر من أرقام أبنائه وأحفاده
+    // ترقيم منطقي (DFS ترتيب مُسبَق) مع تثبيت فرع صاحب الشجرة أولاً:
+    // يُرقَّم كل فرع كاملاً قبل الانتقال للفرع التالي، ورقم الأب دائماً أصغر من أبنائه وأحفاده،
+    // ويُوضَع خطّ نسب المرساة (حسن) في المقدّمة فيأخذ هو وذُرّيته الأرقام الأولى
     const byId = {};
     people.forEach(p => { byId[String(p.displayId)] = p; });
     const childrenOf = {};
@@ -2084,25 +2084,45 @@ async function renumberAllIds(btnEl) {
       if (!pk || pk.startsWith('v') || !byId[pk]) roots.push(p);
       else (childrenOf[pk] = childrenOf[pk] || []).push(p);
     });
-    // اتجاه معكوس: ترتيب تنازلي للأشقّاء والجذور حتى تأخذ الجهة المقابلة للترتيب الحالي الأرقام الأصغر
-    const byOldId = (a, b) => (Number(b.displayId) || 0) - (Number(a.displayId) || 0);
-    roots.sort(byOldId);
-    Object.keys(childrenOf).forEach(k => childrenOf[k].sort(byOldId));
 
-    // خريطة: المعرّف القديم -> المعرّف الجديد (بترتيب الأجيال BFS)
+    // تحديد المرساة: حسن علي احمد (المعرّف الحالي 281) — نُقدّم فرعه ليأخذ الأرقام الأصغر
+    const norm = (s) => (s || '').replace(/[أإآ]/g, 'ا').replace(/\s+/g, ' ').trim();
+    const fatherOf = (p) => { const pk = String(p.parentKey || ''); return (!pk || pk.startsWith('v')) ? null : byId[pk]; };
+    let anchor = byId['281'] && norm(byId['281'].firstName) === norm('حسن') ? byId['281'] : null;
+    if (!anchor) {
+      anchor = people.find(p => {
+        if (norm(p.firstName) !== norm('حسن')) return false;
+        const f = fatherOf(p); const g = f && fatherOf(f);
+        return f && norm(f.firstName) === norm('علي') && g && norm(g.firstName) === norm('احمد');
+      }) || byId['281'] || null;
+    }
+
+    // مجموعة خطّ نسب المرساة حتى الجذر (لتقديمه في الترتيب)
+    const onPath = {};
+    for (let cur = anchor; cur; cur = fatherOf(cur)) onPath[String(cur.displayId)] = true;
+
+    // ترتيب: أفراد خطّ المرساة أولاً، ثم تصاعدياً بالمعرّف القديم
+    const cmp = (a, b) => {
+      const ap = onPath[String(a.displayId)] ? 0 : 1;
+      const bp = onPath[String(b.displayId)] ? 0 : 1;
+      if (ap !== bp) return ap - bp;
+      return (Number(a.displayId) || 0) - (Number(b.displayId) || 0);
+    };
+    roots.sort(cmp);
+    Object.keys(childrenOf).forEach(k => childrenOf[k].sort(cmp));
+
+    // خريطة: المعرّف القديم -> المعرّف الجديد (DFS ترتيب مُسبَق: الأب ثم فرعه كاملاً)
     const idMap = {};
     let seq = 0;
     const seen = {};
-    const queue = roots.slice();       // كل الجذور أولاً (الجيل الأعلى)
-    let head = 0;
-    while (head < queue.length) {
-      const p = queue[head++];
+    const dfs = (p) => {
       const key = String(p.displayId);
-      if (seen[key]) continue;          // حماية من أي حلقة
+      if (seen[key]) return;            // حماية من أي حلقة
       seen[key] = true;
       idMap[key] = ++seq;
-      (childrenOf[key] || []).forEach(c => queue.push(c));   // أبناؤهم يأتون في الجيل التالي
-    }
+      (childrenOf[key] || []).forEach(dfs);   // فرعه بالكامل قبل الفرع التالي
+    };
+    roots.forEach(dfs);
     // أي فرد لم تصله الزيارة (حالة نادرة) يُرقّم في النهاية
     people.forEach(p => { const k = String(p.displayId); if (idMap[k] == null) idMap[k] = ++seq; });
 
