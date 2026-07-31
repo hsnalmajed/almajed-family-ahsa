@@ -249,6 +249,12 @@
       </div>
 
       <div class="form-group">
+        <label for="update-birthdate">تاريخ الميلاد</label>
+        <input type="text" id="update-birthdate" placeholder="مثال: 1990/05/15 أو 1410/11/03 هـ" dir="ltr">
+        <p class="field-hint">يظهر للإدارة فقط ولا يُعرض في الشجرة العامة. اكتبه ميلادي أو هجري.</p>
+      </div>
+
+      <div class="form-group">
         <label for="update-photo-input">الصورة</label>
         <input type="file" id="update-photo-input" accept="image/*">
         <img id="update-photo-preview" style="display:none; width:70px; height:70px; border-radius:50%; object-fit:cover; margin-top:8px;">
@@ -356,6 +362,12 @@
         <input type="tel" id="input-phone" placeholder="05xxxxxxxx">
       </div>
 
+      <div class="form-group">
+        <label for="input-birthdate">تاريخ الميلاد (اختياري)</label>
+        <input type="text" id="input-birthdate" placeholder="مثال: 1990/05/15 أو 1410/11/03 هـ" dir="ltr">
+        <p class="field-hint">يظهر للإدارة فقط ولا يُعرض في الشجرة العامة.</p>
+      </div>
+
       <div class="form-group" id="input-mother-group">
         <label for="input-mother">الأم</label>
         <select id="input-mother" class="mother-select">
@@ -426,7 +438,7 @@
 
 <script src="firebase-config.js"></script>
 <script src="relationship.js?v=6"></script>
-<script src="app.js?v=69"></script>
+<script src="app.js?v=70"></script>
 
 <!-- زر تثبيت التطبيق -->
 <script>

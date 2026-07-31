@@ -691,6 +691,10 @@ function openUpdateModal(person) {
   const phoneMask = document.getElementById('phone-mask');
   const phoneHint = document.getElementById('update-phone-hint');
 
+  // تاريخ الميلاد: يُعبّأ بالقيمة المسجّلة (تظهر للإدارة فقط)
+  const birthInput = document.getElementById('update-birthdate');
+  if (birthInput) birthInput.value = person.birthDate || '';
+
   phoneInput.value = '';
   if (person.phone) {
     phoneMask.textContent = maskPhone(person.phone);
@@ -815,6 +819,7 @@ async function submitUpdateInfo(evt) {
   const phoneEl = document.getElementById('update-phone');
   const phoneTouched = phoneChangeRequested || phoneEl.style.display !== 'none';
   const phone = phoneTouched ? phoneEl.value.trim() : null;
+  const birthDate = (document.getElementById('update-birthdate')?.value || '').trim();
   const status = document.querySelector('input[name="update-status"]:checked')?.value;
 
   if (!status) {
@@ -849,6 +854,7 @@ async function submitUpdateInfo(evt) {
       targetPersonId: selectedTargetPerson.displayId,
       targetPersonName: selectedTargetPerson.firstName,
       photoURL: photoURL || '',
+      birthDate,
       status,
       maritalStatus: (document.querySelector('input[name="update-marital"]:checked')?.value) || 'single',
       spouseFamilies: spouseFamilyVals,
@@ -1234,6 +1240,7 @@ async function stashCurrentMember(showErrors) {
     return false;
   }
   const phone = document.getElementById('input-phone').value.trim();
+  const birthDate = (document.getElementById('input-birthdate')?.value || '').trim();
   const gender = RELATION_TO_GENDER[selectedRelationType];
 
   let photoURL = '';
@@ -1261,7 +1268,7 @@ async function stashCurrentMember(showErrors) {
   const motherName = (motherOpt && motherOpt.value) ? (motherOpt.dataset.mname || '') : '';
 
   pendingMembers.push({
-    firstName, gender, phone, photoURL,
+    firstName, gender, phone, birthDate, photoURL,
     relationType: selectedRelationType, parentKey,
     maritalStatus, spouseFamilies, spouseLinks, spouseInFamily, motherId, motherName
   });
