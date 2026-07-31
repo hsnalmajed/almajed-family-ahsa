@@ -1648,8 +1648,8 @@ function scrollToPerson(displayId) {
   if (input) input.value = '';
 }
 
-// الانتقال إلى موقع مُعِدّ الشجرة (المعرّف 147) من بطاقة "إعداد"
-const PREPARED_BY_ID = 147;
+// الانتقال إلى موقع مُعِدّ الشجرة (المعرّف 77) من بطاقة "إعداد"
+const PREPARED_BY_ID = 77;
 function gotoPreparedByPerson() {
   const el = document.getElementById('person-node-' + PREPARED_BY_ID);
   if (!el) {
