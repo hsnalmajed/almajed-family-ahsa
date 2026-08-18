@@ -440,6 +440,18 @@ header.site-header .admin-link:hover { border-color: var(--accent); }
 .biz-detail-owner-btn {
   margin-top: 6px; width: 100%; justify-content: center;
 }
+/* إدارة العلامات في لوحة المدير */
+.biz-admin-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+@media (max-width: 800px) { .biz-admin-wrap { grid-template-columns: 1fr; } }
+.biz-admin-form-card, .biz-admin-list-card {
+  background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 16px;
+}
+.admin-biz-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.admin-biz-row:last-child { border-bottom: none; }
+.admin-biz-thumb { width: 46px; height: 46px; border-radius: 8px; object-fit: cover; background: #f4f1ea; border: 1px solid var(--border); flex-shrink: 0; }
+.admin-biz-info { flex: 1; min-width: 0; }
+.admin-biz-name { font-weight: 800; color: var(--primary-dark); font-size: .92rem; }
+.admin-biz-meta { font-size: .8rem; color: var(--muted); }
 
 /* صندوق أسماء العوائل (شارات) */
 .families-chips {

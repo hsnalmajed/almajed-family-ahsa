@@ -1899,7 +1899,16 @@ function openBizAddModal() {
   selectedBizLogoFile = null;
   const prev = document.getElementById('biz-logo-preview');
   prev.style.display = 'none'; prev.src = '';
+  // تفريغ حقل المالك (البحث) والاختيار السابق
+  const ownerInput = document.getElementById('biz-owner-input');
+  if (ownerInput) { ownerInput.value = ''; ownerInput.dataset.selectedId = ''; }
+  document.getElementById('biz-category-other-group').style.display = 'none';
   document.getElementById('biz-add-modal').classList.add('open');
+}
+// إظهار/إخفاء حقل «اكتب نوع النشاط» عند اختيار «أخرى»
+function onBizCategoryChange() {
+  const isOther = document.getElementById('biz-category').value === 'أخرى';
+  document.getElementById('biz-category-other-group').style.display = isOther ? 'block' : 'none';
 }
 function closeBizAddModal() {
   document.getElementById('biz-add-modal').classList.remove('open');
@@ -1917,13 +1926,21 @@ function handleBizLogoSelect(evt) {
 async function submitBusinessRequest(evt) {
   evt.preventDefault();
   const bizName = document.getElementById('biz-name').value.trim();
-  const ownerRaw = document.getElementById('biz-owner').value.trim();
-  const category = document.getElementById('biz-category').value;
-  if (!bizName || !ownerRaw || !category) { showToast('الرجاء تعبئة جميع الحقول', true); return; }
+  let category = document.getElementById('biz-category').value;
+  if (!bizName || !category) { showToast('الرجاء تعبئة جميع الحقول', true); return; }
+  // «أخرى» → استخدم النوع المكتوب
+  if (category === 'أخرى') {
+    const other = document.getElementById('biz-category-other').value.trim();
+    if (!other) { showToast('الرجاء كتابة نوع النشاط', true); return; }
+    category = other;
+  }
+  // المالك: يُختار من الشجرة (اسم أو معرّف)
+  const ownerRes = resolveRelationInput('biz-owner-input');
+  if (ownerRes.error) { showToast(ownerRes.error, true); return; }
+  const ownerId = Number(ownerRes.id);
+  const ownerPerson = personsByDisplayId[String(ownerId)];
+  const ownerRef = ownerPerson ? shortLineage(ownerPerson, 2) : String(ownerId);
   if (!selectedBizLogoFile) { showToast('الرجاء اختيار صورة للعلامة التجارية', true); return; }
-
-  // إن كتب المستخدم رقماً فهو معرّف صاحب النشاط
-  const ownerId = /^\d+$/.test(ownerRaw) ? Number(ownerRaw) : null;
 
   const btn = document.getElementById('submit-biz-btn');
   btn.disabled = true; btn.textContent = 'جارٍ الإرسال...';
@@ -1933,7 +1950,7 @@ async function submitBusinessRequest(evt) {
       requestType: 'business',
       bizName,
       logoURL,
-      ownerRef: ownerRaw,
+      ownerRef,
       ownerId,
       category,
       requestStatus: 'pending',
@@ -1987,6 +2004,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('biz-add-modal').addEventListener('click', (e) => { if (e.target.id === 'biz-add-modal') closeBizAddModal(); });
   document.getElementById('biz-logo-input').addEventListener('change', handleBizLogoSelect);
   document.getElementById('biz-add-form').addEventListener('submit', submitBusinessRequest);
+  document.getElementById('biz-category').addEventListener('change', onBizCategoryChange);
+  attachRelationPicker('biz-owner-input', 'biz-owner-sug');
   document.getElementById('close-biz-details-btn').addEventListener('click', closeBizDetails);
   document.getElementById('biz-details-modal').addEventListener('click', (e) => { if (e.target.id === 'biz-details-modal') closeBizDetails(); });
   listenToPersons();

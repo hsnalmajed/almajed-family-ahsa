@@ -17,6 +17,18 @@ let adminAddedMembersThisSession = [];
 let adminEditBirthPicker = null;
 let adminAddBirthPicker = null;
 let rootBirthPicker = null;
+// العلامات التجارية (لوحة المدير)
+let allBusinessesAdmin = [];
+let selectedAdminBizLogoFile = null;
+const BUSINESS_CATEGORIES_ADMIN = [
+  'ترفيه', 'مطاعم', 'كافيهات ومقاهي', 'حلويات ومخبوزات', 'بقالة وتموينات',
+  'مستلزمات رجالية', 'مستلزمات نسائية', 'مستلزمات أطفال', 'أزياء وموضة',
+  'عطور وتجميل', 'ذهب ومجوهرات', 'مستلزمات بناء', 'مقاولات', 'عقارات',
+  'أثاث ومفروشات', 'سيارات وقطع غيار', 'إلكترونيات وأجهزة', 'اتصالات',
+  'خدمات تقنية وبرمجة', 'تصميم ودعاية وإعلان', 'تصوير', 'خدمات تعليمية وتدريب',
+  'خدمات طبية وصحية', 'صيدليات', 'خدمات مالية ومحاسبة', 'محاماة واستشارات',
+  'نقل ولوجستيات', 'سياحة وسفر', 'مزارع ومواشي', 'حرف يدوية', 'رياضة ولياقة', 'أخرى'
+];
 
 const RELATION_TO_GENDER_ADMIN = { son: 'male', brother: 'male', daughter: 'female', sister: 'female' };
 
@@ -84,6 +96,7 @@ function showAdminPanel() {
   document.getElementById('admin-panel').style.display = 'block';
   listenToRequests();
   listenToPersonsAdmin();
+  listenToBusinessesAdmin();
 }
 
 // عند إعادة تحميل الصفحة وهناك جلسة مفتوحة مسبقاً
@@ -109,6 +122,7 @@ function switchTab(tabName) {
   if (tabName === 'cards') renderIdCards();
   if (tabName === 'collect') renderCollectPreview();
   if (tabName === 'proto') renderProtoTree();
+  if (tabName === 'biz') { populateAdminBizCategories(); renderAdminBizList(); }
 }
 
 // ---------------------------------------------------------------------
@@ -811,6 +825,141 @@ async function approveBusinessRequest(requestId, btnEl) {
     alert('حدث خطأ: ' + err.message);
   } finally {
     btnEl.disabled = false;
+  }
+}
+
+// ===== العلامات التجارية: استماع + إضافة مباشرة + إدارة =====
+function listenToBusinessesAdmin() {
+  db.collection('businesses').onSnapshot(snapshot => {
+    allBusinessesAdmin = [];
+    snapshot.forEach(doc => allBusinessesAdmin.push({ id: doc.id, ...doc.data() }));
+    allBusinessesAdmin.sort((a, b) => (a.bizName || '').localeCompare(b.bizName || '', 'ar'));
+    renderAdminBizList();
+  }, err => console.error('businesses admin listen error', err));
+}
+
+function populateAdminBizCategories() {
+  const sel = document.getElementById('admin-biz-category');
+  if (!sel || sel.dataset.filled) return;
+  BUSINESS_CATEGORIES_ADMIN.forEach(c => {
+    const o = document.createElement('option'); o.value = c; o.textContent = c; sel.appendChild(o);
+  });
+  sel.dataset.filled = '1';
+}
+
+function renderAdminBizList() {
+  const box = document.getElementById('admin-biz-list');
+  const countEl = document.getElementById('admin-biz-count');
+  if (!box) return;
+  if (countEl) countEl.textContent = allBusinessesAdmin.length;
+  if (allBusinessesAdmin.length === 0) {
+    box.innerHTML = '<div class="empty-state">لا توجد علامات تجارية بعد.</div>';
+    return;
+  }
+  box.innerHTML = allBusinessesAdmin.map(b => {
+    const owner = (b.ownerId != null && personsByDisplayIdAdmin[String(b.ownerId)])
+      ? (personsByDisplayIdAdmin[String(b.ownerId)].firstName + ' (#' + b.ownerId + ')')
+      : (b.ownerRef || '—');
+    return `<div class="admin-biz-row">
+      <img class="admin-biz-thumb" src="${b.logoURL || ''}" onerror="this.style.visibility='hidden'">
+      <div class="admin-biz-info">
+        <div class="admin-biz-name">${escapeHtml(b.bizName || '')}</div>
+        <div class="admin-biz-meta">${escapeHtml(b.category || '')} — المالك: ${escapeHtml(owner)}</div>
+      </div>
+      <button class="btn btn-danger btn-sm" data-del-biz="${b.id}">🗑️ حذف</button>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('[data-del-biz]').forEach(btn => {
+    btn.addEventListener('click', () => deleteBusiness(btn.dataset.delBiz, btn));
+  });
+}
+
+async function deleteBusiness(id, btnEl) {
+  if (!confirm('حذف هذه العلامة التجارية نهائياً؟')) return;
+  if (btnEl) btnEl.disabled = true;
+  try {
+    await db.collection('businesses').doc(id).delete();
+  } catch (err) {
+    console.error(err); alert('تعذّر الحذف: ' + err.message);
+  } finally {
+    if (btnEl) btnEl.disabled = false;
+  }
+}
+
+function handleAdminBizLogoSelect(evt) {
+  const file = evt.target.files[0];
+  if (!file) return;
+  selectedAdminBizLogoFile = file;
+  const prev = document.getElementById('admin-biz-logo-preview');
+  prev.src = URL.createObjectURL(file); prev.style.display = 'block';
+}
+
+function onAdminBizCategoryChange() {
+  const isOther = document.getElementById('admin-biz-category').value === 'أخرى';
+  document.getElementById('admin-biz-category-other-group').style.display = isOther ? 'block' : 'none';
+}
+
+// منتقي مالك بسيط (بحث بالاسم/المعرّف) للوحة المدير
+function attachAdminBizOwnerPicker() {
+  const input = document.getElementById('admin-biz-owner-input');
+  const box = document.getElementById('admin-biz-owner-sug');
+  if (!input || !box) return;
+  const hide = () => { box.style.display = 'none'; box.innerHTML = ''; };
+  input.addEventListener('input', () => {
+    input.dataset.selectedId = '';
+    const matches = matchPersonsAdmin(input.value);
+    if (!matches.length) { hide(); return; }
+    box.innerHTML = matches.map(p =>
+      `<div class="search-result-item" data-id="${p.displayId}"><span class="sr-name"><b class="sr-id">(${p.displayId})</b> ${escapeHtml(p.firstName || '')}</span></div>`
+    ).join('');
+    box.style.display = 'block';
+    box.querySelectorAll('[data-id]').forEach(el => {
+      el.addEventListener('click', () => {
+        const p = personsByDisplayIdAdmin[el.dataset.id];
+        input.value = `(${p.displayId}) ${p.firstName || ''}`;
+        input.dataset.selectedId = String(p.displayId);
+        hide();
+      });
+    });
+  });
+  document.addEventListener('click', (e) => { if (e.target !== input && !box.contains(e.target)) hide(); });
+}
+
+async function submitAdminBiz(evt) {
+  evt.preventDefault();
+  const bizName = document.getElementById('admin-biz-name').value.trim();
+  let category = document.getElementById('admin-biz-category').value;
+  if (!bizName || !category) { alert('الرجاء تعبئة الحقول المطلوبة'); return; }
+  if (category === 'أخرى') {
+    const other = document.getElementById('admin-biz-category-other').value.trim();
+    if (!other) { alert('الرجاء كتابة نوع النشاط'); return; }
+    category = other;
+  }
+  const ownerInput = document.getElementById('admin-biz-owner-input');
+  const ownerId = ownerInput.dataset.selectedId ? Number(ownerInput.dataset.selectedId) : null;
+  if (!ownerId || !personsByDisplayIdAdmin[String(ownerId)]) { alert('الرجاء اختيار المالك من قائمة البحث'); return; }
+  if (!selectedAdminBizLogoFile) { alert('الرجاء اختيار صورة للعلامة التجارية'); return; }
+
+  const ownerRef = personsByDisplayIdAdmin[String(ownerId)].firstName || String(ownerId);
+  const btn = document.getElementById('admin-biz-submit-btn');
+  btn.disabled = true; btn.textContent = 'جارٍ الحفظ...';
+  try {
+    const logoURL = await resizeImageToBase64Admin(selectedAdminBizLogoFile, 320, 0.8);
+    await db.collection('businesses').add({
+      bizName, logoURL, ownerRef, ownerId, category,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    // تفريغ النموذج
+    document.getElementById('admin-biz-form').reset();
+    document.getElementById('admin-biz-logo-preview').style.display = 'none';
+    ownerInput.value = ''; ownerInput.dataset.selectedId = '';
+    document.getElementById('admin-biz-category-other-group').style.display = 'none';
+    selectedAdminBizLogoFile = null;
+    alert('تمت إضافة العلامة التجارية بنجاح ✅');
+  } catch (err) {
+    console.error(err); alert('حدث خطأ: ' + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'حفظ العلامة مباشرة';
   }
 }
 
@@ -2396,6 +2545,13 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('tab-btn-tree').addEventListener('click', () => switchTab('tree'));
   document.getElementById('tab-btn-cards').addEventListener('click', () => switchTab('cards'));
   document.getElementById('tab-btn-collect').addEventListener('click', () => switchTab('collect'));
+  document.getElementById('tab-btn-biz').addEventListener('click', () => switchTab('biz'));
+  // العلامات التجارية: نموذج الإضافة المباشرة
+  populateAdminBizCategories();
+  attachAdminBizOwnerPicker();
+  document.getElementById('admin-biz-form').addEventListener('submit', submitAdminBiz);
+  document.getElementById('admin-biz-logo-input').addEventListener('change', handleAdminBizLogoSelect);
+  document.getElementById('admin-biz-category').addEventListener('change', onAdminBizCategoryChange);
   const dlXlsxBtn = document.getElementById('download-collect-xlsx-btn');
   if (dlXlsxBtn) dlXlsxBtn.addEventListener('click', (e) => downloadCollectionXlsx(e.currentTarget));
 
