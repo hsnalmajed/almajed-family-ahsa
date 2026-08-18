@@ -1074,6 +1074,18 @@ function renderAdminTree() {
     childrenByParentKey[key].push(p);
   });
 
+  // عدّاد إجمالي الذرية تحت كل شخص (كما في الصفحة الرئيسية)
+  const descMemo = {};
+  const descOf = (id) => {
+    id = String(id);
+    if (descMemo[id] != null) return descMemo[id];
+    const ks = childrenByParentKey[id] || [];
+    let c = ks.length;
+    for (const k of ks) c += descOf(k.displayId);
+    descMemo[id] = c; return c;
+  };
+  renderAdminTree._descOf = descOf;
+
   // ترتيب الجذور بحسب أصغر معرّف حتى تبدأ الشجرة دائماً بالمعرّف 1
   const virtualRootKeys = Object.keys(childrenByParentKey)
     .filter(k => k.startsWith('v'))
@@ -1099,13 +1111,22 @@ function renderAdminTree() {
   if (!adminTreeCenteredOnce) centerAdminTreeOnRootSoon();
 }
 
+// بطاقة مطابقة تماماً لبطاقة الصفحة الرئيسية، مع فتح نافذة المدير (تعديل/إضافة/حذف + كل البيانات) عبر أيقونة ✎
 function buildAdminPersonNode(person, childrenByParentKey) {
   const li = document.createElement('li');
+  const kids = childrenByParentKey[String(person.displayId)] || [];
+  if (kids.length > 0) li.className = 'collapsed';   // مطويّ من الأعلى — يُفتح بالضغط على البطاقة
+
   const node = document.createElement('div');
   const isDead = person.status === 'death';
+  const female = person.gender === 'female';
   node.className = `person-node ${person.gender}${isDead ? ' deceased' : ''}`;
   node.id = 'admin-person-node-' + person.displayId;
-  node.onclick = () => openAdminNodeModal(person);
+  // الضغط على البطاقة/الاسم → إظهار/إخفاء الأبناء (أو فتح نافذة الإدارة إن لم يكن له أبناء)
+  node.addEventListener('click', () => {
+    if (kids.length) li.classList.toggle('collapsed');
+    else openAdminNodeModal(person);
+  });
 
   const photoWrap = document.createElement('div');
   photoWrap.className = 'photo-wrap';
@@ -1126,14 +1147,43 @@ function buildAdminPersonNode(person, childrenByParentKey) {
   nameEl.textContent = person.firstName;
   node.appendChild(nameEl);
 
+  // المعرّف داخل حبة ذهبية: ID: N
   const idEl = document.createElement('div');
   idEl.className = 'person-id';
-  idEl.textContent = `#${person.displayId}` + (person.status === 'death' ? ' • متوفى' : '');
+  idEl.textContent = 'ID: ' + person.displayId;
   node.appendChild(idEl);
+
+  // الحالة الاجتماعية فقط
+  const marital = person.maritalStatus === 'married' ? (female ? 'متزوجة' : 'متزوج') : '';
+  if (marital) {
+    const m = document.createElement('div');
+    m.className = 'person-meta';
+    m.textContent = marital;
+    node.appendChild(m);
+  }
+
+  // صفّ الإجراءات: عدّاد الذرية الذهبي + أيقونة فتح نافذة الإدارة
+  const total = (typeof renderAdminTree._descOf === 'function') ? renderAdminTree._descOf(person.displayId) : kids.length;
+  const actions = document.createElement('div');
+  actions.className = 'person-actions';
+  if (total > 0) {
+    const count = document.createElement('span');
+    count.className = 'person-count';
+    count.title = 'إجمالي الذرية (أبناء وأحفاد)';
+    count.textContent = '👥 ' + total;
+    actions.appendChild(count);
+  }
+  const gear = document.createElement('button');
+  gear.type = 'button';
+  gear.className = 'person-gear';
+  gear.title = 'عرض كل البيانات / تعديل / إضافة / حذف';
+  gear.textContent = '✎';
+  gear.addEventListener('click', (e) => { e.stopPropagation(); openAdminNodeModal(person); });
+  actions.appendChild(gear);
+  node.appendChild(actions);
 
   li.appendChild(node);
 
-  const kids = childrenByParentKey[String(person.displayId)] || [];
   if (kids.length > 0) {
     const ul = document.createElement('ul');
     ul.className = 'tree-list';
@@ -1164,11 +1214,22 @@ function renderAdminNodeRelatives(person) {
   const byId = personsByDisplayIdAdmin;
   const chip = (p, label) => `<button type="button" class="rel-jump" data-jump="${p.displayId}">${label}: ${escapeHtml(p.firstName || '')} <b>#${p.displayId}</b></button>`;
   let rows = '';
-  // تاريخ الميلاد يظهر للإدارة فقط (هجري وميلادي)
+  // كل بيانات الشخص تظهر للإدارة
   const _B = window.Birthdate;
-  const birthLine = (person.birthDate || person.birthDateHijri)
-    ? `<div class="req-meta" style="margin-bottom:8px;">🎂 <b>تاريخ الميلاد:</b> ${escapeHtml(_B ? _B.formatBoth(person) : (person.birthDate || ''))}</div>`
-    : `<div class="req-meta" style="margin-bottom:8px; color:var(--muted);">🎂 تاريخ الميلاد: غير مسجّل</div>`;
+  const birthTxt = (person.birthDate || person.birthDateHijri)
+    ? (_B ? _B.formatBoth(person) : (person.birthDate || '')) : 'غير مسجّل';
+  const maritalFull = (maritalLabel(person.maritalStatus, person.gender, person.spouseFamilies) +
+    spouseLinksLabel(person.gender, person.spouseLinks)) || '—';
+  const dRow = (icon, label, val, muted) =>
+    `<div class="req-meta"${muted ? ' style="color:var(--muted);"' : ''}>${icon} <b>${label}:</b> ${escapeHtml(val)}</div>`;
+  const birthLine = `<div class="admin-node-details">
+    ${dRow('🆔', 'المعرّف', String(person.displayId))}
+    ${dRow('👤', 'الجنس', GENDER_LABELS_AR[person.gender] || '—')}
+    ${dRow('❤️', 'الحالة', STATUS_LABELS_AR[person.status] || person.status || '—')}
+    ${dRow('📞', 'رقم التواصل', person.phone || 'غير مسجّل', !person.phone)}
+    ${dRow('🎂', 'تاريخ الميلاد', birthTxt, birthTxt === 'غير مسجّل')}
+    ${dRow('💍', 'الحالة الاجتماعية', maritalFull)}
+  </div>`;
   const father = byId[String(person.parentKey || '')];
   if (father) rows += chip(father, 'الأب');
   const mother = person.motherId ? byId[String(person.motherId)] : null;
@@ -1936,11 +1997,18 @@ function matchByNameTokensAdmin(person, tokens) {
   return true;
 }
 
-// البحث داخل شجرة العائلة بالاسم أو بالمعرّف: التمرير إلى الشخص وإبرازه
+// البحث داخل شجرة العائلة بالاسم أو بالمعرّف: فتح الفروع فوق الشخص ثم التمرير إليه وإبرازه
 function focusAdminTreeNode(displayId) {
   const el = document.getElementById('admin-person-node-' + displayId);
   if (!el) return false;
-  el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+  // فتح كل الفروع المطويّة فوق الشخص حتى يظهر
+  let li = el.closest('li');
+  while (li) {
+    li.classList.remove('collapsed');
+    const parent = li.parentElement;
+    li = parent ? parent.closest('li') : null;
+  }
+  setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' }), 60);
   el.classList.add('highlighted');
   setTimeout(() => el.classList.remove('highlighted'), 2500);
   return true;
@@ -2476,6 +2544,9 @@ async function saveTreeAsPdf(btnEl) {
   const original = btnEl ? btnEl.textContent : '';
   if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'جارٍ التجهيز...'; }
   const prevZoom = el.style.zoom;
+  // فتح كل الفروع المطويّة مؤقتاً حتى تظهر الشجرة كاملة في الملف
+  const collapsedNodes = Array.from(el.querySelectorAll('li.collapsed'));
+  collapsedNodes.forEach(li => li.classList.remove('collapsed'));
   try {
     await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
     await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
@@ -2581,6 +2652,8 @@ async function saveTreeAsPdf(btnEl) {
     console.error(err);
     alert('حدث خطأ أثناء إنشاء ملف PDF: ' + err.message);
   } finally {
+    // إعادة طيّ الفروع التي كانت مطويّة قبل التصدير
+    collapsedNodes.forEach(li => li.classList.add('collapsed'));
     el.style.zoom = prevZoom || adminTreeZoom;
     applyAdminTreeZoom();
     if (btnEl) { btnEl.disabled = false; btnEl.textContent = original; }

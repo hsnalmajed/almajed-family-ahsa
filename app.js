@@ -1260,6 +1260,15 @@ async function stashCurrentMember(showErrors) {
     return false;
   }
   const phone = document.getElementById('input-phone').value.trim();
+  // جميع الحقول إجبارية عدا تاريخ الميلاد
+  if (!phone) {
+    if (showErrors) showToast('الرجاء إدخال رقم التواصل', true);
+    return false;
+  }
+  if (!selectedPhotoFile) {
+    if (showErrors) showToast('الرجاء إضافة صورة', true);
+    return false;
+  }
   const abd = (addBirthPicker && addBirthPicker.getValue()) || null;
   const birthDate = abd ? abd.birthDate : '';
   const birthDateHijri = abd ? abd.birthDateHijri : '';
@@ -1984,7 +1993,7 @@ function openBizDetails(b) {
   if (!b) return;
   const owner = (b.ownerId != null) ? personsByDisplayId[String(b.ownerId)] : null;
   const ownerLine = owner
-    ? `${escapeHtmlLocal(owner.firstName || '')} (ID: ${b.ownerId})`
+    ? `${escapeHtmlLocal(shortLineage(owner, 2))} (ID: ${b.ownerId})`
     : escapeHtmlLocal(b.ownerRef || '—');
   const body = document.getElementById('biz-details-body');
   body.innerHTML = `
