@@ -1387,9 +1387,20 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
 /* ===== الشجرة ===== */
 .tree-section {
   background: var(--card-bg);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.05);
   padding: 20px;
+  position: relative;
+}
+/* الشريط الذهبي العلوي — بنفس شكل باقي الإطارات */
+.tree-section::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  border-radius: 16px 16px 0 0;
+  background: linear-gradient(90deg, var(--gold-dark), var(--accent), var(--gold-light), var(--accent));
 }
 
 .tree-header {
