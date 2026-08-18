@@ -1882,19 +1882,42 @@ function renderBusinessGrid() {
   });
 }
 
-function populateBizCategories() {
-  const sel = document.getElementById('biz-category');
-  if (!sel || sel.dataset.filled) return;
-  BUSINESS_CATEGORIES.forEach(c => {
-    const o = document.createElement('option');
-    o.value = c; o.textContent = c;
-    sel.appendChild(o);
+// قائمة مجال النشاط القابلة للبحث: تُعرض عند الضغط، تُصفّى بالكتابة، وتسمح بكتابة مجال جديد
+function setupBizCategoryCombo() {
+  const input = document.getElementById('biz-category-input');
+  const list = document.getElementById('biz-category-list');
+  if (!input || !list || input.dataset.wired) return;
+  input.dataset.wired = '1';
+
+  function render(filterVal) {
+    const q = (filterVal || '').trim().toLowerCase();
+    const matches = BUSINESS_CATEGORIES.filter(c => !q || c.toLowerCase().includes(q));
+    let html = matches.map(c => `<div class="cat-combo-item" data-cat="${escapeHtmlLocal(c)}">${escapeHtmlLocal(c)}</div>`).join('');
+    // السماح بإضافة مجال جديد إن لم يطابق أي عنصر تماماً
+    if (q && !BUSINESS_CATEGORIES.some(c => c.toLowerCase() === q)) {
+      html += `<div class="cat-combo-item" data-cat="${escapeHtmlLocal(input.value.trim())}"><span class="cci-new">➕ استخدام: «${escapeHtmlLocal(input.value.trim())}»</span></div>`;
+    }
+    list.innerHTML = html || '<div class="cat-combo-item" style="color:var(--muted);cursor:default;">لا نتائج — اكتب مجالاً جديداً</div>';
+    list.style.display = 'block';
+  }
+  const hide = () => { list.style.display = 'none'; };
+
+  input.addEventListener('focus', () => render(''));
+  input.addEventListener('click', () => render(input.value));
+  input.addEventListener('input', () => render(input.value));
+  list.addEventListener('click', (e) => {
+    const item = e.target.closest('[data-cat]');
+    if (!item) return;
+    input.value = item.getAttribute('data-cat');
+    hide();
   });
-  sel.dataset.filled = '1';
+  document.addEventListener('click', (e) => {
+    if (e.target !== input && !list.contains(e.target)) hide();
+  });
 }
 
 function openBizAddModal() {
-  populateBizCategories();
+  setupBizCategoryCombo();
   document.getElementById('biz-add-form').reset();
   selectedBizLogoFile = null;
   const prev = document.getElementById('biz-logo-preview');
@@ -1902,13 +1925,10 @@ function openBizAddModal() {
   // تفريغ حقل المالك (البحث) والاختيار السابق
   const ownerInput = document.getElementById('biz-owner-input');
   if (ownerInput) { ownerInput.value = ''; ownerInput.dataset.selectedId = ''; }
-  document.getElementById('biz-category-other-group').style.display = 'none';
+  const catInput = document.getElementById('biz-category-input');
+  if (catInput) catInput.value = '';
+  document.getElementById('biz-category-list').style.display = 'none';
   document.getElementById('biz-add-modal').classList.add('open');
-}
-// إظهار/إخفاء حقل «اكتب نوع النشاط» عند اختيار «أخرى»
-function onBizCategoryChange() {
-  const isOther = document.getElementById('biz-category').value === 'أخرى';
-  document.getElementById('biz-category-other-group').style.display = isOther ? 'block' : 'none';
 }
 function closeBizAddModal() {
   document.getElementById('biz-add-modal').classList.remove('open');
@@ -1926,14 +1946,8 @@ function handleBizLogoSelect(evt) {
 async function submitBusinessRequest(evt) {
   evt.preventDefault();
   const bizName = document.getElementById('biz-name').value.trim();
-  let category = document.getElementById('biz-category').value;
+  const category = document.getElementById('biz-category-input').value.trim();
   if (!bizName || !category) { showToast('الرجاء تعبئة جميع الحقول', true); return; }
-  // «أخرى» → استخدم النوع المكتوب
-  if (category === 'أخرى') {
-    const other = document.getElementById('biz-category-other').value.trim();
-    if (!other) { showToast('الرجاء كتابة نوع النشاط', true); return; }
-    category = other;
-  }
   // المالك: يُختار من الشجرة (اسم أو معرّف)
   const ownerRes = resolveRelationInput('biz-owner-input');
   if (ownerRes.error) { showToast(ownerRes.error, true); return; }
@@ -2004,7 +2018,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('biz-add-modal').addEventListener('click', (e) => { if (e.target.id === 'biz-add-modal') closeBizAddModal(); });
   document.getElementById('biz-logo-input').addEventListener('change', handleBizLogoSelect);
   document.getElementById('biz-add-form').addEventListener('submit', submitBusinessRequest);
-  document.getElementById('biz-category').addEventListener('change', onBizCategoryChange);
+  setupBizCategoryCombo();
   attachRelationPicker('biz-owner-input', 'biz-owner-sug');
   document.getElementById('close-biz-details-btn').addEventListener('click', closeBizDetails);
   document.getElementById('biz-details-modal').addEventListener('click', (e) => { if (e.target.id === 'biz-details-modal') closeBizDetails(); });

@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="عائلة الماجد">
 
-<link rel="stylesheet" href="style.css?v=91">
+<link rel="stylesheet" href="style.css?v=92">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -471,15 +471,13 @@
       </div>
 
       <div class="form-group">
-        <label for="biz-category">مجال النشاط *</label>
-        <select id="biz-category" required>
-          <option value="">— اختر المجال —</option>
-        </select>
-      </div>
-
-      <div class="form-group" id="biz-category-other-group" style="display:none;">
-        <label for="biz-category-other">اكتب نوع النشاط *</label>
-        <input type="text" id="biz-category-other" placeholder="اكتب مجال النشاط">
+        <label for="biz-category-input">مجال النشاط *</label>
+        <div class="cat-combo">
+          <input type="text" id="biz-category-input" class="cat-combo-input" placeholder="ابحث أو اكتب مجال النشاط" autocomplete="off">
+          <span class="cat-combo-caret">▾</span>
+          <div class="cat-combo-list" id="biz-category-list"></div>
+        </div>
+        <p class="field-hint">اضغط لعرض القائمة، أو ابحث/اكتب مجالاً جديداً.</p>
       </div>
 
       <div class="modal-actions">
@@ -509,7 +507,7 @@
 <script src="firebase-config.js"></script>
 <script src="birthdate.js?v=1"></script>
 <script src="relationship.js?v=6"></script>
-<script src="app.js?v=74"></script>
+<script src="app.js?v=75"></script>
 
 <!-- زر تثبيت التطبيق -->
 <script>
