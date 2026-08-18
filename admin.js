@@ -539,6 +539,22 @@ function renderRequests() {
           <button class="btn btn-danger btn-sm" data-reject="${r.id}">رفض</button>
         </div>
       `;
+    } else if (r.requestType === 'business') {
+      const owner = (r.ownerId != null && personsByDisplayIdAdmin[String(r.ownerId)])
+        ? (personsByDisplayIdAdmin[String(r.ownerId)].firstName + ' (#' + r.ownerId + ')')
+        : (r.ownerRef || '—');
+      row.innerHTML = `
+        <img class="req-photo" src="${r.logoURL || ''}" style="border-radius:10px;" onerror="this.style.visibility='hidden'">
+        <div class="req-info">
+          <div class="req-name">🏷️ علامة تجارية جديدة: <b>${escapeHtml(r.bizName || '')}</b></div>
+          <div class="req-meta">المجال: ${escapeHtml(r.category || '—')}</div>
+          <div class="req-meta">المالك: ${escapeHtml(owner)}</div>
+        </div>
+        <div class="req-actions">
+          <button class="btn btn-primary btn-sm" data-approve-business="${r.id}">قبول</button>
+          <button class="btn btn-danger btn-sm" data-reject="${r.id}">رفض</button>
+        </div>
+      `;
     } else {
       row.innerHTML = `
         <img class="req-photo" src="${r.photoURL || ''}" onerror="this.style.visibility='hidden'">
@@ -558,6 +574,9 @@ function renderRequests() {
 
   list.querySelectorAll('[data-approve]').forEach(btn => {
     btn.addEventListener('click', () => approveRequest(btn.dataset.approve, btn));
+  });
+  list.querySelectorAll('[data-approve-business]').forEach(btn => {
+    btn.addEventListener('click', () => approveBusinessRequest(btn.dataset.approveBusiness, btn));
   });
   list.querySelectorAll('[data-approve-update]').forEach(btn => {
     btn.addEventListener('click', () => approveUpdateRequest(btn.dataset.approveUpdate, btn));
@@ -757,6 +776,36 @@ async function approveUpdateRequest(requestId, btnEl) {
         } catch (e) { console.error('تعذّر الربط التبادلي مع', link, e); }
       }
     }
+  } catch (err) {
+    console.error(err);
+    alert('حدث خطأ: ' + err.message);
+  } finally {
+    btnEl.disabled = false;
+  }
+}
+
+// قبول طلب علامة تجارية: يُنشئ مستنداً في مجموعة businesses ويعتمد الطلب
+async function approveBusinessRequest(requestId, btnEl) {
+  btnEl.disabled = true;
+  try {
+    const reqRef = db.collection('requests').doc(requestId);
+    await db.runTransaction(async (tx) => {
+      const reqSnap = await tx.get(reqRef);
+      if (!reqSnap.exists) throw new Error('الطلب لم يعد موجوداً');
+      const r = reqSnap.data();
+      if (r.requestStatus !== 'pending') throw new Error('تمت معالجة هذا الطلب مسبقاً');
+
+      const bizRef = db.collection('businesses').doc();
+      tx.set(bizRef, {
+        bizName: r.bizName || '',
+        logoURL: r.logoURL || '',
+        ownerRef: r.ownerRef || '',
+        ownerId: (typeof r.ownerId === 'number') ? r.ownerId : null,
+        category: r.category || '',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      tx.update(reqRef, { requestStatus: 'approved', approvedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    });
   } catch (err) {
     console.error(err);
     alert('حدث خطأ: ' + err.message);

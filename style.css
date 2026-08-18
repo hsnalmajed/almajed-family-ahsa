@@ -371,6 +371,76 @@ header.site-header .admin-link:hover { border-color: var(--accent); }
   color: var(--muted);
   margin-top: 2px;
 }
+/* ===== صندوق العلامات التجارية لأبناء العائلة ===== */
+.biz-card {
+  grid-column: 1 / -1;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.05);
+  padding: 16px 18px 18px;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+.biz-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--gold-dark), var(--accent), var(--gold-light), var(--accent));
+}
+.biz-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.biz-head-title { display: flex; align-items: center; gap: 12px; }
+.biz-head .stat-icon { width: 42px; height: 42px; margin: 0; box-shadow: none; }
+.stat-icon.biz { color: #8a5c14; background: rgba(207,154,46,.16); }
+.biz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 12px;
+}
+.biz-item {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  padding: 12px 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+}
+.biz-item:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,.1); border-color: var(--accent); }
+.biz-logo {
+  width: 84px; height: 84px; object-fit: cover;
+  border-radius: 12px; background: #f4f1ea; margin: 0 auto 8px;
+  display: block; border: 1px solid var(--border);
+}
+.biz-name { font-size: .9rem; font-weight: 800; color: var(--primary-dark); line-height: 1.35; }
+.biz-cat {
+  display: inline-block; margin-top: 5px; font-size: .72rem; font-weight: 700;
+  color: var(--gold-dark); background: var(--gold-light);
+  border: 1px solid var(--accent); border-radius: 999px; padding: 2px 9px;
+}
+.biz-empty { color: var(--muted); font-size: .88rem; padding: 8px 2px; grid-column: 1 / -1; }
+/* تفاصيل العلامة داخل النافذة */
+.biz-detail-logo {
+  width: 120px; height: 120px; object-fit: cover; border-radius: 14px;
+  border: 1px solid var(--border); background: #f4f1ea; display: block; margin: 6px auto 14px;
+}
+.biz-detail-name { text-align: center; font-size: 1.15rem; font-weight: 800; color: var(--primary-dark); }
+.biz-detail-row { display: flex; gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: .92rem; }
+.biz-detail-row:last-child { border-bottom: none; }
+.biz-detail-label { color: var(--muted); min-width: 90px; font-weight: 700; }
+.biz-detail-owner-btn {
+  margin-top: 6px; width: 100%; justify-content: center;
+}
+
 /* صندوق أسماء العوائل (شارات) */
 .families-chips {
   display: flex;
@@ -815,6 +885,16 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
   margin-bottom: 24px;
   position: relative;
 }
+/* الشريط الذهبي العلوي — بنفس شكل إطار «العوائل المنتسبون معهم» */
+.search-section::before,
+.relation-finder::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  border-radius: 16px 16px 0 0;
+  background: linear-gradient(90deg, var(--gold-dark), var(--accent), var(--gold-light), var(--accent));
+}
 .search-section h2 {
   margin: 0 0 14px;
   font-size: 1.05rem;
@@ -878,6 +958,8 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
   box-shadow: 0 2px 10px rgba(0,0,0,.05);
   padding: 18px 20px 20px;
   margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
 }
 
 .relation-finder h2 {

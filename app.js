@@ -1839,9 +1839,156 @@ function showToast(msg, isError) {
 }
 
 // ---------------------------------------------------------------------
+// العلامات التجارية لأبناء العائلة
+// ---------------------------------------------------------------------
+const BUSINESS_CATEGORIES = [
+  'ترفيه', 'مطاعم', 'كافيهات ومقاهي', 'حلويات ومخبوزات', 'بقالة وتموينات',
+  'مستلزمات رجالية', 'مستلزمات نسائية', 'مستلزمات أطفال', 'أزياء وموضة',
+  'عطور وتجميل', 'ذهب ومجوهرات', 'مستلزمات بناء', 'مقاولات', 'عقارات',
+  'أثاث ومفروشات', 'سيارات وقطع غيار', 'إلكترونيات وأجهزة', 'اتصالات',
+  'خدمات تقنية وبرمجة', 'تصميم ودعاية وإعلان', 'تصوير', 'خدمات تعليمية وتدريب',
+  'خدمات طبية وصحية', 'صيدليات', 'خدمات مالية ومحاسبة', 'محاماة واستشارات',
+  'نقل ولوجستيات', 'سياحة وسفر', 'مزارع ومواشي', 'حرف يدوية', 'رياضة ولياقة', 'أخرى'
+];
+
+let bizList = [];
+let selectedBizLogoFile = null;
+
+function listenToBusinesses() {
+  db.collection('businesses').onSnapshot(snapshot => {
+    bizList = [];
+    snapshot.forEach(doc => bizList.push({ id: doc.id, ...doc.data() }));
+    bizList.sort((a, b) => (a.bizName || '').localeCompare(b.bizName || '', 'ar'));
+    renderBusinessGrid();
+  }, err => console.error('businesses listen error', err));
+}
+
+function renderBusinessGrid() {
+  const grid = document.getElementById('biz-grid');
+  if (!grid) return;
+  if (bizList.length === 0) {
+    grid.innerHTML = '<div class="biz-empty">لا توجد علامات تجارية مضافة بعد. كن أول من يضيف نشاطه عبر زر «➕ إضافة».</div>';
+    return;
+  }
+  grid.innerHTML = bizList.map((b, i) => `
+    <div class="biz-item" data-biz="${i}">
+      <img class="biz-logo" src="${b.logoURL || ''}" alt="${escapeHtmlLocal(b.bizName || '')}" onerror="this.style.visibility='hidden'">
+      <div class="biz-name">${escapeHtmlLocal(b.bizName || '')}</div>
+      <span class="biz-cat">${escapeHtmlLocal(b.category || '')}</span>
+    </div>
+  `).join('');
+  grid.querySelectorAll('[data-biz]').forEach(el => {
+    el.addEventListener('click', () => openBizDetails(bizList[parseInt(el.dataset.biz, 10)]));
+  });
+}
+
+function populateBizCategories() {
+  const sel = document.getElementById('biz-category');
+  if (!sel || sel.dataset.filled) return;
+  BUSINESS_CATEGORIES.forEach(c => {
+    const o = document.createElement('option');
+    o.value = c; o.textContent = c;
+    sel.appendChild(o);
+  });
+  sel.dataset.filled = '1';
+}
+
+function openBizAddModal() {
+  populateBizCategories();
+  document.getElementById('biz-add-form').reset();
+  selectedBizLogoFile = null;
+  const prev = document.getElementById('biz-logo-preview');
+  prev.style.display = 'none'; prev.src = '';
+  document.getElementById('biz-add-modal').classList.add('open');
+}
+function closeBizAddModal() {
+  document.getElementById('biz-add-modal').classList.remove('open');
+}
+function handleBizLogoSelect(evt) {
+  const file = evt.target.files[0];
+  if (!file) return;
+  if (file.size > 8 * 1024 * 1024) { showToast('حجم الصورة كبير جداً (الحد الأقصى 8 ميجابايت)', true); evt.target.value = ''; return; }
+  selectedBizLogoFile = file;
+  const prev = document.getElementById('biz-logo-preview');
+  prev.src = URL.createObjectURL(file);
+  prev.style.display = 'block';
+}
+
+async function submitBusinessRequest(evt) {
+  evt.preventDefault();
+  const bizName = document.getElementById('biz-name').value.trim();
+  const ownerRaw = document.getElementById('biz-owner').value.trim();
+  const category = document.getElementById('biz-category').value;
+  if (!bizName || !ownerRaw || !category) { showToast('الرجاء تعبئة جميع الحقول', true); return; }
+  if (!selectedBizLogoFile) { showToast('الرجاء اختيار صورة للعلامة التجارية', true); return; }
+
+  // إن كتب المستخدم رقماً فهو معرّف صاحب النشاط
+  const ownerId = /^\d+$/.test(ownerRaw) ? Number(ownerRaw) : null;
+
+  const btn = document.getElementById('submit-biz-btn');
+  btn.disabled = true; btn.textContent = 'جارٍ الإرسال...';
+  try {
+    const logoURL = await resizeImageToBase64(selectedBizLogoFile, 320, 0.8);
+    await db.collection('requests').add({
+      requestType: 'business',
+      bizName,
+      logoURL,
+      ownerRef: ownerRaw,
+      ownerId,
+      category,
+      requestStatus: 'pending',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    showToast('تم إرسال العلامة التجارية بنجاح، ستظهر بعد موافقة المدير.');
+    closeBizAddModal();
+  } catch (err) {
+    console.error(err);
+    showToast('حدث خطأ أثناء الإرسال: ' + err.message, true);
+  } finally {
+    btn.disabled = false; btn.textContent = '📨 إرسال للمراجعة';
+  }
+}
+
+function openBizDetails(b) {
+  if (!b) return;
+  const owner = (b.ownerId != null) ? personsByDisplayId[String(b.ownerId)] : null;
+  const ownerLine = owner
+    ? `${escapeHtmlLocal(owner.firstName || '')} (ID: ${b.ownerId})`
+    : escapeHtmlLocal(b.ownerRef || '—');
+  const body = document.getElementById('biz-details-body');
+  body.innerHTML = `
+    <img class="biz-detail-logo" src="${b.logoURL || ''}" alt="${escapeHtmlLocal(b.bizName || '')}" onerror="this.style.visibility='hidden'">
+    <div class="biz-detail-name">${escapeHtmlLocal(b.bizName || '')}</div>
+    <div style="margin-top:14px;">
+      <div class="biz-detail-row"><span class="biz-detail-label">المجال</span><span>${escapeHtmlLocal(b.category || '—')}</span></div>
+      <div class="biz-detail-row"><span class="biz-detail-label">المالك</span><span>${ownerLine}</span></div>
+    </div>
+    ${owner ? `<button type="button" class="btn btn-secondary biz-detail-owner-btn" id="biz-goto-owner">👤 عرض صاحب النشاط في الشجرة</button>` : ''}
+  `;
+  document.getElementById('biz-details-modal').classList.add('open');
+  const gotoBtn = document.getElementById('biz-goto-owner');
+  if (gotoBtn) gotoBtn.addEventListener('click', () => {
+    closeBizDetails();
+    scrollToPerson(b.ownerId);
+  });
+}
+function closeBizDetails() {
+  document.getElementById('biz-details-modal').classList.remove('open');
+}
+
+// ---------------------------------------------------------------------
 // ربط الأحداث عند تحميل الصفحة
 // ---------------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
+  listenToBusinesses();
+  document.getElementById('biz-add-btn').addEventListener('click', openBizAddModal);
+  document.getElementById('close-biz-add-modal-btn').addEventListener('click', closeBizAddModal);
+  document.getElementById('cancel-biz-add-btn').addEventListener('click', closeBizAddModal);
+  document.getElementById('biz-add-modal').addEventListener('click', (e) => { if (e.target.id === 'biz-add-modal') closeBizAddModal(); });
+  document.getElementById('biz-logo-input').addEventListener('change', handleBizLogoSelect);
+  document.getElementById('biz-add-form').addEventListener('submit', submitBusinessRequest);
+  document.getElementById('close-biz-details-btn').addEventListener('click', closeBizDetails);
+  document.getElementById('biz-details-modal').addEventListener('click', (e) => { if (e.target.id === 'biz-details-modal') closeBizDetails(); });
   listenToPersons();
 
   // نافذة اختيار الإجراء
