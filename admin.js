@@ -564,6 +564,7 @@ function renderRequests() {
           <div class="req-name">🏷️ علامة تجارية جديدة: <b>${escapeHtml(r.bizName || '')}</b></div>
           <div class="req-meta">المجال: ${escapeHtml(r.category || '—')}</div>
           <div class="req-meta">المالك: ${escapeHtml(owner)}</div>
+          <div class="req-meta">رقم التواصل: ${escapeHtml(r.bizPhone || '—')}</div>
         </div>
         <div class="req-actions">
           <button class="btn btn-primary btn-sm" data-approve-business="${r.id}">قبول</button>
@@ -816,6 +817,7 @@ async function approveBusinessRequest(requestId, btnEl) {
         logoURL: r.logoURL || '',
         ownerRef: r.ownerRef || '',
         ownerId: (typeof r.ownerId === 'number') ? r.ownerId : null,
+        bizPhone: r.bizPhone || '',
         category: r.category || '',
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
@@ -885,7 +887,7 @@ function renderAdminBizList() {
       <img class="admin-biz-thumb" src="${b.logoURL || ''}" onerror="this.style.visibility='hidden'">
       <div class="admin-biz-info">
         <div class="admin-biz-name">${escapeHtml(b.bizName || '')}</div>
-        <div class="admin-biz-meta">${escapeHtml(b.category || '')} — المالك: ${escapeHtml(owner)}</div>
+        <div class="admin-biz-meta">${escapeHtml(b.category || '')} — المالك: ${escapeHtml(owner)}${b.bizPhone ? ' — 📞 ' + escapeHtml(b.bizPhone) : ''}</div>
       </div>
       <div style="display:flex; gap:6px; flex-shrink:0;">
         <button class="btn btn-secondary btn-sm" data-edit-biz="${b.id}">✏️ تعديل</button>
@@ -908,6 +910,7 @@ function startEditBusiness(id) {
   editingBizId = id;
   document.getElementById('admin-biz-name').value = b.bizName || '';
   document.getElementById('admin-biz-category-input').value = b.category || '';
+  document.getElementById('admin-biz-phone').value = b.bizPhone || '';
   const ownerInput = document.getElementById('admin-biz-owner-input');
   const ownerP = (b.ownerId != null) ? personsByDisplayIdAdmin[String(b.ownerId)] : null;
   ownerInput.value = ownerP ? `(${b.ownerId}) ${shortLineageAdmin(ownerP, 2)}` : (b.ownerRef || '');
@@ -993,6 +996,7 @@ async function submitAdminBiz(evt) {
   }
 
   const ownerRef = shortLineageAdmin(personsByDisplayIdAdmin[String(ownerId)], 2) || String(ownerId);
+  const bizPhone = document.getElementById('admin-biz-phone').value.trim();
   const btn = document.getElementById('admin-biz-submit-btn');
   btn.disabled = true; btn.textContent = 'جارٍ الحفظ...';
   try {
@@ -1000,10 +1004,10 @@ async function submitAdminBiz(evt) {
       ? await resizeImageToBase64Admin(selectedAdminBizLogoFile, 320, 0.8)
       : existing.logoURL;
     if (editingBizId) {
-      await db.collection('businesses').doc(editingBizId).update({ bizName, logoURL, ownerRef, ownerId, category });
+      await db.collection('businesses').doc(editingBizId).update({ bizName, logoURL, ownerRef, ownerId, bizPhone, category });
     } else {
       await db.collection('businesses').add({
-        bizName, logoURL, ownerRef, ownerId, category,
+        bizName, logoURL, ownerRef, ownerId, bizPhone, category,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
     }
