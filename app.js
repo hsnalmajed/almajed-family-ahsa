@@ -681,6 +681,9 @@ function openUpdateModal(person) {
   document.getElementById('update-modal-title').textContent = `تحديث معلومات: ${person.firstName} (#${person.displayId})`;
   document.getElementById('update-info-form').reset();
   document.getElementById('update-photo-preview').style.display = 'none';
+  // خيار إرفاق الصورة: يظهر للذكور فقط، ويُخفى للإناث
+  const updPhotoGroup = document.getElementById('update-photo-input').closest('.form-group');
+  if (updPhotoGroup) updPhotoGroup.style.display = (person.gender === 'female') ? 'none' : '';
   document.querySelectorAll('input[name="update-status"]').forEach(r => {
     r.checked = (r.value === person.status);
   });
@@ -1224,6 +1227,21 @@ function chooseRelationType(type, btnEl) {
   }
   // ابن/أخ ← صيغة المذكر وعائلة الزوجة، ابنة/أخت ← صيغة المؤنث وعائلة الزوج
   const female = RELATION_TO_GENDER[type] === 'female';
+
+  // تاريخ الميلاد: يُخفى للجميع (ذكور وإناث). الصورة: تُخفى للإناث فقط.
+  const photoGroup = document.getElementById('input-photo').closest('.form-group');
+  const birthGroup = document.getElementById('input-birthdate-mount').closest('.form-group');
+  if (birthGroup) birthGroup.style.display = 'none';
+  if (addBirthPicker) addBirthPicker.clear();
+  if (photoGroup) photoGroup.style.display = female ? 'none' : '';
+  if (female) {
+    selectedPhotoFile = null;
+    const inpPhoto = document.getElementById('input-photo');
+    if (inpPhoto) inpPhoto.value = '';
+    const prev = document.getElementById('photo-preview');
+    if (prev) prev.style.display = 'none';
+  }
+
   applyMaritalLabels(document.getElementById('add-modal'), RELATION_TO_GENDER[type]);
 
   // نصوص قسم الأزواج بحسب الجنس
@@ -1265,7 +1283,8 @@ async function stashCurrentMember(showErrors) {
     if (showErrors) showToast('الرجاء إدخال رقم التواصل', true);
     return false;
   }
-  if (!selectedPhotoFile) {
+  // الصورة مطلوبة للذكور فقط (تُخفى للإناث)
+  if (RELATION_TO_GENDER[selectedRelationType] !== 'female' && !selectedPhotoFile) {
     if (showErrors) showToast('الرجاء إضافة صورة', true);
     return false;
   }
@@ -1963,6 +1982,8 @@ async function submitBusinessRequest(evt) {
   const ownerId = Number(ownerRes.id);
   const ownerPerson = personsByDisplayId[String(ownerId)];
   const ownerRef = ownerPerson ? shortLineage(ownerPerson, 2) : String(ownerId);
+  const bizPhone = document.getElementById('biz-phone').value.trim();
+  if (!bizPhone) { showToast('الرجاء إدخال رقم التواصل', true); return; }
   if (!selectedBizLogoFile) { showToast('الرجاء اختيار صورة للعلامة التجارية', true); return; }
 
   const btn = document.getElementById('submit-biz-btn');
@@ -1975,6 +1996,7 @@ async function submitBusinessRequest(evt) {
       logoURL,
       ownerRef,
       ownerId,
+      bizPhone,
       category,
       requestStatus: 'pending',
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -2002,6 +2024,7 @@ function openBizDetails(b) {
     <div style="margin-top:14px;">
       <div class="biz-detail-row"><span class="biz-detail-label">المجال</span><span>${escapeHtmlLocal(b.category || '—')}</span></div>
       <div class="biz-detail-row"><span class="biz-detail-label">المالك</span><span>${ownerLine}</span></div>
+      ${b.bizPhone ? `<div class="biz-detail-row"><span class="biz-detail-label">رقم التواصل</span><span dir="ltr"><a href="tel:${escapeHtmlLocal(b.bizPhone)}">${escapeHtmlLocal(b.bizPhone)}</a></span></div>` : ''}
     </div>
     ${owner ? `<button type="button" class="btn btn-secondary biz-detail-owner-btn" id="biz-goto-owner">👤 عرض صاحب النشاط في الشجرة</button>` : ''}
   `;
