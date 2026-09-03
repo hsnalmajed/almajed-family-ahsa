@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>لوحة تحكم المدير - عائلة الماجد</title>
-<link rel="stylesheet" href="style.css?v=94">
+<link rel="stylesheet" href="style.css?v=95">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -132,27 +132,27 @@
           <h3 style="margin:0 0 12px; font-size:1rem; color:var(--primary-dark);">➕ إضافة علامة تجارية مباشرة</h3>
           <form id="admin-biz-form">
             <div class="form-group">
-              <label for="admin-biz-name">اسم النشاط *</label>
+              <label for="admin-biz-name">اسم النشاط <span class="req-star">*</span></label>
               <input type="text" id="admin-biz-name" placeholder="مثال: مطعم الأصالة" required>
             </div>
             <div class="form-group">
-              <label for="admin-biz-logo-input">صورة العلامة التجارية *</label>
+              <label for="admin-biz-logo-input">صورة العلامة التجارية <span class="req-star">*</span></label>
               <input type="file" id="admin-biz-logo-input" accept="image/*">
               <img id="admin-biz-logo-preview" style="display:none; width:90px; height:90px; border-radius:12px; object-fit:cover; margin-top:8px; border:1px solid var(--border);">
             </div>
             <div class="form-group">
-              <label for="admin-biz-owner-input">المالك (ابحث في الشجرة) *</label>
+              <label for="admin-biz-owner-input">المالك (ابحث في الشجرة) <span class="req-star">*</span></label>
               <div class="rel-picker">
                 <input type="text" id="admin-biz-owner-input" class="spouse-link-input" placeholder="ابحث بالاسم أو المعرّف (ID)" autocomplete="off">
                 <div class="rel-suggestions" id="admin-biz-owner-sug"></div>
               </div>
             </div>
             <div class="form-group">
-              <label for="admin-biz-phone">رقم التواصل *</label>
+              <label for="admin-biz-phone">رقم التواصل <span class="req-star">*</span></label>
               <input type="tel" id="admin-biz-phone" placeholder="05xxxxxxxx" dir="ltr">
             </div>
             <div class="form-group">
-              <label for="admin-biz-category-input">مجال النشاط *</label>
+              <label for="admin-biz-category-input">مجال النشاط <span class="req-star">*</span></label>
               <div class="cat-combo">
                 <input type="text" id="admin-biz-category-input" class="cat-combo-input" placeholder="ابحث أو اكتب مجال النشاط" autocomplete="off">
                 <span class="cat-combo-caret">▾</span>
@@ -220,12 +220,12 @@
     <h3 id="admin-edit-modal-title">تعديل معلومات</h3>
     <form id="admin-edit-form">
       <div class="form-group">
-        <label for="admin-edit-name">الاسم الأول *</label>
+        <label for="admin-edit-name">الاسم الأول <span class="req-star">*</span></label>
         <input type="text" id="admin-edit-name" required>
       </div>
 
       <div class="form-group">
-        <label>الجنس *</label>
+        <label>الجنس <span class="req-star">*</span></label>
         <div class="status-toggle">
           <label><input type="radio" name="admin-edit-gender" value="male" required><span>ذكر</span></label>
           <label><input type="radio" name="admin-edit-gender" value="female"><span>أنثى</span></label>
@@ -249,7 +249,7 @@
       </div>
 
       <div class="form-group">
-        <label>الحالة *</label>
+        <label>الحالة <span class="req-star">*</span></label>
         <div class="status-toggle">
           <label><input type="radio" name="admin-edit-status" value="alive" required><span>على قيد الحياة</span></label>
           <label><input type="radio" name="admin-edit-status" value="death"><span>متوفى</span></label>
@@ -331,7 +331,7 @@
 
     <form id="admin-quick-add-form" style="display:none;">
       <div class="form-group">
-        <label for="admin-add-name">الاسم الأول *</label>
+        <label for="admin-add-name">الاسم الأول <span class="req-star">*</span></label>
         <input type="text" id="admin-add-name" required>
       </div>
 
@@ -352,7 +352,7 @@
       </div>
 
       <div class="form-group">
-        <label>الحالة *</label>
+        <label>الحالة <span class="req-star">*</span></label>
         <div class="status-toggle">
           <label><input type="radio" name="admin-add-status" value="alive" checked required><span>على قيد الحياة</span></label>
           <label><input type="radio" name="admin-add-status" value="death"><span>متوفى</span></label>
@@ -428,12 +428,12 @@
 
     <form id="root-add-form">
       <div class="form-group">
-        <label for="root-first-name">الاسم الأول *</label>
+        <label for="root-first-name">الاسم الأول <span class="req-star">*</span></label>
         <input type="text" id="root-first-name" required>
       </div>
 
       <div class="form-group">
-        <label>الجنس *</label>
+        <label>الجنس <span class="req-star">*</span></label>
         <div class="status-toggle">
           <label><input type="radio" name="root-gender" value="male" required><span>ذكر</span></label>
           <label><input type="radio" name="root-gender" value="female"><span>أنثى</span></label>
@@ -457,7 +457,7 @@
       </div>
 
       <div class="form-group">
-        <label>الحالة *</label>
+        <label>الحالة <span class="req-star">*</span></label>
         <div class="status-toggle">
           <label><input type="radio" name="root-status" value="alive" required><span>على قيد الحياة</span></label>
           <label><input type="radio" name="root-status" value="death"><span>متوفى</span></label>

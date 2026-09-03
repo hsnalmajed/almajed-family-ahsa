@@ -12,7 +12,6 @@ let selectedUpdatePhotoFile = null; // صورة طلب التحديث
 let urlPersonOpened = false;
 let pendingMembers = []; // قائمة الأفراد المُجهّزين لإرسالهم ضمن طلب واحد
 let updateBirthPicker = null; // منتقي تاريخ الميلاد (نافذة التحديث)
-let addBirthPicker = null;    // منتقي تاريخ الميلاد (نافذة الإضافة)
 
 const RELATION_LABELS = {
   son: 'ابن',
@@ -1220,19 +1219,11 @@ function chooseRelationType(type, btnEl) {
   document.querySelectorAll('.relation-choices button').forEach(b => b.classList.remove('selected'));
   btnEl.classList.add('selected');
   document.getElementById('add-member-form').style.display = 'block';
-  // منتقي تاريخ الميلاد (يُنشأ مرة واحدة عند أول ظهور)
-  if (window.Birthdate) {
-    if (!addBirthPicker) addBirthPicker = window.Birthdate.create('input-birthdate-mount');
-    else addBirthPicker.clear();
-  }
   // ابن/أخ ← صيغة المذكر وعائلة الزوجة، ابنة/أخت ← صيغة المؤنث وعائلة الزوج
   const female = RELATION_TO_GENDER[type] === 'female';
 
-  // تاريخ الميلاد: يُخفى للجميع (ذكور وإناث). الصورة: تُخفى للإناث فقط.
+  // تاريخ الميلاد أُزيل نهائياً من نموذج الإضافة. الصورة: تُخفى للإناث فقط.
   const photoGroup = document.getElementById('input-photo').closest('.form-group');
-  const birthGroup = document.getElementById('input-birthdate-mount').closest('.form-group');
-  if (birthGroup) birthGroup.style.display = 'none';
-  if (addBirthPicker) addBirthPicker.clear();
   if (photoGroup) photoGroup.style.display = female ? 'none' : '';
   if (female) {
     selectedPhotoFile = null;
@@ -1247,13 +1238,19 @@ function chooseRelationType(type, btnEl) {
   // نصوص قسم الأزواج بحسب الجنس
   const secLbl = document.getElementById('input-spouse-section-label');
   const multiHint = document.getElementById('input-spouse-multi-hint');
-  if (secLbl) secLbl.textContent = female ? 'الزوج المسجّل' : 'الزوجات المسجّلات';
+  if (secLbl) secLbl.innerHTML = (female ? 'الزوج المسجّل' : 'الزوجات المسجّلات')
+    + ' <span class="req-star">*</span>';
   if (multiHint) multiHint.textContent = female
     ? 'يمكن إضافة زوج واحد فقط: اختر «نعم» للبحث عنه في الشجرة، أو «لا» لكتابة اسم عائلته.'
     : 'أضِف كل زوجة على حدة: اختر «نعم» للبحث عنها في الشجرة، أو «لا» لكتابة اسم عائلتها.';
 
+  // الحالة الاجتماعية إجبارية: تبدأ بلا اختيار ليختارها المستخدم بنفسه
+  document.querySelectorAll('input[name="input-marital"]').forEach(r => { r.checked = false; });
+  refreshMaritalGroup('input-marital', 'input-spouse-group');
+
   // إعادة ضبط سؤال «من عائلة الماجد؟» والقوائم
   document.querySelectorAll('input[name="input-spouse-in-family"]').forEach(r => { r.checked = (r.value === 'no'); });
+  if (addFamilyList) addFamilyList.clear();
   if (addSpouseLinkList) addSpouseLinkList.clear();
   refreshSpouseOrigin('input-spouse-in-family', 'input-spouse-link-block', 'input-spouse-family-block');
 
@@ -1278,7 +1275,7 @@ async function stashCurrentMember(showErrors) {
     return false;
   }
   const phone = document.getElementById('input-phone').value.trim();
-  // جميع الحقول إجبارية عدا تاريخ الميلاد
+  // جميع حقول نموذج الإضافة إجبارية (تاريخ الميلاد أُزيل من النموذج)
   if (!phone) {
     if (showErrors) showToast('الرجاء إدخال رقم التواصل', true);
     return false;
@@ -1288,10 +1285,31 @@ async function stashCurrentMember(showErrors) {
     if (showErrors) showToast('الرجاء إضافة صورة', true);
     return false;
   }
-  const abd = (addBirthPicker && addBirthPicker.getValue()) || null;
-  const birthDate = abd ? abd.birthDate : '';
-  const birthDateHijri = abd ? abd.birthDateHijri : '';
-  const birthDateCal = abd ? abd.birthDateCal : '';
+  // الأم إجبارية متى ما كانت هناك خيارات متاحة (زوجات مسجّلات للأب)
+  const motherSel = document.getElementById('input-mother');
+  if (motherSel && !motherSel.disabled && !motherSel.value) {
+    if (showErrors) showToast('الرجاء اختيار الأم', true);
+    return false;
+  }
+  // الحالة الاجتماعية إجبارية
+  const maritalChecked = document.querySelector('input[name="input-marital"]:checked');
+  if (!maritalChecked) {
+    if (showErrors) showToast('الرجاء تحديد الحالة الاجتماعية', true);
+    return false;
+  }
+  // عند اختيار «متزوج/متزوجة» يجب تسجيل زوج/زوجة واحدة على الأقل
+  const femaleNew = RELATION_TO_GENDER[selectedRelationType] === 'female';
+  if (maritalChecked.value === 'married') {
+    const spouseCount = (addFamilyList ? addFamilyList.size() : 0)
+                      + (addSpouseLinkList ? addSpouseLinkList.size() : 0);
+    if (spouseCount === 0) {
+      if (showErrors) showToast(femaleNew ? 'الرجاء إضافة بيانات الزوج' : 'الرجاء إضافة بيانات الزوجة', true);
+      return false;
+    }
+  }
+  const birthDate = '';
+  const birthDateHijri = '';
+  const birthDateCal = '';
   const gender = RELATION_TO_GENDER[selectedRelationType];
 
   let photoURL = '';
@@ -1324,13 +1342,13 @@ async function stashCurrentMember(showErrors) {
     maritalStatus, spouseFamilies, spouseLinks, spouseInFamily, motherId, motherName
   });
   renderPendingMembers();
-  if (addBirthPicker) addBirthPicker.clear();
 
   // تفريغ النموذج استعداداً للفرد التالي
   document.getElementById('add-member-form').reset();
   document.getElementById('photo-preview').style.display = 'none';
   if (addFamilyList) addFamilyList.clear();
   if (addSpouseLinkList) addSpouseLinkList.clear();
+  document.querySelectorAll('input[name="input-marital"]').forEach(r => { r.checked = false; });
   document.querySelectorAll('input[name="input-spouse-in-family"]').forEach(r => { r.checked = (r.value === 'no'); });
   refreshSpouseOrigin('input-spouse-in-family', 'input-spouse-link-block', 'input-spouse-family-block');
   refreshMaritalGroup('input-marital', 'input-spouse-group');
@@ -1372,6 +1390,17 @@ function handlePhotoSelect(evt) {
   preview.style.display = 'block';
 }
 
+/** هل نموذج «إضافة فرد» فارغ تماماً (لم يُدخل المستخدم أي بيانات)؟ */
+function isAddFormEmpty() {
+  const name = document.getElementById('input-first-name')?.value.trim() || '';
+  const phone = document.getElementById('input-phone')?.value.trim() || '';
+  const marital = document.querySelector('input[name="input-marital"]:checked');
+  const motherVal = document.getElementById('input-mother')?.value || '';
+  const spouses = (addFamilyList ? addFamilyList.size() : 0)
+                + (addSpouseLinkList ? addSpouseLinkList.size() : 0);
+  return !name && !phone && !marital && !motherVal && !selectedPhotoFile && spouses === 0;
+}
+
 /**
  * "إرسال الطلب": يضمّ الفرد المعبّأ حالياً (إن وُجد) إلى القائمة ثم يرسل جميع
  * الأفراد المُجهّزين كطلب واحد (requestType: 'addBatch').
@@ -1385,9 +1414,12 @@ async function submitAddRequest(evt) {
   submitBtn.textContent = 'جارٍ الإرسال...';
 
   try {
-    // ضمّ الفرد المعبّأ حالياً (إن كان هناك اسم ونوع قرابة مختار)
-    if (selectedRelationType && document.getElementById('input-first-name').value.trim()) {
-      await stashCurrentMember(false);
+    // ضمّ الفرد المعبّأ حالياً. جميع الحقول إجبارية، فإن كان النموذج ناقصاً
+    // نُظهر الخطأ ونوقف الإرسال. الاستثناء: نموذج فارغ تماماً مع وجود أفراد
+    // مُجهّزين مسبقاً — يُتجاهل ويُرسل ما تم تجهيزه.
+    if (selectedRelationType && !(pendingMembers.length > 0 && isAddFormEmpty())) {
+      const ok = await stashCurrentMember(true);
+      if (!ok) return;
     }
 
     if (pendingMembers.length === 0) {

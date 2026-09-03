@@ -1958,3 +1958,22 @@ a.admin-link:hover { opacity: 1; text-decoration: underline; }
 }
 
 .panel-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+
+/* ===== نجمة الحقول المطلوبة (حمراء) ===== */
+.req-star {
+  color: #d32f2f;
+  font-weight: 800;
+  font-size: 1.05em;
+  line-height: 1;
+}
+
+.required-note {
+  margin: 0 0 14px;
+  padding: 8px 11px;
+  background: #fdecea;
+  border: 1px solid #f5c6c2;
+  border-radius: 8px;
+  color: #8e2019;
+  font-size: .82rem;
+  font-weight: 600;
+}

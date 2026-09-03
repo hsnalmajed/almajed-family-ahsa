@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="عائلة الماجد">
 
-<link rel="stylesheet" href="style.css?v=94">
+<link rel="stylesheet" href="style.css?v=95">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -276,7 +276,7 @@
       </div>
 
       <div class="form-group">
-        <label>الحالة *</label>
+        <label>الحالة <span class="req-star">*</span></label>
         <div class="status-toggle">
           <label><input type="radio" name="update-status" value="alive" required><span>على قيد الحياة</span></label>
           <label><input type="radio" name="update-status" value="death"><span>متوفى</span></label>
@@ -361,30 +361,26 @@
     <div id="added-members-list" class="added-members-list" style="display:none;"></div>
 
     <form id="add-member-form" style="display:none;">
+      <p class="required-note">جميع الحقول المعلّمة بـ <span class="req-star">*</span> مطلوبة ولا يمكن إرسال الطلب بدونها.</p>
+
       <div class="form-group">
-        <label for="input-first-name">الاسم الأول *</label>
+        <label for="input-first-name">الاسم الأول <span class="req-star">*</span></label>
         <input type="text" id="input-first-name" required>
       </div>
 
       <div class="form-group">
-        <label for="input-photo">الصورة *</label>
+        <label for="input-photo">الصورة <span class="req-star">*</span></label>
         <input type="file" id="input-photo" accept="image/*">
         <img id="photo-preview" style="display:none; width:70px; height:70px; border-radius:50%; object-fit:cover; margin-top:8px;">
       </div>
 
       <div class="form-group">
-        <label for="input-phone">رقم التواصل *</label>
+        <label for="input-phone">رقم التواصل <span class="req-star">*</span></label>
         <input type="tel" id="input-phone" placeholder="05xxxxxxxx">
       </div>
 
-      <div class="form-group">
-        <label>تاريخ الميلاد (اختياري)</label>
-        <div id="input-birthdate-mount"></div>
-        <p class="field-hint">اختر هجري أو ميلادي — يُحوَّل تلقائياً. يظهر للإدارة فقط.</p>
-      </div>
-
       <div class="form-group" id="input-mother-group">
-        <label for="input-mother">الأم</label>
+        <label for="input-mother">الأم <span class="req-star">*</span></label>
         <select id="input-mother" class="mother-select">
           <option value="">— غير محددة —</option>
         </select>
@@ -392,15 +388,15 @@
       </div>
 
       <div class="form-group">
-        <label>الحالة الاجتماعية</label>
+        <label>الحالة الاجتماعية <span class="req-star">*</span></label>
         <div class="status-toggle">
-          <label><input type="radio" name="input-marital" value="single" checked><span class="marital-single-lbl">غير متزوج</span></label>
+          <label><input type="radio" name="input-marital" value="single"><span class="marital-single-lbl">غير متزوج</span></label>
           <label><input type="radio" name="input-marital" value="married"><span class="marital-married-lbl">متزوج</span></label>
         </div>
       </div>
 
       <div class="form-group spouse-group" id="input-spouse-group" style="display:none;">
-        <label class="spouse-section-label" id="input-spouse-section-label">الزوجات المسجّلات</label>
+        <label class="spouse-section-label" id="input-spouse-section-label">الزوجات المسجّلات <span class="req-star">*</span></label>
         <p class="family-hint" id="input-spouse-multi-hint">أضِف كل زوجة على حدة: اختر «نعم» للبحث عنها في الشجرة، أو «لا» لكتابة اسم عائلتها.</p>
 
         <div class="spouse-origin">
@@ -451,18 +447,18 @@
     <p class="field-hint" style="margin:-6px 0 14px;">أضِف نشاطك التجاري ليظهر لأبناء العائلة بعد موافقة المدير.</p>
     <form id="biz-add-form">
       <div class="form-group">
-        <label for="biz-name">اسم النشاط *</label>
+        <label for="biz-name">اسم النشاط <span class="req-star">*</span></label>
         <input type="text" id="biz-name" placeholder="مثال: مطعم الأصالة" required>
       </div>
 
       <div class="form-group">
-        <label for="biz-logo-input">صورة العلامة التجارية *</label>
+        <label for="biz-logo-input">صورة العلامة التجارية <span class="req-star">*</span></label>
         <input type="file" id="biz-logo-input" accept="image/*">
         <img id="biz-logo-preview" style="display:none; width:90px; height:90px; border-radius:12px; object-fit:cover; margin-top:8px; border:1px solid var(--border);">
       </div>
 
       <div class="form-group">
-        <label for="biz-owner-input">المالك (ابحث في شجرة العائلة) *</label>
+        <label for="biz-owner-input">المالك (ابحث في شجرة العائلة) <span class="req-star">*</span></label>
         <div class="rel-picker">
           <input type="text" id="biz-owner-input" class="spouse-link-input" placeholder="ابحث بالاسم أو رقم المعرّف (ID)" autocomplete="off">
           <div class="rel-suggestions" id="biz-owner-sug"></div>
@@ -471,12 +467,12 @@
       </div>
 
       <div class="form-group">
-        <label for="biz-phone">رقم التواصل *</label>
+        <label for="biz-phone">رقم التواصل <span class="req-star">*</span></label>
         <input type="tel" id="biz-phone" placeholder="05xxxxxxxx" dir="ltr">
       </div>
 
       <div class="form-group">
-        <label for="biz-category-input">مجال النشاط *</label>
+        <label for="biz-category-input">مجال النشاط <span class="req-star">*</span></label>
         <div class="cat-combo">
           <input type="text" id="biz-category-input" class="cat-combo-input" placeholder="ابحث أو اكتب مجال النشاط" autocomplete="off">
           <span class="cat-combo-caret">▾</span>
@@ -512,7 +508,7 @@
 <script src="firebase-config.js"></script>
 <script src="birthdate.js?v=1"></script>
 <script src="relationship.js?v=6"></script>
-<script src="app.js?v=77"></script>
+<script src="app.js?v=78"></script>
 
 <!-- زر تثبيت التطبيق -->
 <script>
