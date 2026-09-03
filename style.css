@@ -77,17 +77,51 @@ header.site-header p {
   z-index: 5;
 }
 
+/* زر دخول المدير — أيقونة دائرية بدل النص */
 header.site-header .admin-link {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
   color: var(--primary-dark);
   background: #fff;
   border: 1px solid var(--border);
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: .8rem;
+  border-radius: 50%;
   text-decoration: none;
   box-shadow: var(--shadow);
+  transition: color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease;
 }
-header.site-header .admin-link:hover { border-color: var(--accent); }
+header.site-header .admin-link svg { width: 19px; height: 19px; display: block; }
+header.site-header .admin-link:hover,
+header.site-header .admin-link:focus-visible {
+  color: var(--gold-dark);
+  border-color: var(--accent);
+  box-shadow: 0 4px 14px rgba(0,0,0,.13);
+  transform: translateY(-1px);
+}
+header.site-header .admin-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* تلميح الاسم عند المرور بالمؤشر */
+.admin-tip {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 8px);
+  transform: translateY(-50%);
+  background: var(--primary-dark);
+  color: #fff;
+  font-size: .72rem;
+  font-weight: 700;
+  white-space: nowrap;
+  padding: 4px 9px;
+  border-radius: 7px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .16s ease;
+}
+header.site-header .admin-link:hover .admin-tip,
+header.site-header .admin-link:focus-visible .admin-tip { opacity: 1; }
+@media (hover: none) { .admin-tip { display: none; } }
 
 /* بطاقة "إعداد" مع صورة ورقم واتساب */
 .prepared-by {
@@ -451,6 +485,23 @@ header.site-header .admin-link:hover { border-color: var(--accent); }
 .biz-detail-row { display: flex; gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: .92rem; }
 .biz-detail-row:last-child { border-bottom: none; }
 .biz-detail-label { color: var(--muted); min-width: 90px; font-weight: 700; }
+
+/* أزرار التواصل داخل تفاصيل العلامة التجارية */
+.contact-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.wa-chip, .call-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  border-radius: 14px; padding: 4px 11px;
+  font-size: .82rem; font-weight: 800; text-decoration: none;
+  transition: background .15s ease, border-color .15s ease;
+}
+.wa-chip { color: #128c3e; background: #eafaf0; border: 1px solid #b7e6c8; }
+.wa-chip:hover { background: #d6f5e2; }
+.wa-chip svg { color: #25D366; flex: none; }
+.call-chip { color: var(--primary-dark); background: #fff; border: 1px solid var(--border); }
+.call-chip:hover { background: var(--bg); border-color: var(--accent); }
+.call-chip svg { flex: none; }
+.wa-chip:focus-visible, .call-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 .biz-detail-owner-btn {
   margin-top: 6px; width: 100%; justify-content: center;
 }
