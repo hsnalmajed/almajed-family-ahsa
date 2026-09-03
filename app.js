@@ -11,7 +11,6 @@ let selectedPhotoFile = null;     // صورة طلب الإضافة
 let selectedUpdatePhotoFile = null; // صورة طلب التحديث
 let urlPersonOpened = false;
 let pendingMembers = []; // قائمة الأفراد المُجهّزين لإرسالهم ضمن طلب واحد
-let updateBirthPicker = null; // منتقي تاريخ الميلاد (نافذة التحديث)
 
 const RELATION_LABELS = {
   son: 'ابن',
@@ -695,16 +694,12 @@ function openUpdateModal(person) {
   const phoneMask = document.getElementById('phone-mask');
   const phoneHint = document.getElementById('update-phone-hint');
 
-  // تاريخ الميلاد: منتقي تقويم (هجري/ميلادي) يُعبّأ بالقيمة المسجّلة (تظهر للإدارة فقط)
-  if (window.Birthdate) {
-    if (!updateBirthPicker) updateBirthPicker = window.Birthdate.create('update-birthdate-mount');
-    if (updateBirthPicker) {
-      if (person.birthDate || person.birthDateHijri) {
-        updateBirthPicker.setValue({ birthDate: person.birthDate, birthDateHijri: person.birthDateHijri, birthDateCal: person.birthDateCal });
-      } else {
-        updateBirthPicker.clear();
-      }
-    }
+  // ملاحظة الصورة: مطلوبة، فإن كانت مسجّلة مسبقاً يكفي إبقاؤها دون رفع صورة جديدة
+  const photoHint = document.getElementById('update-photo-hint');
+  if (photoHint) {
+    photoHint.textContent = person.photoURL
+      ? 'الصورة مسجّلة لدينا. ارفع صورة جديدة فقط إن أردت تحديثها.'
+      : 'لا توجد صورة مسجّلة — الرجاء إرفاق صورة.';
   }
 
   phoneInput.value = '';
@@ -735,7 +730,8 @@ function openUpdateModal(person) {
   const female = person.gender === 'female';
   const secLbl = document.getElementById('update-spouse-section-label');
   const multiHint = document.getElementById('update-spouse-multi-hint');
-  if (secLbl) secLbl.textContent = female ? 'الزوج المسجّل' : 'الزوجات المسجّلات';
+  if (secLbl) secLbl.innerHTML = (female ? 'الزوج المسجّل' : 'الزوجات المسجّلات')
+    + ' <span class="req-star">*</span>';
   if (multiHint) multiHint.textContent = female
     ? 'يمكن إضافة زوج واحد فقط: اختر «نعم» للبحث عنه في الشجرة، أو «لا» لكتابة اسم عائلته.'
     : 'أضِف كل زوجة على حدة: اختر «نعم» للبحث عنها في الشجرة، أو «لا» لكتابة اسم عائلتها. يمكنك إضافة أكثر من زوجة.';
@@ -831,18 +827,44 @@ async function submitUpdateInfo(evt) {
   const phoneEl = document.getElementById('update-phone');
   const phoneTouched = phoneChangeRequested || phoneEl.style.display !== 'none';
   const phone = phoneTouched ? phoneEl.value.trim() : null;
-  const bd = (updateBirthPicker && updateBirthPicker.getValue()) || null;
-  const birthDate = bd ? bd.birthDate : '';
-  const birthDateHijri = bd ? bd.birthDateHijri : '';
-  const birthDateCal = bd ? bd.birthDateCal : '';
+  // تاريخ الميلاد أُزيل من نافذة التحديث — تُرسل قيم فارغة فلا تُغيّر المسجَّل
+  const birthDate = '';
+  const birthDateHijri = '';
+  const birthDateCal = '';
   const status = document.querySelector('input[name="update-status"]:checked')?.value;
 
+  // جميع الحقول إجبارية عدا «الأم»
+  // رقم التواصل: مطلوب إن لم يكن مسجّلاً، أو عند طلب تغييره
+  if (phoneTouched && !phone) {
+    showToast('الرجاء إدخال رقم التواصل', true);
+    return;
+  }
+  // الصورة: مطلوبة للذكور — يكفي وجود صورة مسجّلة مسبقاً
+  const isFemalePerson = selectedTargetPerson.gender === 'female';
+  if (!isFemalePerson && !selectedUpdatePhotoFile && !selectedTargetPerson.photoURL) {
+    showToast('الرجاء إرفاق صورة', true);
+    return;
+  }
   if (!status) {
     showToast('الرجاء اختيار الحالة', true);
     return;
   }
+  const maritalChecked = document.querySelector('input[name="update-marital"]:checked');
+  if (!maritalChecked) {
+    showToast('الرجاء تحديد الحالة الاجتماعية', true);
+    return;
+  }
 
-  const isMarried = document.querySelector('input[name="update-marital"]:checked')?.value === 'married';
+  const isMarried = maritalChecked.value === 'married';
+  // عند «متزوج/متزوجة» يجب تسجيل زوج/زوجة واحدة على الأقل
+  if (isMarried) {
+    const spouseCount = (updateFamilyList ? updateFamilyList.size() : 0)
+                      + (updateSpouseLinkList ? updateSpouseLinkList.size() : 0);
+    if (spouseCount === 0) {
+      showToast(isFemalePerson ? 'الرجاء إضافة بيانات الزوج' : 'الرجاء إضافة بيانات الزوجة', true);
+      return;
+    }
+  }
   // نجمع النوعين معاً: زوجات من العائلة (روابط) + زوجات من خارجها (أسماء عوائل)
   const spouseLinkVals = (isMarried && updateSpouseLinkList) ? updateSpouseLinkList.values() : [];
   const spouseFamilyVals = (isMarried && updateFamilyList) ? updateFamilyList.values() : [];
@@ -1285,12 +1307,7 @@ async function stashCurrentMember(showErrors) {
     if (showErrors) showToast('الرجاء إضافة صورة', true);
     return false;
   }
-  // الأم إجبارية متى ما كانت هناك خيارات متاحة (زوجات مسجّلات للأب)
-  const motherSel = document.getElementById('input-mother');
-  if (motherSel && !motherSel.disabled && !motherSel.value) {
-    if (showErrors) showToast('الرجاء اختيار الأم', true);
-    return false;
-  }
+  // الأم: حقل اختياري — يمكن تعبئته لاحقاً بعد إضافة الزوجة للأب
   // الحالة الاجتماعية إجبارية
   const maritalChecked = document.querySelector('input[name="input-marital"]:checked');
   if (!maritalChecked) {
@@ -1398,6 +1415,7 @@ function isAddFormEmpty() {
   const motherVal = document.getElementById('input-mother')?.value || '';
   const spouses = (addFamilyList ? addFamilyList.size() : 0)
                 + (addSpouseLinkList ? addSpouseLinkList.size() : 0);
+  // ملاحظة: «الأم» اختيارية، لكن تعبئتها تعني أن النموذج ليس فارغاً
   return !name && !phone && !marital && !motherVal && !selectedPhotoFile && spouses === 0;
 }
 

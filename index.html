@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="عائلة الماجد">
 
-<link rel="stylesheet" href="style.css?v=95">
+<link rel="stylesheet" href="style.css?v=96">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -253,8 +253,10 @@
     <button class="close-x" id="close-update-modal-btn">✕</button>
     <h3 id="update-modal-title">تحديث المعلومات</h3>
     <form id="update-info-form">
+      <p class="required-note">جميع الحقول المعلّمة بـ <span class="req-star">*</span> مطلوبة. حقل «الأم» اختياري ويمكن تعبئته لاحقاً.</p>
+
       <div class="form-group">
-        <label for="update-phone">رقم التواصل</label>
+        <label for="update-phone">رقم التواصل <span class="req-star">*</span></label>
         <div class="phone-current" id="phone-current" style="display:none;">
           <span class="pc-mask" id="phone-mask" dir="ltr"></span>
           <button type="button" class="btn btn-secondary btn-sm" id="phone-change-btn">تغيير الرقم</button>
@@ -264,14 +266,9 @@
       </div>
 
       <div class="form-group">
-        <label>تاريخ الميلاد</label>
-        <div id="update-birthdate-mount"></div>
-        <p class="field-hint">اختر هجري أو ميلادي — يُحوَّل تلقائياً. يظهر للإدارة فقط ولا يُعرض في الشجرة العامة.</p>
-      </div>
-
-      <div class="form-group">
-        <label for="update-photo-input">الصورة</label>
+        <label for="update-photo-input">الصورة <span class="req-star">*</span></label>
         <input type="file" id="update-photo-input" accept="image/*">
+        <p class="field-hint" id="update-photo-hint"></p>
         <img id="update-photo-preview" style="display:none; width:70px; height:70px; border-radius:50%; object-fit:cover; margin-top:8px;">
       </div>
 
@@ -285,6 +282,7 @@
 
       <div class="form-group" id="update-mother-group">
         <label for="update-mother">الأم</label>
+        <p class="mother-note">لاختيار الأم يجب أن تكون مضافة كزوجة للأب</p>
         <select id="update-mother" class="mother-select">
           <option value="">— غير محددة —</option>
         </select>
@@ -292,7 +290,7 @@
       </div>
 
       <div class="form-group">
-        <label>الحالة الاجتماعية</label>
+        <label>الحالة الاجتماعية <span class="req-star">*</span></label>
         <div class="status-toggle">
           <label><input type="radio" name="update-marital" value="single"><span class="marital-single-lbl">غير متزوج</span></label>
           <label><input type="radio" name="update-marital" value="married"><span class="marital-married-lbl">متزوج</span></label>
@@ -300,7 +298,7 @@
       </div>
 
       <div class="form-group spouse-group" id="update-spouse-group" style="display:none;">
-        <label class="spouse-section-label" id="update-spouse-section-label">الزوجات المسجّلات</label>
+        <label class="spouse-section-label" id="update-spouse-section-label">الزوجات المسجّلات <span class="req-star">*</span></label>
         <p class="family-hint" id="update-spouse-multi-hint">أضِف كل زوجة على حدة: اختر «نعم» للبحث عنها داخل شجرة العائلة، أو «لا» لكتابة اسم عائلتها. يمكنك إضافة أكثر من زوجة — بعضها من العائلة وبعضها من خارجها.</p>
 
         <!-- السؤال يُطرح لكل إضافة -->
@@ -361,7 +359,7 @@
     <div id="added-members-list" class="added-members-list" style="display:none;"></div>
 
     <form id="add-member-form" style="display:none;">
-      <p class="required-note">جميع الحقول المعلّمة بـ <span class="req-star">*</span> مطلوبة ولا يمكن إرسال الطلب بدونها.</p>
+      <p class="required-note">جميع الحقول المعلّمة بـ <span class="req-star">*</span> مطلوبة ولا يمكن إرسال الطلب بدونها. حقل «الأم» اختياري ويمكن تعبئته لاحقاً.</p>
 
       <div class="form-group">
         <label for="input-first-name">الاسم الأول <span class="req-star">*</span></label>
@@ -380,7 +378,8 @@
       </div>
 
       <div class="form-group" id="input-mother-group">
-        <label for="input-mother">الأم <span class="req-star">*</span></label>
+        <label for="input-mother">الأم</label>
+        <p class="mother-note">لاختيار الأم يجب أن تكون مضافة كزوجة للأب</p>
         <select id="input-mother" class="mother-select">
           <option value="">— غير محددة —</option>
         </select>
@@ -506,9 +505,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
 <script src="firebase-config.js"></script>
-<script src="birthdate.js?v=1"></script>
 <script src="relationship.js?v=6"></script>
-<script src="app.js?v=78"></script>
+<script src="app.js?v=79"></script>
 
 <!-- زر تثبيت التطبيق -->
 <script>

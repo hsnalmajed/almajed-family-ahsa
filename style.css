@@ -1977,3 +1977,16 @@ a.admin-link:hover { opacity: 1; text-decoration: underline; }
   font-size: .82rem;
   font-weight: 600;
 }
+
+/* ملاحظة حقل الأم */
+.mother-note {
+  margin: 0 0 7px;
+  padding: 6px 10px;
+  background: #f4f1e6;
+  border-right: 3px solid var(--primary, #175939);
+  border-radius: 6px;
+  color: #4a4636;
+  font-size: .8rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
