@@ -28,7 +28,7 @@ firebase.initializeApp(firebaseConfig);
 // المفتاح العام هذا ليس سراً، ومكانه الطبيعي في كود الموقع.
 // إذا تُرك فارغاً يعمل الموقع بدون App Check.
 // =====================================================================
-const APP_CHECK_SITE_KEY = "";
+const APP_CHECK_SITE_KEY = "6Ldi7g8uAAAAAMW1sp_cQsg3FZXzNwcnMbzGfUN8";
 
 if (APP_CHECK_SITE_KEY && typeof firebase.appCheck === 'function') {
   try {
