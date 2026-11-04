@@ -11,11 +11,13 @@ const firebaseConfig = {
   appId: "1:932265240190:web:a0983ec1b76ff2dfab1a2f"
 };
 
-// بريد حساب Google الخاص بالمدير. الدخول للوحة المدير يتم بزر «الدخول بحساب Google»
-// وحساب Google هذا محمي بالتحقق بخطوتين (Authenticator).
-// ⚠️ لتغيير المدير: غيّر البريد هنا وفي firestore.rules معاً.
+// قائمة المديرين: بريد حساب Google لكل مدير. الدخول للوحة المدير بزر «الدخول بحساب Google»
+// ويُنصح أن يفعّل كل مدير التحقق بخطوتين (Authenticator) على حسابه.
+// ⚠️ لإضافة مدير أو إزالته: عدّل القائمة هنا وفي firestore.rules معاً (نفس البُرد بالضبط).
 // لا توجد أي كلمة سر في ملفات الموقع، والحماية الحقيقية في firestore.rules.
-const ADMIN_EMAIL = "almajedhsn@gmail.com";
+const ADMIN_EMAILS = [
+  "almajedhsn@gmail.com"
+];
 
 firebase.initializeApp(firebaseConfig);
 

@@ -62,8 +62,9 @@ function setPrivatePhone(writer, personDocId, phone) {
 // المدير يدخل بحساب Google الخاص به (المحمي بالتحقق بخطوتين عبر Authenticator).
 // قواعد firestore.rules هي الحماية الحقيقية: لا تسمح بالكتابة إلا لهذا البريد المؤكَّد.
 function isAdminUser(user) {
+  const email = String((user && user.email) || '').toLowerCase();
   return !!(user && user.emailVerified
-    && String(user.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase());
+    && ADMIN_EMAILS.some(a => a.toLowerCase() === email));
 }
 
 function showLoginError(msg) {

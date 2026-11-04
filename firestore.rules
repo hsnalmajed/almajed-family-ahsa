@@ -15,12 +15,17 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ---- من هو المدير؟ ----
-    // حساب Google الخاص بالمدير فقط (محمي بالتحقق بخطوتين)، ويجب أن يكون الدخول
-    // عبر Google وأن يكون البريد مؤكَّداً. لتغيير المدير: غيّر البريد هنا وفي firebase-config.js.
+    // ---- من هم المديرون؟ ----
+    // حسابات Google المذكورة في القائمة فقط (كل مدير يفعّل التحقق بخطوتين على حسابه)،
+    // ويجب أن يكون الدخول عبر Google وأن يكون البريد مؤكَّداً.
+    // لإضافة مدير: أضف بريده هنا بين علامتي ' ' مع فاصلة، وفي firebase-config.js أيضاً، ثم Publish.
+    //   مثال:  return ['almajedhsn@gmail.com', 'example@gmail.com'];
+    function adminEmails() {
+      return ['almajedhsn@gmail.com'];
+    }
     function isAdmin() {
       return request.auth != null
-        && request.auth.token.email == 'almajedhsn@gmail.com'
+        && request.auth.token.email in adminEmails()
         && request.auth.token.email_verified == true
         && request.auth.token.firebase.sign_in_provider == 'google.com';
     }
