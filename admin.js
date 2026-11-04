@@ -2117,7 +2117,7 @@ function ancestorsOfAdmin(person, limit) {
 function shortLineageAdmin(person, depth) {
   return [person.firstName]
     .concat(ancestorsOfAdmin(person, depth || 2).map(a => a.firstName))
-    .filter(Boolean).join(' - ');
+    .filter(Boolean).join(' ');
 }
 
 // بحث بالنسب: الكلمة الأولى = الاسم، الثانية = الأب، الثالثة = الجد (حتى 3)

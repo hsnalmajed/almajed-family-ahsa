@@ -1043,7 +1043,7 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
   margin-bottom: 24px;
   position: relative;
   /* بدون overflow:hidden حتى لا تُقصّ قائمة اقتراحات الأشخاص أسفل الحقل */
-  z-index: 3;
+  z-index: 4;
 }
 
 .relation-finder h2 {
@@ -2092,4 +2092,60 @@ a.admin-link:hover { opacity: 1; text-decoration: underline; }
   .relation-form .rel-picker { flex: 1 1 100%; }
   .relation-form > span { width: 100%; text-align: center; margin: -4px 0; }
   .relation-form > .btn { width: 100%; }
+}
+
+/* ===== قائمة اقتراحات الأشخاص (صلة القرابة + ابحث عن شخص) ===== */
+.rel-suggestions,
+.search-section .search-results {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(9,42,27,.16);
+  padding: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+/* أعرض من الحقل الضيّق حتى يظهر الاسم في سطر واحد */
+.rel-suggestions {
+  right: 0; left: auto;
+  width: max(100%, 300px);
+  max-width: calc(100vw - 40px);
+}
+/* «ابحث عن شخص»: القائمة تطفو فوق ما تحتها بدل أن تمدّ الصندوق */
+.search-section { z-index: 3; }
+.search-section .search-results {
+  position: absolute;
+  top: calc(100% - 14px);
+  right: 20px; left: 20px;
+  margin-top: 0;
+  z-index: 30;
+}
+.rel-suggestions .search-result-item,
+.search-section .search-result-item {
+  border-bottom: none;
+  border-radius: 8px;
+  padding: 7px 10px;
+  gap: 10px;
+}
+.rel-suggestions .search-result-item + .search-result-item,
+.search-section .search-result-item + .search-result-item { margin-top: 2px; }
+.rel-suggestions .search-result-item:hover,
+.search-section .search-result-item:hover { background: #f3efe4; }
+.rel-suggestions .search-result-item img,
+.search-section .search-result-item img { width: 34px; height: 34px; flex: none; }
+.rel-suggestions .sr-name,
+.search-section .sr-name {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-size: .93rem; color: var(--text);
+}
+.rel-suggestions .sr-name b,
+.search-section .sr-name b { color: var(--primary-dark); font-weight: 800; }
+.sr-rest { color: var(--muted); }
+.rel-suggestions .sr-id,
+.search-section .sr-id {
+  flex: none; margin: 0;
+  font-size: .75rem; font-weight: 800;
+  min-width: 34px; text-align: center;
 }

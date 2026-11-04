@@ -479,12 +479,43 @@ function ancestorsOf(person, limit) {
   return chain;
 }
 
-// الاسم مع عدد محدود من الآباء: "حسن - علي - أحمد"
+// الاسم مع عدد محدود من الآباء: "حسن علي أحمد"
 function shortLineage(person, depth) {
   const names = [person.firstName].concat(
     ancestorsOf(person, depth || 2).map(a => a.firstName)
   );
-  return names.filter(Boolean).join(' - ');
+  return names.filter(Boolean).join(' ');
+}
+
+// عنصر واحد في قائمة اقتراحات الأشخاص (مشترك بين «ابحث عن شخص» و«صلة القرابة»)
+function personSuggestionHtml(p, attr) {
+  const rest = ancestorsOf(p, 2).map(a => a.firstName).filter(Boolean).join(' ');
+  return `
+    <div class="search-result-item" ${attr}="${p.displayId}">
+      <img src="${p.photoURL || defaultAvatar(p.gender)}" alt="">
+      <span class="sr-name"><b>${escapeHtmlLocal(p.firstName || '')}</b>${rest ? ' <span class="sr-rest">' + escapeHtmlLocal(rest) + '</span>' : ''}</span>
+      <span class="sr-id">${p.displayId}</span>
+    </div>`;
+}
+
+// يبحث عن الأشخاص بالمعرّف أو بالاسم (الأول، أو الثنائي، أو الثلاثي)
+function findPersons(query, limit) {
+  const q = String(query || '').trim();
+  if (!q) return [];
+  if (/^\d+$/.test(q)) return allPersons.filter(p => String(p.displayId) === q);
+  const tokens = nameSearchTokens(q);
+  if (!tokens.length) return [];
+  // الترتيب: الاسم المطابق تماماً أولاً (حسن)، ثم ما يبدأ به (حسنين)، ثم ما يحتويه (محسن)
+  const rank = p => {
+    const n = normalizeArabic(p.firstName);
+    return n === tokens[0] ? 0 : (n.startsWith(tokens[0]) ? 1 : 2);
+  };
+  const out = allPersons
+    .filter(p => p.firstName && matchByNameTokens(p, tokens))
+    .map(p => ({ p, r: rank(p) }))
+    .sort((a, b) => a.r - b.r || (Number(a.p.displayId) - Number(b.p.displayId)))
+    .map(x => x.p);
+  return limit ? out.slice(0, limit) : out;
 }
 
 // يفكّك نص البحث إلى كلمات مُوحّدة (اسم، اسم الأب، اسم الجد) — حتى 3 كلمات
@@ -506,7 +537,7 @@ function matchByNameTokens(person, tokens) {
 // الاسم الكامل حتى نهاية الشجرة
 function fullLineage(person) {
   const names = [person.firstName].concat(ancestorsOf(person).map(a => a.firstName));
-  return names.filter(Boolean).join(' - ');
+  return names.filter(Boolean).join(' ');
 }
 
 
@@ -1526,14 +1557,7 @@ function sendUpdateRequestEmailNotification(data) {
 // ---------------------------------------------------------------------
 // يبحث عن الأشخاص المطابقين لنص (معرّف أو اسم) لعرضهم كاقتراحات
 function matchPersonsForRelation(query) {
-  const q = query.trim();
-  if (!q) return [];
-  if (/^\d+$/.test(q)) {
-    return allPersons.filter(p => String(p.displayId) === q);
-  }
-  const tokens = nameSearchTokens(q);
-  if (!tokens.length) return [];
-  return allPersons.filter(p => p.firstName && matchByNameTokens(p, tokens)).slice(0, 8);
+  return findPersons(query, 30);
 }
 
 // يربط حقل إدخال بقائمة اقتراحات تعمل مثل "ابحث عن شخص"
@@ -1548,13 +1572,9 @@ function attachRelationPicker(inputId, sugId) {
     input.dataset.selectedId = '';           // مسح أي اختيار سابق عند الكتابة
     const matches = matchPersonsForRelation(input.value);
     if (!matches.length) { hide(); return; }
-    box.innerHTML = matches.map(p => `
-      <div class="search-result-item" data-id="${p.displayId}">
-        <img src="${p.photoURL || defaultAvatar(p.gender)}" alt="">
-        <span class="sr-name"><b class="sr-id">(${p.displayId})</b> ${escapeHtmlLocal(shortLineage(p, 2))}</span>
-      </div>
-    `).join('');
+    box.innerHTML = matches.map(p => personSuggestionHtml(p, 'data-id')).join('');
     box.style.display = 'block';
+    box.scrollTop = 0;
     box.querySelectorAll('[data-id]').forEach(el => {
       el.addEventListener('click', () => {
         const p = personsByDisplayId[el.dataset.id];
@@ -1565,7 +1585,8 @@ function attachRelationPicker(inputId, sugId) {
     });
   });
 
-  input.addEventListener('focus', () => { if (input.value.trim()) input.dispatchEvent(new Event('input')); });
+  input.addEventListener('focus', () => { if (input.value.trim() && !input.dataset.selectedId) input.dispatchEvent(new Event('input')); });
+  input.addEventListener('keydown', (e) => { if (e.key === 'Escape') hide(); });
   document.addEventListener('click', (e) => { if (e.target !== input && !box.contains(e.target)) hide(); });
 }
 
@@ -1664,8 +1685,9 @@ function escapeHtmlLocal(str) {
 // ---------------------------------------------------------------------
 // البحث بالاسم أو المعرّف
 // ---------------------------------------------------------------------
+// تعرض النتائج أثناء الكتابة (مثل صلة القرابة) وعند الضغط على «بحث»
 function handleSearch(evt) {
-  evt.preventDefault();
+  if (evt) evt.preventDefault();
   const query = document.getElementById('search-input').value.trim();
   const box = document.getElementById('search-results');
 
@@ -1675,13 +1697,7 @@ function handleSearch(evt) {
     return;
   }
 
-  let matches;
-  if (/^\d+$/.test(query)) {
-    matches = allPersons.filter(p => String(p.displayId) === query);
-  } else {
-    const tokens = nameSearchTokens(query);
-    matches = tokens.length ? allPersons.filter(p => p.firstName && matchByNameTokens(p, tokens)) : [];
-  }
+  const matches = findPersons(query);
 
   if (matches.length === 0) {
     box.innerHTML = '<div class="search-no-results">لا توجد نتائج مطابقة</div>';
@@ -1689,13 +1705,10 @@ function handleSearch(evt) {
     return;
   }
 
-  box.innerHTML = matches.map(p => `
-    <div class="search-result-item" data-goto="${p.displayId}">
-      <img src="${p.photoURL || defaultAvatar(p.gender)}" alt="">
-      <span class="sr-name"><b class="sr-id">(${p.displayId})</b> ${escapeHtmlLocal(shortLineage(p, 2))}</span>
-    </div>
-  `).join('');
+  box.innerHTML = matches.slice(0, 50).map(p => personSuggestionHtml(p, 'data-goto')).join('')
+    + (matches.length > 50 ? `<div class="search-no-results">و${matches.length - 50} نتيجة أخرى — أضف اسم الأب أو الجد لتضييق البحث</div>` : '');
   box.style.display = 'block';
+  box.scrollTop = 0;
 
   box.querySelectorAll('[data-goto]').forEach(el => {
     el.addEventListener('click', () => scrollToPerson(el.dataset.goto));
@@ -2284,6 +2297,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // البحث
   document.getElementById('search-form').addEventListener('submit', handleSearch);
+  const searchInput = document.getElementById('search-input');
+  searchInput.addEventListener('input', () => handleSearch());
+  searchInput.addEventListener('focus', () => { if (searchInput.value.trim()) handleSearch(); });
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') document.getElementById('search-results').style.display = 'none';
+  });
   document.addEventListener('click', (e) => {
     const box = document.getElementById('search-results');
     if (!box.contains(e.target) && e.target.id !== 'search-input') {
