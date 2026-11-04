@@ -22,9 +22,9 @@ const ADMIN_EMAILS = [
 firebase.initializeApp(firebaseConfig);
 
 // =====================================================================
-// App Check: يجعل قاعدة البيانات تقبل الطلبات القادمة من موقعنا فقط (عبر reCAPTCHA v3)،
+// App Check: يجعل قاعدة البيانات تقبل الطلبات القادمة من موقعنا فقط (عبر Fraud Defense / reCAPTCHA Enterprise)،
 // فلا تستطيع البرامج الآلية سحب بيانات العائلة أو إغراق لوحة المدير بطلبات مزيفة.
-// ضع هنا "مفتاح الموقع" (Site key) الخاص بـ reCAPTCHA v3 بعد إنشائه.
+// مفتاح الموقع (Site key) المسجَّل في Firebase ← App Check ← Fraud Defense.
 // المفتاح العام هذا ليس سراً، ومكانه الطبيعي في كود الموقع.
 // إذا تُرك فارغاً يعمل الموقع بدون App Check.
 // =====================================================================
@@ -32,7 +32,11 @@ const APP_CHECK_SITE_KEY = "6Ldi7g8uAAAAAMW1sp_cQsg3FZXzNwcnMbzGfUN8";
 
 if (APP_CHECK_SITE_KEY && typeof firebase.appCheck === 'function') {
   try {
-    firebase.appCheck().activate(APP_CHECK_SITE_KEY, true);
+    // Fraud Defense (reCAPTCHA Enterprise) — البديل الحديث لـ reCAPTCHA v3 الكلاسيكي
+    firebase.appCheck().activate(
+      new firebase.appCheck.ReCaptchaEnterpriseProvider(APP_CHECK_SITE_KEY),
+      true
+    );
   } catch (e) {
     console.error('تعذّر تفعيل App Check:', e);
   }
