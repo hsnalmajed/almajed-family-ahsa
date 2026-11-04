@@ -18,6 +18,24 @@ const firebaseConfig = {
 const ADMIN_EMAIL = "admin@family-tree.local";
 
 firebase.initializeApp(firebaseConfig);
+
+// =====================================================================
+// App Check: يجعل قاعدة البيانات تقبل الطلبات القادمة من موقعنا فقط (عبر reCAPTCHA v3)،
+// فلا تستطيع البرامج الآلية سحب بيانات العائلة أو إغراق لوحة المدير بطلبات مزيفة.
+// ضع هنا "مفتاح الموقع" (Site key) الخاص بـ reCAPTCHA v3 بعد إنشائه.
+// المفتاح العام هذا ليس سراً، ومكانه الطبيعي في كود الموقع.
+// إذا تُرك فارغاً يعمل الموقع بدون App Check.
+// =====================================================================
+const APP_CHECK_SITE_KEY = "";
+
+if (APP_CHECK_SITE_KEY && typeof firebase.appCheck === 'function') {
+  try {
+    firebase.appCheck().activate(APP_CHECK_SITE_KEY, true);
+  } catch (e) {
+    console.error('تعذّر تفعيل App Check:', e);
+  }
+}
+
 const db = firebase.firestore();
 const auth = firebase.auth();
 

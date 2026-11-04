@@ -63,7 +63,19 @@ service cloud.firestore {
         && request.resource.data.requestType in ['add', 'addBatch', 'update', 'business']
         && request.resource.data.createdAt == request.time
         && !('approvedAt' in request.resource.data)
+        && reasonableRequestSize(request.resource.data)
       );
+    }
+
+    // حدود معقولة لحجم الطلب حتى لا يُغرق أحد لوحة المدير
+    // (الصور تُصغَّر في المتصفح إلى نحو 30 كيلوبايت، فالحدود هنا واسعة للاستخدام الطبيعي)
+    function reasonableRequestSize(d) {
+      return d.size() <= 30
+        && (!('members' in d) || (d.members is list && d.members.size() <= 30))
+        && (!('photoURL' in d) || (d.photoURL is string && d.photoURL.size() <= 200000))
+        && (!('logoURL' in d) || (d.logoURL is string && d.logoURL.size() <= 200000))
+        && (!('firstName' in d) || (d.firstName is string && d.firstName.size() <= 100))
+        && (!('phone' in d) || (d.phone is string && d.phone.size() <= 30));
     }
 
     // ---- كل ما عدا ذلك مغلق ----
