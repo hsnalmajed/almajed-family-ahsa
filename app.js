@@ -1634,7 +1634,11 @@ function handleRelationFinder(evt) {
       html += `<div class="rel-paternal-title">صلة القرابة من ناحية الأب:</div>`;
       html += `<div>${renderRelText(result.paternalText)}</div>`;
       if (result.linkPerson && String(result.linkPerson.id) !== String(id1) && String(result.linkPerson.id) !== String(id2)) {
-        html += `<div class="link-person-line">🔗 الشخص الذي يربط بينهما: ${personChipHtml(result.linkPerson.id)}</div>`;
+        const firstP = personsByDisplayId[String(id1)];
+        const title = result.linkPerson.titleForFirst && firstP
+          ? ` — ${escapeHtmlLocal(result.linkPerson.titleForFirst)} لـ${escapeHtmlLocal(firstP.firstName || '')}`
+          : '';
+        html += `<div class="link-person-line">🔗 الشخص الذي يربط بينهما: ${personChipHtml(result.linkPerson.id)}${title}</div>`;
       }
     }
     // (3) صلات إضافية عبر الأخوال/الأعمام

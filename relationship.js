@@ -53,6 +53,14 @@ function findLCA(id1, id2, personsByDisplayId) {
 const ORDINALS_AR = ['', 'الأولى', 'الثانية', 'الثالثة', 'الرابعة', 'الخامسة', 'السادسة', 'السابعة', 'الثامنة'];
 function ordinal(n) { return ORDINALS_AR[n] || `رقم ${n}`; }
 
+// ترتيب الجد بالنسبة لشخص: depth = عدد الأجيال بينهما (1 = الأب، 2 = الجد الأول، 3 = الجد الثاني …)
+const ORDINALS_M_AR = ['', 'الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس', 'السادس', 'السابع', 'الثامن', 'التاسع', 'العاشر'];
+function ancestorTitle(depth, male) {
+  if (depth === 1) return male ? 'الأب' : 'الأم';
+  const n = depth - 1;
+  return male ? `الجد ${ORDINALS_M_AR[n] || 'رقم ' + n}` : `الجدة ${ORDINALS_AR[n] || 'رقم ' + n}`;
+}
+
 /**
  * يحسب المصطلح العربي: "الشخص B هو/هي ____ بالنسبة إلى الشخص A"
  * d1 = بُعد A (عدد الأجيال) عن الجد المشترك، d2 = بُعد B عن الجد المشترك
@@ -87,10 +95,8 @@ function describeRelationship(personA, personB, d1, d2) {
     }
     // كلاهما أبعد من جيل واحد عن الجد المشترك => أبناء عمومة بفارق أجيال
     const degree = d2 - 1;
-    const removed = d1 - d2;
     const label = bMale ? 'ابن عم' : 'بنت عم';
-    const degreeText = degree === 1 ? label : `${label} من الدرجة ${ordinal(degree)}`;
-    return `${degreeText} (أكبر جيلاً بمقدار ${removed} ${removed === 1 ? 'جيل' : 'أجيال'})`;
+    return degree === 1 ? label : `${label} من الدرجة ${ordinal(degree)}`;
   }
 
   // B من جيل أصغر (أبعد عن الجد المشترك من A) => ابن/بنت أخ أو أبعد
@@ -100,10 +106,8 @@ function describeRelationship(personA, personB, d1, d2) {
       return bMale ? `من نسل الأخ (يبعد ${d2} أجيال)` : `من نسل الأخ (تبعد ${d2} أجيال)`;
     }
     const degree = d1 - 1;
-    const removed = d2 - d1;
     const label = bMale ? 'ابن عم' : 'بنت عم';
-    const degreeText = degree === 1 ? label : `${label} من الدرجة ${ordinal(degree)}`;
-    return `${degreeText} (أصغر جيلاً بمقدار ${removed} ${removed === 1 ? 'جيل' : 'أجيال'})`;
+    return degree === 1 ? label : `${label} من الدرجة ${ordinal(degree)}`;
   }
 
   // نفس الجيل (d1 === d2 >= 2): أبناء عمومة
@@ -342,12 +346,18 @@ function computeRelationship(id1, id2, personsByDisplayId) {
   let paternalText = null;
   let linkPerson = null;
   if (lca) {
-    const relText = describeRelationship(personA, personB, lca.d1, lca.d2);
-    paternalText = `@{${key2}} ${personB.gender === 'male' ? 'هو' : 'هي'} ${relText} بالنسبة إلى @{${key1}}`;
+    // الجملة تبدأ بالشخص المُدخَل أولاً: «A هو … بالنسبة إلى B»
+    const relText = describeRelationship(personB, personA, lca.d2, lca.d1);
+    paternalText = `@{${key1}} ${personA.gender === 'male' ? 'هو' : 'هي'} ${relText} بالنسبة إلى @{${key2}}`;
     // الشخص الذي "يربط" بينهما هو أقرب جد مشترك إن كان مسجّلاً كفرد حقيقي
     if (!lca.lcaKey.startsWith('v') && personsByDisplayId[lca.lcaKey]) {
       const lp = personsByDisplayId[lca.lcaKey];
-      linkPerson = { id: lp.displayId, name: lp.firstName };
+      linkPerson = {
+        id: lp.displayId,
+        name: lp.firstName,
+        // ترتيب هذا الجد بالنسبة للشخص المُدخَل أولاً (مثل: الجد الرابع)
+        titleForFirst: lca.d1 > 0 ? ancestorTitle(lca.d1, lp.gender !== 'female') : ''
+      };
     }
   }
 
