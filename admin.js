@@ -57,6 +57,33 @@ function setPrivatePhone(writer, personDocId, phone) {
 }
 
 // ---------------------------------------------------------------------
+// سجل نشاط المدير (adminLog): من فعل ماذا ومتى.
+// القواعد تسمح للمدير بالإضافة والقراءة فقط — لا تعديل ولا حذف لأي سجل.
+// الكتابة «بلا انتظار»: لو فشلت لا تتعطل العملية الأصلية.
+// ---------------------------------------------------------------------
+function logAdminAction(action, text) {
+  try {
+    const u = auth.currentUser;
+    db.collection('adminLog').add({
+      at: firebase.firestore.FieldValue.serverTimestamp(),
+      by: (u && u.email) || '',
+      action: String(action || ''),
+      text: String(text || '').slice(0, 500)
+    }).catch(err => console.warn('تعذّر تسجيل النشاط:', err.code || err.message));
+  } catch (e) { console.warn('تعذّر تسجيل النشاط:', e); }
+}
+function describeRequestForLog(r) {
+  if (!r) return 'طلب';
+  if (r.requestType === 'update') return `طلب تحديث بيانات: ${r.targetPersonName || ''} (#${r.targetPersonId})`;
+  if (r.requestType === 'addBatch') {
+    const names = (r.members || []).map(m => m.firstName).filter(Boolean).join('، ');
+    return `طلب إضافة ${(r.members || []).length} فرد (${names}) لـ ${r.targetPersonName || ''} (#${r.targetPersonId})`;
+  }
+  if (r.requestType === 'business') return `طلب علامة تجارية: ${r.bizName || ''}`;
+  return `طلب إضافة: ${r.firstName || ''} لـ ${r.targetPersonName || ''} (#${r.targetPersonId})`;
+}
+
+// ---------------------------------------------------------------------
 // تسجيل دخول المدير بحساب Google
 // ---------------------------------------------------------------------
 // المدير يدخل بحساب Google الخاص به (المحمي بالتحقق بخطوتين عبر Authenticator).
@@ -92,6 +119,7 @@ async function handleLogin(evt) {
       showLoginError('الحساب ' + (email || '') + ' ليس حساب المدير. سجّل الدخول بحساب المدير المعتمد.');
       return;
     }
+    logAdminAction('login', 'تسجيل دخول للوحة المدير');
     showAdminPanel();
   } catch (err) {
     console.error('Admin login error:', err.code, err.message);
@@ -144,6 +172,7 @@ function showAdminPanel() {
   listenToRequests();
   listenToPersonsAdmin();
   listenToBusinessesAdmin();
+  checkBackupReminder();
 }
 
 // عند إعادة تحميل الصفحة وهناك جلسة مفتوحة مسبقاً
@@ -173,6 +202,77 @@ function switchTab(tabName) {
   if (tabName === 'collect') renderCollectPreview();
   if (tabName === 'proto') renderProtoTree();
   if (tabName === 'biz') { setupAdminBizCategoryCombo(); getAdminBizExtrasEditor(); renderAdminBizList(); }
+  if (tabName === 'log') listenToAdminLog();
+}
+
+// ---------------------------------------------------------------------
+// تبويب سجل النشاط
+// ---------------------------------------------------------------------
+let adminLogEntries = [];
+let adminLogListening = false;
+const LOG_ICONS = {
+  login: '🔑', approve: '✅', reject: '❌', add: '➕', edit: '✏️', delete: '🗑️',
+  'biz-add': '🏷️', 'biz-edit': '🏷️', 'biz-delete': '🗑️', renumber: '🔢', backup: '💾', migrate: '🔒'
+};
+function listenToAdminLog() {
+  if (adminLogListening) { renderAdminLog(); return; }
+  adminLogListening = true;
+  const box = document.getElementById('admin-log-list');
+  box.innerHTML = '<div class="empty-state">جارٍ التحميل...</div>';
+  db.collection('adminLog').orderBy('at', 'desc').limit(300).onSnapshot(snap => {
+    adminLogEntries = [];
+    snap.forEach(d => adminLogEntries.push({ id: d.id, ...d.data() }));
+    renderAdminLog();
+  }, err => {
+    adminLogListening = false;
+    console.error('adminLog error:', err);
+    box.innerHTML = '<div class="empty-state">تعذّر تحميل السجل' +
+      (err.code === 'permission-denied' ? ' — انشر قواعد الحماية الجديدة (firestore.rules) في Firebase ثم أعد تحميل الصفحة.' : ': ' + escapeHtml(err.message)) + '</div>';
+  });
+}
+function formatLogTime(ts) {
+  if (!ts || !ts.toDate) return 'الآن';
+  return ts.toDate().toLocaleString('ar-SA-u-ca-gregory-nu-latn', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+function renderAdminLog() {
+  const box = document.getElementById('admin-log-list');
+  if (!box) return;
+  const q = normalizeArabic(document.getElementById('admin-log-filter')?.value || '');
+  const rows = adminLogEntries.filter(e => !q || normalizeArabic((e.text || '') + ' ' + (e.by || '')).includes(q));
+  if (!rows.length) {
+    box.innerHTML = '<div class="empty-state">' + (adminLogEntries.length ? 'لا توجد نتائج مطابقة.' : 'لا توجد عمليات مسجّلة بعد.') + '</div>';
+    return;
+  }
+  box.innerHTML = rows.map(e => `
+    <div class="log-row">
+      <span class="log-ico">${LOG_ICONS[e.action] || '•'}</span>
+      <div class="log-main">
+        <div class="log-text">${escapeHtml(e.text || '')}</div>
+        <div class="log-meta"><span>${escapeHtml(formatLogTime(e.at))}</span><span dir="ltr">${escapeHtml(e.by || '')}</span></div>
+      </div>
+    </div>`).join('');
+}
+
+// ---------------------------------------------------------------------
+// تذكير النسخة الاحتياطية (meta/backup يحفظ وقت آخر نسخة)
+// ---------------------------------------------------------------------
+const BACKUP_REMIND_DAYS = 30;
+async function checkBackupReminder() {
+  const bar = document.getElementById('backup-reminder');
+  const txt = document.getElementById('backup-reminder-text');
+  if (!bar || !txt) return;
+  try {
+    const snap = await db.collection('meta').doc('backup').get();
+    const last = snap.exists && snap.data().lastAt && snap.data().lastAt.toDate ? snap.data().lastAt.toDate() : null;
+    const days = last ? Math.floor((Date.now() - last.getTime()) / 86400000) : null;
+    if (last && days < BACKUP_REMIND_DAYS) { bar.style.display = 'none'; return; }
+    txt.textContent = last
+      ? `⚠️ مرّ ${days} يوماً على آخر نسخة احتياطية (${last.toLocaleDateString('ar-SA-u-ca-gregory-nu-latn')}). يُنصح بأخذ نسخة كل شهر.`
+      : '⚠️ لا توجد نسخة احتياطية مسجّلة بعد. يُنصح بأخذ نسخة الآن وحفظها في مكان آمن.';
+    bar.style.display = 'flex';
+  } catch (err) {
+    console.warn('تعذّر فحص النسخة الاحتياطية:', err);
+  }
 }
 
 // ---------------------------------------------------------------------
@@ -591,7 +691,7 @@ function renderRequests() {
     } else if (r.requestType === 'addBatch') {
       const members = r.members || [];
       const membersHtml = members.map(m =>
-        `<div class="req-meta">• ${escapeHtml(m.firstName)} — ${RELATION_LABELS_AR[m.relationType] || m.relationType} (${GENDER_LABELS_AR[m.gender] || ''})${m.phone ? ' — ' + escapeHtml(m.phone) : ''}${(m.birthDate || m.birthDateHijri) ? ' — 🎂 ' + escapeHtml(window.Birthdate ? window.Birthdate.formatBoth(m) : (m.birthDate || '')) : ''} —${escapeHtml(maritalLabel(m.maritalStatus, m.gender, m.spouseFamilies || m.spouseFamily) + spouseLinksLabel(m.gender, m.spouseLinks))}${(m.motherId || m.motherName) ? ' — الأم: ' + escapeHtml(m.motherId ? ('(' + m.motherId + ') ' + ((allPersonsAdmin.find(p => p.displayId === Number(m.motherId)) || {}).firstName || '')) : m.motherName) : ''}</div>`
+        `<div class="req-meta">• ${escapeHtml(m.firstName)}${dupBadgeAdmin(m.parentKey, m.firstName)} — ${RELATION_LABELS_AR[m.relationType] || m.relationType} (${GENDER_LABELS_AR[m.gender] || ''})${m.phone ? ' — ' + escapeHtml(m.phone) : ''}${(m.birthDate || m.birthDateHijri) ? ' — 🎂 ' + escapeHtml(window.Birthdate ? window.Birthdate.formatBoth(m) : (m.birthDate || '')) : ''} —${escapeHtml(maritalLabel(m.maritalStatus, m.gender, m.spouseFamilies || m.spouseFamily) + spouseLinksLabel(m.gender, m.spouseLinks))}${(m.motherId || m.motherName) ? ' — الأم: ' + escapeHtml(m.motherId ? ('(' + m.motherId + ') ' + ((allPersonsAdmin.find(p => p.displayId === Number(m.motherId)) || {}).firstName || '')) : m.motherName) : ''}</div>`
       ).join('');
       row.innerHTML = `
         <div class="req-info">
@@ -625,7 +725,7 @@ function renderRequests() {
       row.innerHTML = `
         <img class="req-photo" src="${r.photoURL || ''}" onerror="this.style.visibility='hidden'">
         <div class="req-info">
-          <div class="req-name">${escapeHtml(r.firstName)} <span class="req-gender">(${GENDER_LABELS_AR[r.gender] || ''})</span></div>
+          <div class="req-name">${escapeHtml(r.firstName)} <span class="req-gender">(${GENDER_LABELS_AR[r.gender] || ''})</span>${dupBadgeAdmin(r.parentKey, r.firstName)}</div>
           <div class="req-meta">${RELATION_LABELS_AR[r.relationType] || r.relationType} لِـ <b>${escapeHtml(r.targetPersonName || '')}</b> (#${r.targetPersonId})</div>
           <div class="req-meta">الهاتف: ${escapeHtml(r.phone || '—')} | الحالة: ${STATUS_LABELS_AR[r.status] || r.status}</div>
         </div>
@@ -657,6 +757,7 @@ function renderRequests() {
 
 async function approveRequest(requestId, btnEl) {
   btnEl.disabled = true;
+  const reqForLog = pendingRequests.find(x => x.id === requestId);
   try {
     const reqRef = db.collection('requests').doc(requestId);
     const counterRef = db.collection('meta').doc('counter');
@@ -692,6 +793,7 @@ async function approveRequest(requestId, btnEl) {
       tx.set(counterRef, { lastId: newId }, { merge: true });
       tx.update(reqRef, { requestStatus: 'approved', approvedAt: firebase.firestore.FieldValue.serverTimestamp() });
     });
+    logAdminAction('approve', 'قبول ' + describeRequestForLog(reqForLog));
   } catch (err) {
     console.error(err);
     alert('حدث خطأ: ' + err.message);
@@ -705,6 +807,7 @@ async function approveRequest(requestId, btnEl) {
  */
 async function approveBatchRequest(requestId, btnEl) {
   btnEl.disabled = true;
+  const reqForLog = pendingRequests.find(x => x.id === requestId);
   try {
     const reqRef = db.collection('requests').doc(requestId);
     const counterRef = db.collection('meta').doc('counter');
@@ -768,6 +871,7 @@ async function approveBatchRequest(requestId, btnEl) {
         } catch (e) { console.error('تعذّر الربط التبادلي (دفعة) مع', link, e); }
       }
     }
+    logAdminAction('approve', 'قبول ' + describeRequestForLog(reqForLog));
   } catch (err) {
     console.error(err);
     alert('حدث خطأ: ' + err.message);
@@ -781,6 +885,7 @@ async function approveBatchRequest(requestId, btnEl) {
  */
 async function approveUpdateRequest(requestId, btnEl) {
   btnEl.disabled = true;
+  const reqForLog = pendingRequests.find(x => x.id === requestId);
   try {
     const reqRef = db.collection('requests').doc(requestId);
     let approvedReq = null;
@@ -847,6 +952,7 @@ async function approveUpdateRequest(requestId, btnEl) {
         } catch (e) { console.error('تعذّر الربط التبادلي مع', link, e); }
       }
     }
+    logAdminAction('approve', 'قبول ' + describeRequestForLog(reqForLog));
   } catch (err) {
     console.error(err);
     alert('حدث خطأ: ' + err.message);
@@ -858,6 +964,7 @@ async function approveUpdateRequest(requestId, btnEl) {
 // قبول طلب علامة تجارية: يُنشئ مستنداً في مجموعة businesses ويعتمد الطلب
 async function approveBusinessRequest(requestId, btnEl) {
   btnEl.disabled = true;
+  const reqForLog = pendingRequests.find(x => x.id === requestId);
   try {
     const reqRef = db.collection('requests').doc(requestId);
     await db.runTransaction(async (tx) => {
@@ -879,6 +986,7 @@ async function approveBusinessRequest(requestId, btnEl) {
       });
       tx.update(reqRef, { requestStatus: 'approved', approvedAt: firebase.firestore.FieldValue.serverTimestamp() });
     });
+    logAdminAction('approve', 'قبول ' + describeRequestForLog(reqForLog));
   } catch (err) {
     console.error(err);
     alert('حدث خطأ: ' + err.message);
@@ -1008,7 +1116,9 @@ async function deleteBusiness(id, btnEl) {
   if (!confirm('حذف هذه العلامة التجارية نهائياً؟')) return;
   if (btnEl) btnEl.disabled = true;
   try {
+    const bizNameForLog = ((allBusinessesAdmin.find(x => x.id === id)) || {}).bizName || id;
     await db.collection('businesses').doc(id).delete();
+    logAdminAction('biz-delete', 'حذف علامة تجارية: ' + bizNameForLog);
   } catch (err) {
     console.error(err); alert('تعذّر الحذف: ' + err.message);
   } finally {
@@ -1084,6 +1194,7 @@ async function submitAdminBiz(evt) {
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
     }
+    logAdminAction(editingBizId ? 'biz-edit' : 'biz-add', (editingBizId ? 'تعديل علامة تجارية: ' : 'إضافة علامة تجارية مباشرة: ') + bizName);
     cancelEditBusiness(); // يفرّغ النموذج ويعيد الحالة للإضافة
     alert('تم الحفظ بنجاح ✅');
   } catch (err) {
@@ -1096,11 +1207,13 @@ async function submitAdminBiz(evt) {
 
 async function rejectRequest(requestId, btnEl) {
   btnEl.disabled = true;
+  const reqForLog = pendingRequests.find(x => x.id === requestId);
   try {
     await db.collection('requests').doc(requestId).update({
       requestStatus: 'rejected',
       rejectedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
+    logAdminAction('reject', 'رفض ' + describeRequestForLog(reqForLog));
   } catch (err) {
     console.error(err);
     alert('حدث خطأ: ' + err.message);
@@ -1142,6 +1255,8 @@ function rebuildAdminPersons() {
   personsByDisplayIdAdmin = {};
   allPersonsAdmin.forEach(p => { personsByDisplayIdAdmin[String(p.displayId)] = p; });
   renderPersonsList(allPersonsAdmin);
+  // إعادة رسم الطلبات حتى تظهر تنبيهات التكرار بعد وصول قائمة الأشخاص
+  if (typeof pendingRequests !== 'undefined' && pendingRequests.length) renderRequests();
   renderAdminTree();
   renderIdCards();
   renderCollectPreview();
@@ -1170,6 +1285,7 @@ async function migrateLegacyPhones() {
       });
       await batch.commit();
     }
+    logAdminAction('migrate', 'نقل أرقام جوالات ' + legacy.length + ' فرداً إلى المنطقة الخاصة');
     console.log('🔒 تم نقل أرقام ' + legacy.length + ' فرداً إلى المنطقة الخاصة.');
     alert('🔒 تحديث أمني: تم نقل أرقام جوالات ' + legacy.length + ' فرداً إلى منطقة خاصة لا يراها إلا المدير.\nالزوار الآن لا يرون إلا آخر 4 أرقام.');
   } catch (err) {
@@ -1394,6 +1510,23 @@ function showAdminDeleteConfirm() {
 // ---------------------------------------------------------------------
 // \u062A\u0648\u062D\u064A\u062F \u0627\u0644\u062D\u0631\u0648\u0641 \u0627\u0644\u0639\u0631\u0628\u064A\u0629 \u062D\u062A\u0649 \u062A\u062A\u0637\u0627\u0628\u0642 \u0627\u0644\u0635\u064A\u063A \u0627\u0644\u0645\u062E\u062A\u0644\u0641\u0629 \u0641\u064A \u0627\u0644\u0628\u062D\u062B:
 // \u0623/\u0625/\u0622/\u0671 \u2192 \u0627 \u060C \u0629 \u2192 \u0647 \u060C \u0649 \u2192 \u064A \u060C \u0624 \u2192 \u0648 \u060C \u0626 \u2192 \u064A \u060C \u0648\u0625\u0632\u0627\u0644\u0629 \u0627\u0644\u062A\u0634\u0643\u064A\u0644 \u0648\u0627\u0644\u062A\u0637\u0648\u064A\u0644
+// ===== منع تكرار الأشخاص: نفس الاسم تحت نفس الأب =====
+function nameKeyAdmin(name) { return normalizeArabic(name).replace(/\s+/g, ''); }
+function findDuplicateAdmin(parentKey, firstName) {
+  const k = nameKeyAdmin(firstName);
+  if (!k || !parentKey) return null;
+  return allPersonsAdmin.find(p => String(p.parentKey) === String(parentKey) && nameKeyAdmin(p.firstName) === k) || null;
+}
+function dupBadgeAdmin(parentKey, firstName) {
+  const d = findDuplicateAdmin(parentKey, firstName);
+  return d ? ` <span class="dup-warn">⚠️ قد يكون مكرراً: يوجد (${d.displayId}) ${escapeHtml(shortLineageAdmin(d, 2))}</span>` : '';
+}
+function confirmNotDuplicateAdmin(parentKey, firstName) {
+  const d = findDuplicateAdmin(parentKey, firstName);
+  if (!d) return true;
+  return confirm(`تنبيه: يوجد في الشجرة مسبقاً تحت نفس الأب:\n(${d.displayId}) ${shortLineageAdmin(d, 2)}\n\nهل تريد إضافته كشخص مختلف رغم ذلك؟`);
+}
+
 function normalizeArabic(s) {
   return String(s || '')
     .replace(/[\u064B-\u0652\u0670\u0640]/g, '')
@@ -1855,6 +1988,7 @@ async function submitAdminEdit(evt) {
       } catch (e) { console.error('تعذّر الربط التبادلي مع', link, e); }
     }
 
+    logAdminAction('edit', `تعديل بيانات: ${firstName} (#${selectedAdminTargetPerson.displayId})`);
     closeAdminEditModal();
   } catch (err) {
     console.error(err);
@@ -1885,6 +2019,7 @@ async function deleteAdminPerson(person) {
 
     await db.collection('persons').doc(person.id).delete();
     try { await privatePhoneRef(person.id).delete(); } catch (e) { console.error('تعذّر حذف الرقم الخاص', e); }
+    logAdminAction('delete', `حذف: ${person.firstName || ''} (#${person.displayId})`);
     closeAdminNodeModal();
   } catch (err) {
     console.error(err);
@@ -1973,6 +2108,9 @@ async function submitAdminQuickAdd(evt) {
     alert('الرجاء إدخال الاسم');
     return;
   }
+  const dupParentKey = (selectedAdminRelationType === 'son' || selectedAdminRelationType === 'daughter')
+    ? String(selectedAdminTargetPerson.displayId) : String(selectedAdminTargetPerson.parentKey);
+  if (!confirmNotDuplicateAdmin(dupParentKey, firstName)) return;
 
   const btn = document.getElementById('admin-quick-add-submit-btn');
   btn.disabled = true;
@@ -2019,6 +2157,7 @@ async function submitAdminQuickAdd(evt) {
 
     if (married && spouseLinks.length) await applyReciprocalSpouse(createdId, firstName, spouseLinks);
 
+    logAdminAction('add', `إضافة مباشرة: ${firstName} (#${createdId}) — ${selectedAdminRelationType} لـ ${selectedAdminTargetPerson.firstName || ''} (#${selectedAdminTargetPerson.displayId})`);
     adminAddedMembersThisSession.push({ name: firstName, relation: selectedAdminRelationType });
     renderAdminAddedMembersList();
 
@@ -2270,6 +2409,7 @@ async function submitRootPerson(evt) {
     alert('الرجاء تعبئة الحقول المطلوبة');
     return;
   }
+  if (parentIdRaw && !confirmNotDuplicateAdmin(parentIdRaw, firstName)) return;
 
   const btn = document.getElementById('root-submit-btn');
   btn.disabled = true;
@@ -2317,6 +2457,7 @@ async function submitRootPerson(evt) {
 
     if (married && spouseLinks.length) await applyReciprocalSpouse(createdId, firstName, spouseLinks);
 
+    logAdminAction('add', `إضافة مباشرة: ${firstName} (#${createdId})${parentIdRaw ? ' — ابن/ابنة لـ #' + parentIdRaw : ' — جذر مستقل'}`);
     closeRootModal();
   } catch (err) {
     console.error(err);
@@ -2552,6 +2693,16 @@ async function downloadBackup(btnEl) {
     downloadFile('\ufeff' + rows.join('\r\n'),
       'نسخة_احتياطية_' + stamp + '.csv', 'text/csv;charset=utf-8');
 
+    try {
+      await db.collection('meta').doc('backup').set({
+        lastAt: firebase.firestore.FieldValue.serverTimestamp(),
+        by: (auth.currentUser && auth.currentUser.email) || '',
+        count: people.length
+      }, { merge: true });
+    } catch (e) { console.warn('تعذّر حفظ وقت النسخة الاحتياطية:', e); }
+    logAdminAction('backup', 'تنزيل نسخة احتياطية (' + people.length + ' فرد)');
+    checkBackupReminder();
+
     alert('تم تنزيل ملفين:\n• JSON يحتوي كل البيانات والصور (للاسترجاع)\n• CSV لفتحه في Excel\n\nعدد الأفراد: ' + people.length + '\nاحفظهما في مكان آمن.');
   } catch (err) {
     console.error(err);
@@ -2653,6 +2804,7 @@ async function renumberAllIds(btnEl) {
     }
 
     await db.collection('meta').doc('counter').set({ lastId: updates.length }, { merge: true });
+    logAdminAction('renumber', 'إعادة ترقيم المعرّفات: ' + updates.length + ' فرد' + (orphans ? ' (' + orphans + ' أصبحوا جذوراً مستقلة)' : ''));
 
     alert(
       'تمت إعادة الترقيم بنجاح ✅\n' +
@@ -2816,6 +2968,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('tab-btn-cards').addEventListener('click', () => switchTab('cards'));
   document.getElementById('tab-btn-collect').addEventListener('click', () => switchTab('collect'));
   document.getElementById('tab-btn-biz').addEventListener('click', () => switchTab('biz'));
+  document.getElementById('tab-btn-log').addEventListener('click', () => switchTab('log'));
+  document.getElementById('admin-log-filter').addEventListener('input', renderAdminLog);
+  document.getElementById('backup-reminder-btn').addEventListener('click', (e) => downloadBackup(e.currentTarget));
   // العلامات التجارية: نموذج الإضافة/التعديل المباشر
   setupAdminBizCategoryCombo();
   attachAdminBizOwnerPicker();

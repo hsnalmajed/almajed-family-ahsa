@@ -2153,3 +2153,27 @@ a.admin-link:hover { opacity: 1; text-decoration: underline; }
   font-size: .75rem; font-weight: 800;
   min-width: 34px; text-align: center;
 }
+.dup-warn {
+  display: inline-block; margin-inline-start: 6px; padding: 1px 8px; border-radius: 10px;
+  font-size: .78rem; font-weight: 700; color: #8a4b00; background: #fff4e0; border: 1px solid #f0c890;
+}
+
+/* ===== تذكير النسخة الاحتياطية ===== */
+.backup-reminder {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  background: #fff4e0; border: 1px solid #f0c890; color: #6b3d00;
+  border-radius: 12px; padding: 10px 14px; margin: 0 0 14px; font-size: .9rem; font-weight: 600;
+}
+/* ===== سجل النشاط ===== */
+.log-filter {
+  width: 100%; max-width: 420px; padding: 9px 12px; border: 1px solid var(--border);
+  border-radius: 10px; font-family: inherit; font-size: .92rem; background: #fcfbf8;
+}
+.log-row {
+  display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px;
+  background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 6px;
+}
+.log-ico { font-size: 1.1rem; line-height: 1.4; flex: none; }
+.log-main { min-width: 0; flex: 1; }
+.log-text { font-size: .92rem; color: var(--text); word-break: break-word; }
+.log-meta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 3px; font-size: .78rem; color: var(--muted); }

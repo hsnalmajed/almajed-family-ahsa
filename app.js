@@ -92,6 +92,22 @@ function normalizeArabic(s) {
     .toLowerCase();
 }
 
+// مفتاح مقارنة الأسماء الأولى لاكتشاف التكرار ("عبد الله" = "عبدالله" = "عبدُالله")
+function nameKey(name) {
+  return normalizeArabic(name).replace(/\s+/g, '');
+}
+
+// يبحث عن شخص بنفس الاسم تحت نفس الأب: في الشجرة، أو ضمن الأفراد المجهّزين في نفس الطلب
+function findDuplicateSibling(parentKey, firstName, pending) {
+  const k = nameKey(firstName);
+  if (!k || !parentKey) return null;
+  const inTree = allPersons.find(p => String(p.parentKey) === String(parentKey) && nameKey(p.firstName) === k);
+  if (inTree) return { person: inTree };
+  const inPending = (pending || []).find(m => String(m.parentKey) === String(parentKey) && nameKey(m.firstName) === k);
+  if (inPending) return { pending: inPending };
+  return null;
+}
+
 function familyKey(name) {
   // نفس التوحيد مع إزالة أداة التعريف "ال/آل" في بداية اسم العائلة
   return normalizeArabic(name).replace(/^(ال|آل)\s*/, '').trim();
@@ -1328,6 +1344,26 @@ async function stashCurrentMember(showErrors) {
   if (!firstName) {
     if (showErrors) showToast('الرجاء إدخال الاسم', true);
     return false;
+  }
+  // منع التكرار: هل يوجد شخص بنفس الاسم تحت نفس الأب؟
+  if (showErrors) {
+    const pk = (selectedRelationType === 'son' || selectedRelationType === 'daughter')
+      ? String(selectedTargetPerson.displayId)
+      : String(selectedTargetPerson.parentKey);
+    const dup = findDuplicateSibling(pk, firstName, pendingMembers);
+    if (dup && dup.pending) {
+      showToast(`«${firstName}» مضاف مسبقاً في هذا الطلب`, true);
+      return false;
+    }
+    if (dup && dup.person) {
+      const ok = confirm(
+        `تنبيه: يوجد في الشجرة مسبقاً تحت نفس الأب:\n` +
+        `(${dup.person.displayId}) ${shortLineage(dup.person, 2)}\n\n` +
+        `إذا كان هو نفس الشخص فاضغط «إلغاء»، ويمكنك تحديث بياناته من صفحته بدلاً من إضافته مرة أخرى.\n` +
+        `هل تريد إضافته كشخص مختلف رغم ذلك؟`
+      );
+      if (!ok) return false;
+    }
   }
   const phone = document.getElementById('input-phone').value.trim();
   // جميع حقول نموذج الإضافة إجبارية (تاريخ الميلاد أُزيل من النموذج)

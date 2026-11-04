@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
 <meta name="googlebot" content="noindex, nofollow">
 <title>لوحة تحكم المدير - عائلة الماجد</title>
-<link rel="stylesheet" href="style.css?v=101">
+<link rel="stylesheet" href="style.css?v=102">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -40,6 +40,11 @@
   </div>
 
   <div class="container">
+    <!-- تذكير النسخة الاحتياطية: يظهر إذا مرّ أكثر من شهر على آخر نسخة -->
+    <div class="backup-reminder" id="backup-reminder" style="display:none;">
+      <span id="backup-reminder-text"></span>
+      <button class="btn btn-primary btn-sm" id="backup-reminder-btn">💾 خذ نسخة احتياطية الآن</button>
+    </div>
     <div class="tabs">
       <button class="tab-btn active" id="tab-btn-requests">الطلبات المعلقة (<span id="requests-count">0</span>)</button>
       <button class="tab-btn" id="tab-btn-persons">كل الأشخاص</button>
@@ -48,6 +53,16 @@
       <button class="tab-btn" id="tab-btn-collect">📊 جمع البيانات</button>
       <button class="tab-btn" id="tab-btn-biz">🏷️ العلامات التجارية</button>
       <button class="tab-btn" id="tab-btn-proto">🎨 نموذج شجرة العائلة</button>
+      <button class="tab-btn" id="tab-btn-log">📜 سجل النشاط</button>
+    </div>
+
+    <!-- تبويب سجل النشاط -->
+    <div class="tab-panel" id="tab-panel-log">
+      <div class="panel-toolbar">
+        <input type="text" id="admin-log-filter" class="log-filter" placeholder="تصفية السجل: اسم، معرّف، أو نوع العملية" autocomplete="off">
+      </div>
+      <p class="field-hint" style="margin:0 0 10px;">كل عملية يقوم بها المدير تُسجَّل هنا تلقائياً مع الوقت والبريد. السجل لا يمكن تعديله أو حذفه حتى من المدير. يُعرض آخر 300 عملية.</p>
+      <div id="admin-log-list"></div>
     </div>
 
     <!-- تبويب الطلبات -->
@@ -546,6 +561,6 @@
 <script src="firebase-config.js?v=6"></script>
 <script src="birthdate.js?v=1"></script>
 <script src="bizextras.js?v=2"></script>
-<script src="admin.js?v=100"></script>
+<script src="admin.js?v=101"></script>
 </body>
 </html>
