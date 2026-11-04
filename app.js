@@ -1996,8 +1996,13 @@ function setupBizCategoryCombo() {
   });
 }
 
+let bizExtrasEditor = null;
 function openBizAddModal() {
   setupBizCategoryCombo();
+  if (!bizExtrasEditor && window.BizExtras) {
+    bizExtrasEditor = BizExtras.createEditor(document.getElementById('biz-extras-editor'));
+  }
+  if (bizExtrasEditor) bizExtrasEditor.clear();
   document.getElementById('biz-add-form').reset();
   selectedBizLogoFile = null;
   const prev = document.getElementById('biz-logo-preview');
@@ -2037,6 +2042,8 @@ async function submitBusinessRequest(evt) {
   const bizPhone = document.getElementById('biz-phone').value.trim();
   if (!bizPhone) { showToast('الرجاء إدخال رقم التواصل', true); return; }
   if (!selectedBizLogoFile) { showToast('الرجاء اختيار صورة للعلامة التجارية', true); return; }
+  const extrasRes = bizExtrasEditor ? bizExtrasEditor.read() : { values: [], error: '' };
+  if (extrasRes.error) { showToast(extrasRes.error, true); return; }
 
   const btn = document.getElementById('submit-biz-btn');
   btn.disabled = true; btn.textContent = 'جارٍ الإرسال...';
@@ -2050,6 +2057,7 @@ async function submitBusinessRequest(evt) {
       ownerId,
       bizPhone,
       category,
+      extras: extrasRes.values,
       requestStatus: 'pending',
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
@@ -2119,6 +2127,7 @@ function openBizDetails(b) {
       <div class="biz-detail-row"><span class="biz-detail-label">المجال</span><span>${escapeHtmlLocal(b.category || '—')}</span></div>
       <div class="biz-detail-row"><span class="biz-detail-label">المالك</span><span>${ownerLine}</span></div>
       ${b.bizPhone ? `<div class="biz-detail-row"><span class="biz-detail-label">رقم التواصل</span>${contactActionsHtml(b.bizPhone)}</div>` : ''}
+      ${window.BizExtras ? BizExtras.renderRows(b.extras) : ''}
     </div>
     ${owner ? `<button type="button" class="btn btn-secondary biz-detail-owner-btn" id="biz-goto-owner">👤 عرض صاحب النشاط في الشجرة</button>` : ''}
   `;

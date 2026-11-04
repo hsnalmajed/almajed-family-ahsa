@@ -172,7 +172,7 @@ function switchTab(tabName) {
   if (tabName === 'cards') renderIdCards();
   if (tabName === 'collect') renderCollectPreview();
   if (tabName === 'proto') renderProtoTree();
-  if (tabName === 'biz') { setupAdminBizCategoryCombo(); renderAdminBizList(); }
+  if (tabName === 'biz') { setupAdminBizCategoryCombo(); getAdminBizExtrasEditor(); renderAdminBizList(); }
 }
 
 // ---------------------------------------------------------------------
@@ -614,6 +614,7 @@ function renderRequests() {
           <div class="req-meta">المجال: ${escapeHtml(r.category || '—')}</div>
           <div class="req-meta">المالك: ${escapeHtml(owner)}</div>
           <div class="req-meta">رقم التواصل: ${escapeHtml(r.bizPhone || '—')}</div>
+          ${(window.BizExtras && BizExtras.sanitize(r.extras).length) ? `<div class="req-biz-extras">${BizExtras.renderRows(r.extras)}</div>` : ''}
         </div>
         <div class="req-actions">
           <button class="btn btn-primary btn-sm" data-approve-business="${r.id}">قبول</button>
@@ -873,6 +874,7 @@ async function approveBusinessRequest(requestId, btnEl) {
         ownerId: (typeof r.ownerId === 'number') ? r.ownerId : null,
         bizPhone: r.bizPhone || '',
         category: r.category || '',
+        extras: window.BizExtras ? BizExtras.sanitize(r.extras) : [],
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       tx.update(reqRef, { requestStatus: 'approved', approvedAt: firebase.firestore.FieldValue.serverTimestamp() });
@@ -941,7 +943,7 @@ function renderAdminBizList() {
       <img class="admin-biz-thumb" src="${b.logoURL || ''}" onerror="this.style.visibility='hidden'">
       <div class="admin-biz-info">
         <div class="admin-biz-name">${escapeHtml(b.bizName || '')}</div>
-        <div class="admin-biz-meta">${escapeHtml(b.category || '')} — المالك: ${escapeHtml(owner)}${b.bizPhone ? ' — 📞 ' + escapeHtml(b.bizPhone) : ''}</div>
+        <div class="admin-biz-meta">${escapeHtml(b.category || '')} — المالك: ${escapeHtml(owner)}${b.bizPhone ? ' — 📞 ' + escapeHtml(b.bizPhone) : ''}${(window.BizExtras && BizExtras.summary(b.extras)) ? ' — ' + escapeHtml(BizExtras.summary(b.extras)) : ''}</div>
       </div>
       <div style="display:flex; gap:6px; flex-shrink:0;">
         <button class="btn btn-secondary btn-sm" data-edit-biz="${b.id}">✏️ تعديل</button>
@@ -955,6 +957,15 @@ function renderAdminBizList() {
   box.querySelectorAll('[data-edit-biz]').forEach(btn => {
     btn.addEventListener('click', () => startEditBusiness(btn.dataset.editBiz));
   });
+}
+
+let adminBizExtrasEditor = null;
+function getAdminBizExtrasEditor() {
+  if (!adminBizExtrasEditor && window.BizExtras) {
+    const el = document.getElementById('admin-biz-extras-editor');
+    if (el) adminBizExtrasEditor = BizExtras.createEditor(el);
+  }
+  return adminBizExtrasEditor;
 }
 
 // تعبئة النموذج لتعديل علامة موجودة
@@ -972,6 +983,8 @@ function startEditBusiness(id) {
   const prev = document.getElementById('admin-biz-logo-preview');
   if (b.logoURL) { prev.src = b.logoURL; prev.style.display = 'block'; } else { prev.style.display = 'none'; }
   selectedAdminBizLogoFile = null; // الاحتفاظ بالشعار الحالي ما لم يُختر جديد
+  const exEd = getAdminBizExtrasEditor();
+  if (exEd) exEd.setValues(b.extras || []);
   document.getElementById('admin-biz-submit-btn').textContent = '💾 حفظ التعديلات';
   document.getElementById('admin-biz-cancel-edit-btn').style.display = 'block';
   document.getElementById('admin-biz-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -985,6 +998,8 @@ function cancelEditBusiness() {
   const ownerInput = document.getElementById('admin-biz-owner-input');
   ownerInput.value = ''; ownerInput.dataset.selectedId = '';
   selectedAdminBizLogoFile = null;
+  const exEd = getAdminBizExtrasEditor();
+  if (exEd) exEd.clear();
   document.getElementById('admin-biz-submit-btn').textContent = 'حفظ العلامة مباشرة';
   document.getElementById('admin-biz-cancel-edit-btn').style.display = 'none';
 }
@@ -1051,6 +1066,10 @@ async function submitAdminBiz(evt) {
 
   const ownerRef = shortLineageAdmin(personsByDisplayIdAdmin[String(ownerId)], 2) || String(ownerId);
   const bizPhone = document.getElementById('admin-biz-phone').value.trim();
+  const exEd = getAdminBizExtrasEditor();
+  const extrasRes = exEd ? exEd.read() : { values: [], error: '' };
+  if (extrasRes.error) { alert(extrasRes.error); return; }
+  const extras = extrasRes.values;
   const btn = document.getElementById('admin-biz-submit-btn');
   btn.disabled = true; btn.textContent = 'جارٍ الحفظ...';
   try {
@@ -1058,10 +1077,10 @@ async function submitAdminBiz(evt) {
       ? await resizeImageToBase64Admin(selectedAdminBizLogoFile, 320, 0.8)
       : existing.logoURL;
     if (editingBizId) {
-      await db.collection('businesses').doc(editingBizId).update({ bizName, logoURL, ownerRef, ownerId, bizPhone, category });
+      await db.collection('businesses').doc(editingBizId).update({ bizName, logoURL, ownerRef, ownerId, bizPhone, category, extras });
     } else {
       await db.collection('businesses').add({
-        bizName, logoURL, ownerRef, ownerId, bizPhone, category,
+        bizName, logoURL, ownerRef, ownerId, bizPhone, category, extras,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
     }

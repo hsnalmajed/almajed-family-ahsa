@@ -4,7 +4,7 @@
 // =====================================================================
 
 // عند كل تحديث للموقع نرفع هذا الرقم ليُحذف المخزون القديم تلقائياً
-const CACHE_VERSION = 'almajed-v8';
+const CACHE_VERSION = 'almajed-v9';
 
 // الملفات الأساسية التي تُخزَّن عند أول فتح
 const CORE_ASSETS = [
@@ -13,6 +13,7 @@ const CORE_ASSETS = [
   './style.css',
   './app.js',
   './relationship.js',
+  './bizextras.js',
   './firebase-config.js',
   './logo.jpg',
   './prepared-by.jpg',
