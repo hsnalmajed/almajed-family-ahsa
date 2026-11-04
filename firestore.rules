@@ -80,7 +80,7 @@ service cloud.firestore {
     // (الصور تُصغَّر في المتصفح إلى نحو 30 كيلوبايت، فالحدود هنا واسعة للاستخدام الطبيعي)
     function reasonableRequestSize(d) {
       return d.size() <= 30
-        && (!('members' in d) || (d.members is list && d.members.size() <= 30))
+        && (!('members' in d) || (d.members is list && d.members.size() <= 50))
         && (!('photoURL' in d) || (d.photoURL is string && d.photoURL.size() <= 200000))
         && (!('logoURL' in d) || (d.logoURL is string && d.logoURL.size() <= 200000))
         && (!('firstName' in d) || (d.firstName is string && d.firstName.size() <= 100))
