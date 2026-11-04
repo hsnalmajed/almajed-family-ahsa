@@ -73,7 +73,26 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time
         && !('approvedAt' in request.resource.data)
         && reasonableRequestSize(request.resource.data)
+        && validRequestContent(request.resource.data)
       );
+    }
+
+    // فحص محتوى كل نوع من الطلبات (منقول من القواعد السابقة)
+    function validRequestContent(d) {
+      return (d.requestType == 'add'
+          && d.firstName is string && d.firstName.size() > 0
+          && d.gender in ['male', 'female']
+          && d.status in ['alive', 'death']
+          && d.relationType in ['son', 'daughter', 'brother', 'sister'])
+        || (d.requestType == 'addBatch'
+          && d.members is list && d.members.size() > 0)
+        || (d.requestType == 'update'
+          && d.targetPersonId is number
+          && d.status in ['alive', 'death'])
+        || (d.requestType == 'business'
+          && d.bizName is string && d.bizName.size() > 0
+          && d.category is string && d.category.size() > 0
+          && d.ownerRef is string && d.ownerRef.size() > 0);
     }
 
     // حدود معقولة لحجم الطلب حتى لا يُغرق أحد لوحة المدير
