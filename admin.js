@@ -34,6 +34,29 @@ const BUSINESS_CATEGORIES_ADMIN = [
 const RELATION_TO_GENDER_ADMIN = { son: 'male', brother: 'male', daughter: 'female', sister: 'female' };
 
 // ---------------------------------------------------------------------
+// حماية أرقام الجوال
+// الأرقام الكاملة لا تُحفظ في مجموعة persons (التي يقرؤها كل زائر)، بل في
+// مجموعة خاصة personsPrivate/{نفس معرّف مستند الشخص} لا يقرؤها إلا المدير
+// (حسب firestore.rules). في persons يُحفظ فقط آخر 4 أرقام (phoneLast4).
+// ---------------------------------------------------------------------
+const PRIVATE_COLLECTION = 'personsPrivate';
+let privatePhonesAdmin = {};          // docId -> phone
+let rawPersonsAdmin = [];             // آخر نسخة من persons كما وصلت من القاعدة
+let phonesMigrationStarted = false;
+
+function phoneLast4Of(phone) {
+  const d = String(phone || '').replace(/\D/g, '');
+  return d ? d.slice(-4) : '';
+}
+function privatePhoneRef(personDocId) {
+  return db.collection(PRIVATE_COLLECTION).doc(personDocId);
+}
+// يكتب الرقم في المنطقة الخاصة ضمن معاملة أو دفعة (tx أو batch)
+function setPrivatePhone(writer, personDocId, phone) {
+  writer.set(privatePhoneRef(personDocId), { phone: String(phone || '') }, { merge: true });
+}
+
+// ---------------------------------------------------------------------
 // تسجيل الدخول بكلمة السر
 // ---------------------------------------------------------------------
 async function handleLogin(evt) {
@@ -622,12 +645,13 @@ async function approveRequest(requestId, btnEl) {
       const newId = lastId + 1;
 
       const personRef = db.collection('persons').doc();
+      setPrivatePhone(tx, personRef.id, reqData.phone || '');
       tx.set(personRef, {
         displayId: newId,
         firstName: reqData.firstName,
         gender: reqData.gender,
         photoURL: reqData.photoURL || '',
-        phone: reqData.phone || '',
+        phoneLast4: phoneLast4Of(reqData.phone),
         birthDate: reqData.birthDate || '',
         birthDateHijri: reqData.birthDateHijri || '',
         birthDateCal: reqData.birthDateCal || '',
@@ -673,12 +697,13 @@ async function approveBatchRequest(requestId, btnEl) {
         lastId += 1;
         const married = (m.maritalStatus || 'single') === 'married';
         const personRef = db.collection('persons').doc();
+        setPrivatePhone(tx, personRef.id, m.phone || '');
         tx.set(personRef, {
           displayId: lastId,
           firstName: m.firstName,
           gender: m.gender,
           photoURL: m.photoURL || '',
-          phone: m.phone || '',
+          phoneLast4: phoneLast4Of(m.phone),
           birthDate: m.birthDate || '',
           birthDateHijri: m.birthDateHijri || '',
           birthDateCal: m.birthDateCal || '',
@@ -745,7 +770,10 @@ async function approveUpdateRequest(requestId, btnEl) {
 
       const updates = {};
       // نقبل النص الفارغ أيضاً حتى يتمكن المستخدم من حذف رقمه
-      if (typeof reqData.phone === 'string') updates.phone = reqData.phone;
+      if (typeof reqData.phone === 'string') {
+        updates.phoneLast4 = phoneLast4Of(reqData.phone);
+        setPrivatePhone(tx, personRef.id, reqData.phone);
+      }
       // تاريخ الميلاد: نطبّقه فقط إن أرسل المستخدم قيمة (حتى لا نمسح ما سجّلته الإدارة سابقاً)
       if (typeof reqData.birthDate === 'string' && reqData.birthDate.trim()) {
         updates.birthDate = reqData.birthDate.trim();
@@ -1039,18 +1067,71 @@ async function rejectRequest(requestId, btnEl) {
 // ---------------------------------------------------------------------
 // تبويب: كل الأشخاص
 // ---------------------------------------------------------------------
+let personsListenerStarted = false;
 function listenToPersonsAdmin() {
+  if (personsListenerStarted) return;   // منع تكرار المستمعين عند الدخول وإعادة التحميل
+  personsListenerStarted = true;
+
   db.collection('persons').orderBy('displayId').onSnapshot(snapshot => {
-    allPersonsAdmin = [];
-    snapshot.forEach(doc => allPersonsAdmin.push({ id: doc.id, ...doc.data() }));
-    personsByDisplayIdAdmin = {};
-    allPersonsAdmin.forEach(p => { personsByDisplayIdAdmin[String(p.displayId)] = p; });
-    renderPersonsList(allPersonsAdmin);
-    renderAdminTree();
-    renderIdCards();
-    renderCollectPreview();
-    renderProtoTree();
+    rawPersonsAdmin = [];
+    snapshot.forEach(doc => rawPersonsAdmin.push({ id: doc.id, ...doc.data() }));
+    rebuildAdminPersons();
+    migrateLegacyPhones();
   }, err => console.error(err));
+
+  // الأرقام الكاملة (للمدير فقط)
+  db.collection(PRIVATE_COLLECTION).onSnapshot(snapshot => {
+    privatePhonesAdmin = {};
+    snapshot.forEach(doc => { privatePhonesAdmin[doc.id] = doc.data().phone || ''; });
+    rebuildAdminPersons();
+  }, err => console.error('تعذّر قراءة الأرقام الخاصة:', err));
+}
+
+// يدمج الرقم الكامل من المنطقة الخاصة داخل كائن الشخص (في ذاكرة المتصفح فقط)
+// حتى تعمل بقية شاشات المدير كما هي باستخدام p.phone
+function rebuildAdminPersons() {
+  allPersonsAdmin = rawPersonsAdmin.map(p => {
+    const priv = privatePhonesAdmin[p.id];
+    return { ...p, phone: (priv !== undefined && priv !== '') ? priv : (p.phone || '') };
+  });
+  personsByDisplayIdAdmin = {};
+  allPersonsAdmin.forEach(p => { personsByDisplayIdAdmin[String(p.displayId)] = p; });
+  renderPersonsList(allPersonsAdmin);
+  renderAdminTree();
+  renderIdCards();
+  renderCollectPreview();
+  renderProtoTree();
+}
+
+// نقل تلقائي لمرة واحدة: أي شخص ما زال رقمه الكامل محفوظاً في persons (البيانات القديمة)
+// يُنقل رقمه إلى المنطقة الخاصة ويُحذف من persons ويُترك آخر 4 أرقام فقط.
+async function migrateLegacyPhones() {
+  if (phonesMigrationStarted) return;
+  const legacy = rawPersonsAdmin.filter(p => Object.prototype.hasOwnProperty.call(p, 'phone'));
+  if (!legacy.length) return;
+  phonesMigrationStarted = true;
+  try {
+    const CHUNK = 200; // كل شخص = عمليتان، والحد 500 عملية للدفعة
+    for (let i = 0; i < legacy.length; i += CHUNK) {
+      const batch = db.batch();
+      legacy.slice(i, i + CHUNK).forEach(p => {
+        const phone = String(p.phone || '');
+        // لا نمسح رقماً أحدث موجوداً مسبقاً في المنطقة الخاصة
+        if (phone && !privatePhonesAdmin[p.id]) setPrivatePhone(batch, p.id, phone);
+        batch.update(db.collection('persons').doc(p.id), {
+          phone: firebase.firestore.FieldValue.delete(),
+          phoneLast4: phoneLast4Of(privatePhonesAdmin[p.id] || phone)
+        });
+      });
+      await batch.commit();
+    }
+    console.log('🔒 تم نقل أرقام ' + legacy.length + ' فرداً إلى المنطقة الخاصة.');
+    alert('🔒 تحديث أمني: تم نقل أرقام جوالات ' + legacy.length + ' فرداً إلى منطقة خاصة لا يراها إلا المدير.\nالزوار الآن لا يرون إلا آخر 4 أرقام.');
+  } catch (err) {
+    phonesMigrationStarted = false;
+    console.error('تعذّر نقل الأرقام:', err);
+    alert('تعذّر نقل الأرقام إلى المنطقة الخاصة: ' + err.message + '\nتأكد من نشر قواعد الحماية (firestore.rules) ثم أعد تحميل الصفحة.');
+  }
 }
 
 // ---------------------------------------------------------------------
@@ -1703,14 +1784,18 @@ async function submitAdminEdit(evt) {
     const motherName = (motherOpt && motherOpt.value) ? (motherOpt.dataset.mname || '') : '';
 
     const updates = {
-      firstName, gender, phone, birthDate, birthDateHijri, birthDateCal, status,
+      firstName, gender, phoneLast4: phoneLast4Of(phone), birthDate, birthDateHijri, birthDateCal, status,
       maritalStatus: married ? 'married' : 'single',
-      spouseFamilies, spouseLinks, motherId, motherName
+      spouseFamilies, spouseLinks, motherId, motherName,
+      phone: firebase.firestore.FieldValue.delete()   // الرقم الكامل لا يُحفظ في البيانات العامة
     };
     if (selectedAdminEditPhotoFile) {
       updates.photoURL = await resizeImageToBase64Admin(selectedAdminEditPhotoFile);
     }
-    await db.collection('persons').doc(selectedAdminTargetPerson.id).update(updates);
+    const editBatch = db.batch();
+    editBatch.update(db.collection('persons').doc(selectedAdminTargetPerson.id), updates);
+    setPrivatePhone(editBatch, selectedAdminTargetPerson.id, phone);
+    await editBatch.commit();
 
     // ربط تبادلي: إضافة هذا الشخص كزوج/زوجة لدى كل زوجة مرتبطة من العائلة
     for (const link of spouseLinks) {
@@ -1754,6 +1839,7 @@ async function deleteAdminPerson(person) {
     }
 
     await db.collection('persons').doc(person.id).delete();
+    try { await privatePhoneRef(person.id).delete(); } catch (e) { console.error('تعذّر حذف الرقم الخاص', e); }
     closeAdminNodeModal();
   } catch (err) {
     console.error(err);
@@ -1874,9 +1960,10 @@ async function submitAdminQuickAdd(evt) {
       createdId = newId;
 
       const personRef = db.collection('persons').doc();
+      setPrivatePhone(tx, personRef.id, phone);
       tx.set(personRef, {
         displayId: newId,
-        firstName, gender, phone, birthDate, birthDateHijri, birthDateCal, status, photoURL,
+        firstName, gender, phoneLast4: phoneLast4Of(phone), birthDate, birthDateHijri, birthDateCal, status, photoURL,
         maritalStatus: married ? 'married' : 'single',
         spouseFamilies, spouseLinks, motherId, motherName,
         parentKey,
@@ -2172,9 +2259,10 @@ async function submitRootPerson(evt) {
       }
 
       const personRef = db.collection('persons').doc();
+      setPrivatePhone(tx, personRef.id, phone);
       tx.set(personRef, {
         displayId: newId,
-        firstName, gender, phone, birthDate, birthDateHijri, birthDateCal, status, photoURL, parentKey,
+        firstName, gender, phoneLast4: phoneLast4Of(phone), birthDate, birthDateHijri, birthDateCal, status, photoURL, parentKey,
         maritalStatus: married ? 'married' : 'single',
         spouseFamilies, spouseLinks, motherId, motherName,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -2385,8 +2473,14 @@ async function downloadBackup(btnEl) {
   if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'جارٍ التجهيز...'; }
   try {
     const snap = await db.collection('persons').get();
+    const privSnap = await db.collection(PRIVATE_COLLECTION).get();
+    const privPhones = {};
+    privSnap.forEach(d => { privPhones[d.id] = d.data().phone || ''; });
     const people = [];
-    snap.forEach(d => people.push({ docId: d.id, ...d.data() }));
+    snap.forEach(d => {
+      const data = d.data();
+      people.push({ docId: d.id, ...data, phone: privPhones[d.id] || data.phone || '' });
+    });
     people.sort((a, b) => (Number(a.displayId) || 0) - (Number(b.displayId) || 0));
 
     const counterSnap = await db.collection('meta').doc('counter').get();

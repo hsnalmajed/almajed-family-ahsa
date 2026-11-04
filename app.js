@@ -666,7 +666,7 @@ function closeChoiceModal() {
 // يعرض آخر 4 أرقام فقط من رقم الجوال، والباقي نقاطاً
 function maskPhone(phone) {
   const digits = String(phone || '').replace(/\D/g, '');
-  if (digits.length < 4) return '••••';
+  if (!digits) return '••••';
   return '••• •••• ' + digits.slice(-4);
 }
 
@@ -703,8 +703,10 @@ function openUpdateModal(person) {
   }
 
   phoneInput.value = '';
-  if (person.phone) {
-    phoneMask.textContent = maskPhone(person.phone);
+  // الرقم الكامل لم يعد يصل للزائر أصلاً؛ تصل فقط آخر 4 أرقام (phoneLast4)
+  const last4 = person.phoneLast4 || String(person.phone || '').replace(/\D/g, '').slice(-4);
+  if (last4) {
+    phoneMask.textContent = maskPhone(last4);
     phoneBox.style.display = 'flex';
     phoneInput.style.display = 'none';
     if (phoneHint) phoneHint.textContent = 'رقمك مسجّل لدينا (تظهر آخر 4 أرقام فقط). اضغط «تغيير الرقم» إن أردت تحديثه.';

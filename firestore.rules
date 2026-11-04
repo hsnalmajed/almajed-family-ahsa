@@ -1,0 +1,74 @@
+rules_version = '2';
+
+// =====================================================================
+// قواعد حماية قاعدة بيانات «عائلة الماجد»
+// تُنسخ كاملة إلى: Firebase Console ← Firestore Database ← Rules ← Publish
+//
+// الملخّص:
+//   • الشجرة (persons) والعلامات التجارية (businesses): قراءة فقط للزوار.
+//   • أرقام الجوال الكاملة (personsPrivate): المدير فقط — قراءة وكتابة.
+//   • الطلبات (requests): الزائر يُرسل طلباً جديداً فقط، ولا يقرأ أي طلب.
+//   • أي تعديل أو حذف أو إضافة مباشرة: المدير فقط.
+//   • أي مجموعة أخرى غير مذكورة هنا: مغلقة تماماً.
+// =====================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---- من هو المدير؟ ----
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == 'admin@family-tree.local';
+    }
+
+    // ---- من يرى الشجرة؟ ----
+    // مفتوحة للجميع (أي شخص معه الرابط)
+    function canViewTree() {
+      return true;
+    }
+
+    // ---- أفراد العائلة (بيانات عامة بدون أرقام كاملة) ----
+    match /persons/{personId} {
+      allow read: if canViewTree() || isAdmin();
+      // يُمنع حفظ الرقم الكامل هنا؛ مكانه personsPrivate
+      allow create: if isAdmin() && !('phone' in request.resource.data);
+      allow update: if isAdmin()
+        && (!('phone' in request.resource.data)
+            || ('phone' in resource.data && request.resource.data.phone == resource.data.phone));
+      allow delete: if isAdmin();
+    }
+
+    // ---- أرقام الجوال الكاملة: المدير فقط ----
+    match /personsPrivate/{personId} {
+      allow read, write: if isAdmin();
+    }
+
+    // ---- العلامات التجارية: رقم النشاط معروض عمداً للتواصل ----
+    match /businesses/{bizId} {
+      allow read: if canViewTree() || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // ---- عدّاد المعرّفات: المدير فقط ----
+    match /meta/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    // ---- الطلبات: الزائر يرسل فقط، والمدير يراجع ----
+    match /requests/{requestId} {
+      allow read, update, delete: if isAdmin();
+      allow create: if isAdmin() || (
+        canViewTree()
+        && request.resource.data.requestStatus == 'pending'
+        && request.resource.data.requestType in ['add', 'addBatch', 'update', 'business']
+        && request.resource.data.createdAt == request.time
+        && !('approvedAt' in request.resource.data)
+      );
+    }
+
+    // ---- كل ما عدا ذلك مغلق ----
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

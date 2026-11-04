@@ -16,7 +16,7 @@
     <h2>🔒 دخول المدير</h2>
     <form id="login-form">
       <div class="error-text" id="login-error">كلمة السر غير صحيحة</div>
-      <input type="password" id="admin-password" placeholder="كلمة السر" inputmode="numeric" required autofocus>
+      <input type="password" id="admin-password" placeholder="كلمة السر" autocomplete="current-password" required autofocus>
       <button type="submit" class="btn btn-primary" id="login-btn" style="width:100%;">دخول</button>
     </form>
     <a class="back-link" href="index.html">⟵ العودة إلى الشجرة</a>
@@ -532,8 +532,8 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
-<script src="firebase-config.js"></script>
+<script src="firebase-config.js?v=2"></script>
 <script src="birthdate.js?v=1"></script>
-<script src="admin.js?v=95"></script>
+<script src="admin.js?v=96"></script>
 </body>
 </html>

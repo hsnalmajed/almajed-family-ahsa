@@ -11,11 +11,11 @@ const firebaseConfig = {
   appId: "1:932265240190:web:a0983ec1b76ff2dfab1a2f"
 };
 
-// البريد الإلكتروني الداخلي لحساب المدير (المستخدم يدخل فقط كلمة السر 2355)
+// البريد الإلكتروني الداخلي لحساب المدير (المدير يكتب كلمة السر فقط في صفحة الدخول).
+// ⚠️ لا تكتب كلمة السر في أي ملف من ملفات الموقع: كل ملف هنا يراه أي زائر.
+// كلمة السر تُحفظ فقط في Firebase Authentication، وقواعد الحماية (firestore.rules)
+// هي التي تمنع غير المدير من التعديل أو قراءة الأرقام.
 const ADMIN_EMAIL = "admin@family-tree.local";
-
-// كلمة سر المدير (يجب أن تطابق كلمة السر التي أنشأتها لحساب المدير في Firebase Authentication)
-const ADMIN_PASSWORD = "2355";
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
