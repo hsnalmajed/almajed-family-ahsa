@@ -57,42 +57,64 @@ function setPrivatePhone(writer, personDocId, phone) {
 }
 
 // ---------------------------------------------------------------------
-// تسجيل الدخول بكلمة السر
+// تسجيل دخول المدير بحساب Google
 // ---------------------------------------------------------------------
+// المدير يدخل بحساب Google الخاص به (المحمي بالتحقق بخطوتين عبر Authenticator).
+// قواعد firestore.rules هي الحماية الحقيقية: لا تسمح بالكتابة إلا لهذا البريد المؤكَّد.
+function isAdminUser(user) {
+  return !!(user && user.emailVerified
+    && String(user.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase());
+}
+
+function showLoginError(msg) {
+  const errBox = document.getElementById('login-error');
+  errBox.textContent = msg;
+  errBox.style.display = 'block';
+}
+
 async function handleLogin(evt) {
   evt.preventDefault();
-  const pass = document.getElementById('admin-password').value.trim();
-  const errBox = document.getElementById('login-error');
-  errBox.style.display = 'none';
+  document.getElementById('login-error').style.display = 'none';
 
   const loginBtn = document.getElementById('login-btn');
+  const loginTxt = document.getElementById('login-btn-text');
   loginBtn.disabled = true;
-  loginBtn.textContent = 'جارٍ التحقق...';
+  loginTxt.textContent = 'جارٍ التحقق...';
 
   try {
-    await auth.signInWithEmailAndPassword(ADMIN_EMAIL, pass);
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    const result = await auth.signInWithPopup(provider);
+    if (!isAdminUser(result.user)) {
+      const email = result.user && result.user.email;
+      await auth.signOut();
+      showLoginError('الحساب ' + (email || '') + ' ليس حساب المدير. سجّل الدخول بحساب المدير المعتمد.');
+      return;
+    }
     showAdminPanel();
   } catch (err) {
     console.error('Admin login error:', err.code, err.message);
-    errBox.textContent = describeAuthError(err);
-    errBox.style.display = 'block';
+    showLoginError(describeAuthError(err));
   } finally {
     loginBtn.disabled = false;
-    loginBtn.textContent = 'دخول';
+    loginTxt.textContent = 'الدخول بحساب Google';
   }
 }
 
 function describeAuthError(err) {
   switch (err.code) {
-    case 'auth/wrong-password':
-      return 'كلمة السر غير صحيحة. تأكد أنها مطابقة تماماً لكلمة سر حساب admin@family-tree.local في Firebase Authentication.';
-    case 'auth/user-not-found':
-      return 'حساب المدير (admin@family-tree.local) غير موجود في Firebase Authentication > Users. أنشئه أولاً (راجع الخطوة 2 في README).';
-    case 'auth/invalid-credential':
-    case 'auth/invalid-login-credentials':
-      return 'كلمة السر غير صحيحة، أو حساب admin@family-tree.local غير موجود. تحقق من الحساب في Firebase Authentication > Users (البريد وكلمة السر يجب أن تتطابق تماماً بدون مسافات زائدة).';
+    case 'auth/popup-closed-by-user':
+    case 'auth/cancelled-popup-request':
+      return 'أُغلقت نافذة Google قبل إكمال الدخول. حاول مرة أخرى.';
+    case 'auth/popup-blocked':
+      return 'المتصفح منع نافذة Google المنبثقة. اسمح بالنوافذ المنبثقة لهذا الموقع ثم حاول مجدداً (أو افتح الصفحة في Chrome/Safari مباشرة وليس من داخل واتساب).';
+    case 'auth/operation-not-supported-in-this-environment':
+    case 'auth/web-storage-unsupported':
+      return 'هذا المتصفح لا يدعم الدخول بحساب Google. افتح صفحة المدير في Chrome أو Safari مباشرة.';
+    case 'auth/account-exists-with-different-credential':
+      return 'يوجد حساب بنفس البريد بطريقة دخول أخرى. احذف الحساب القديم من Firebase Authentication ثم حاول مجدداً.';
     case 'auth/operation-not-allowed':
-      return 'طريقة الدخول بالبريد وكلمة السر غير مُفعّلة. فعّلها من Firebase Console > Authentication > Sign-in method > Email/Password.';
+      return 'الدخول بحساب Google غير مُفعّل. فعّله من Firebase Console > Authentication > Sign-in method > Google.';
     case 'auth/invalid-api-key':
     case 'auth/api-key-not-valid':
     case 'auth/invalid-app-credential':
@@ -125,8 +147,11 @@ function showAdminPanel() {
 
 // عند إعادة تحميل الصفحة وهناك جلسة مفتوحة مسبقاً
 auth.onAuthStateChanged(user => {
-  if (user && user.email === ADMIN_EMAIL) {
+  if (isAdminUser(user)) {
     showAdminPanel();
+  } else if (user) {
+    // جلسة قديمة لحساب ليس مديراً (مثل حساب كلمة السر السابق): نُخرجه
+    auth.signOut();
   }
 });
 

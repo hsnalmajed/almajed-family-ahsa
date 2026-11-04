@@ -16,9 +16,13 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ---- من هو المدير؟ ----
+    // حساب Google الخاص بالمدير فقط (محمي بالتحقق بخطوتين)، ويجب أن يكون الدخول
+    // عبر Google وأن يكون البريد مؤكَّداً. لتغيير المدير: غيّر البريد هنا وفي firebase-config.js.
     function isAdmin() {
       return request.auth != null
-        && request.auth.token.email == 'admin@family-tree.local';
+        && request.auth.token.email == 'almajedhsn@gmail.com'
+        && request.auth.token.email_verified == true
+        && request.auth.token.firebase.sign_in_provider == 'google.com';
     }
 
     // ---- من يرى الشجرة؟ ----
