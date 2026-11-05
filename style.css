@@ -2268,3 +2268,12 @@ header.site-header p.hdr-tagline { color: var(--muted); font-size: 1rem; font-we
   header.site-header .prepared-by .pb-photo { width: 58px; height: 58px; }
   header.site-header .prepared-by .pb-name { font-size: .95rem; }
 }
+
+/* توسيط العنوان والعبارة والبطاقة عمودياً بجانب الشعار */
+@media (min-width: 900px) {
+  header.site-header { grid-template-rows: 1fr auto auto auto 1fr; }
+  header.site-header .logo-wrap, .hdr-divider { grid-row: 1 / -1; }
+  header.site-header h1 { grid-row: 2; }
+  header.site-header p.hdr-tagline { grid-row: 3; }
+  header.site-header .prepared-wrap { grid-row: 4; }
+}
