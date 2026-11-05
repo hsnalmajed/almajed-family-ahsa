@@ -2393,3 +2393,29 @@ header.site-header p.hdr-tagline { color: var(--muted); font-size: 1rem; font-we
   transition: opacity .2s ease, transform .2s ease;
 }
 .rc-flash.show { opacity: 1; transform: translate(-50%, 0); }
+/* الاستقبال: الزوجات، الأم، الوالد والإخوة */
+.rc-box-wide { grid-column: 1 / -1; }
+.rc-sub { margin: 18px 0 8px; font-size: 1rem; color: var(--primary-dark); }
+.rc-sub small { color: var(--muted); }
+.rc-select { appearance: auto; }
+.rc-select:disabled { color: var(--muted); background: #f3f1ec; }
+.rc-sp { border: 1px dashed var(--border); border-radius: 12px; padding: 10px; background: #fcfbf8; }
+.rc-sp-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.rc-sp-chip { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 4px 6px 4px 12px; font-size: .9rem; font-weight: 700; }
+.rc-sp-chip.in { background: #eef6f0; border: 1px solid #cfe5d6; color: #1f6b3d; }
+.rc-sp-chip.out { background: #fff7e6; border: 1px solid #f0d79a; color: #7a5410; }
+.rc-sp-chip small { font-weight: 500; opacity: .8; }
+.rc-linkname { font-family: inherit; font-weight: 800; border: none; background: none; color: inherit; cursor: pointer; padding: 0; }
+.rc-linkname i { font-style: normal; color: var(--gold-dark); }
+.rc-x { border: none; background: rgba(0,0,0,.06); color: #8a2a2a; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-size: .8rem; line-height: 1; }
+.rc-x:hover { background: #fbeaea; }
+.rc-sp-add { display: flex; flex-direction: column; gap: 8px; }
+.rc-sp-out { display: flex; gap: 8px; }
+.rc-sp-out .rc-input { flex: 1; }
+.rc-sp-search-wrap { position: relative; }
+.rc-sp-sug { display: none; position: absolute; top: calc(100% + 4px); right: 0; left: 0; z-index: 30; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 4px; box-shadow: 0 10px 26px rgba(9,42,27,.16); max-height: 260px; overflow-y: auto; }
+.rc-father-line { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-weight: 800; color: var(--primary-dark); }
+.rc-link { font-family: inherit; font-size: .88rem; font-weight: 700; border: none; background: none; color: var(--primary); cursor: pointer; text-decoration: underline; padding: 4px; }
+.rc-two { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0 20px; align-items: start; }
+@media (max-width: 700px) { .rc-two { grid-template-columns: minmax(0, 1fr); } }
+.rc-addkid .rc-select { flex: 1 1 160px; width: auto; }
