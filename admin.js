@@ -2175,7 +2175,6 @@ function renderPersonsList(list) {
 // تصفية جدول «كل الأشخاص»: بحث بالمعرّف أو الاسم + الجنس + الحالة الاجتماعية + الحالة
 // ---------------------------------------------------------------------
 function hasPhoneAdmin(p) { return String(p.phone || '').replace(/\D/g, '').length >= 5; }
-function hasBirthAdmin(p) { return !!(String(p.birthDate || '').trim() || String(p.birthDateHijri || '').trim()); }
 function isMarriedAdmin(p) {
   return p.maritalStatus === 'married'
     || (Array.isArray(p.spouseLinks) && p.spouseLinks.length > 0)

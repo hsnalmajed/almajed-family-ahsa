@@ -2597,3 +2597,4 @@ header.site-header p.hdr-tagline { color: var(--muted); font-size: 1rem; font-we
 .pt-badge-dead { background: #eee; color: #555; }
 .pt-badge-alive { background: #eef6f0; color: #1f6b3d; }
 #persons-list { overflow: auto; max-height: 75vh; border-radius: 10px; }
+.rc-prow-name { min-width: 0; } .rc-prow-name .rc-chip { max-width: 190px; overflow: hidden; text-overflow: ellipsis; }
