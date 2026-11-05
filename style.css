@@ -321,7 +321,7 @@ header.site-header .prepared-by .pb-admin svg { width: 17px; height: 17px; }
 }
 @keyframes ctaTap {
   0%, 68%, 100% { transform: translateY(0); }
-  78%           { transform: translateY(-6px); }
+  78%           { transform: translateY(6px); }   /* الإصبع يشير للأسفل نحو الشجرة */
   88%           { transform: translateY(0); }
 }
 
