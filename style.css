@@ -2243,3 +2243,22 @@ header.site-header p.hdr-tagline { color: var(--muted); font-size: 1rem; font-we
   header.site-header::before { opacity: .09; }
 }
 
+
+/* رأس الصفحة على الشاشات العريضة: موزّع على عرض محتوى الموقع (1060px)
+   الشعار عند الحافة اليمنى، العنوان والبطاقة عند الحافة اليسرى، والفاصل الذهبي في المنتصف */
+@media (min-width: 1100px) {
+  header.site-header {
+    grid-template-columns: auto 1fr auto;
+    justify-content: stretch;
+    padding-inline: max(20px, calc((100% - 1060px) / 2));
+    padding-top: 26px; padding-bottom: 32px;
+  }
+  header.site-header .site-logo { max-width: 360px; }
+  .hdr-divider { justify-self: center; height: 200px; }
+  header.site-header h1 { font-size: 62px; }
+  header.site-header p.hdr-tagline { font-size: 1.12rem; }
+  .hdr-kicker { font-size: .9rem; }
+  header.site-header .prepared-by { max-width: 400px; padding: 14px 16px 14px 56px; }
+  header.site-header .prepared-by .pb-photo { width: 58px; height: 58px; }
+  header.site-header .prepared-by .pb-name { font-size: .95rem; }
+}
