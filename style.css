@@ -2483,3 +2483,15 @@ header.site-header p.hdr-tagline { color: var(--muted); font-size: 1rem; font-we
   .rc-step:not(.on) .rc-step-l { display: none; }
   .rc-step.on { flex: 1 1 auto; }
 }
+
+/* الاستقبال: أقسام مرقّمة تحت بعض */
+#rc-grid { counter-reset: rcsec; gap: 16px; }
+#rc-grid > .rc-box { border-top: 4px solid var(--primary); }
+.rc-box h3 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 1.15rem; padding-bottom: 10px; border-bottom: 1px solid #efe9dc; margin-bottom: 6px; }
+.rc-num { counter-increment: rcsec; width: 30px; height: 30px; flex: none; border-radius: 50%; background: var(--primary); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: .95rem; font-weight: 800; }
+.rc-num::before { content: counter(rcsec); }
+.rc-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 20px; }
+.rc-field-wide { grid-column: 1 / -1; }
+@media (max-width: 700px) { .rc-form { grid-template-columns: minmax(0, 1fr); } }
+.rc-father-line { margin-top: 8px; }
+.rc-addkid { background: #fcfbf8; border: 1px dashed var(--border); border-radius: 12px; padding: 10px; }

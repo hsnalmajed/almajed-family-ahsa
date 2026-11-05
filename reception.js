@@ -269,42 +269,35 @@
         <button type="button" class="rc-btn" id="rc-full-edit">✏️ تعديل كامل</button>
       </div>
 
-      <div class="rc-grid${female || !(married || kids.length) ? ' solo' : ''}" id="rc-grid">
+      <div class="rc-grid solo" id="rc-grid">
         <section class="rc-box">
-          <h3>📝 بيانات ${esc(p.firstName)}</h3>
-          <label class="rc-label" for="rc-phone">رقم الجوال</label>
-          <input type="tel" id="rc-phone" class="rc-input" dir="ltr" placeholder="05xxxxxxxx" value="${esc(p.phone || '')}">
-
-          <label class="rc-label">تاريخ الميلاد</label>
-          <div id="rc-birth-mount"></div>
-
-          <label class="rc-label">الحالة</label>
-          <div class="rc-toggle" id="rc-status">
-            <button type="button" data-v="alive" class="${p.status === 'death' ? '' : 'on'}">على قيد الحياة</button>
-            <button type="button" data-v="death" class="${p.status === 'death' ? 'on' : ''}">${female ? 'متوفاة' : 'متوفى'}</button>
+          <h3><span class="rc-num"></span> بيانات ${esc(p.firstName)}</h3>
+          <div class="rc-form">
+            <div><label class="rc-label" for="rc-phone">رقم الجوال</label>
+              <input type="tel" id="rc-phone" class="rc-input" dir="ltr" placeholder="05xxxxxxxx" value="${esc(p.phone || '')}"></div>
+            <div><label class="rc-label">الحالة</label>
+              <div class="rc-toggle" id="rc-status">
+                <button type="button" data-v="alive" class="${p.status === 'death' ? '' : 'on'}">على قيد الحياة</button>
+                <button type="button" data-v="death" class="${p.status === 'death' ? 'on' : ''}">${female ? 'متوفاة' : 'متوفى'}</button>
+              </div></div>
+            <div class="rc-field-wide"><label class="rc-label">تاريخ الميلاد</label>
+              <div id="rc-birth-mount"></div></div>
+            <div class="rc-field-wide"><label class="rc-label">الحالة الاجتماعية</label>
+              <div class="rc-toggle" id="rc-marital">
+                <button type="button" data-v="single" class="${married ? '' : 'on'}">${female ? 'غير متزوجة' : 'غير متزوج'}</button>
+                <button type="button" data-v="married" class="${married ? 'on' : ''}">${female ? 'متزوجة' : 'متزوج'}</button>
+              </div></div>
+            <div class="rc-field-wide" id="rc-spouse-block" style="${married ? '' : 'display:none;'}">
+              <label class="rc-label">${female ? 'الزوج' : 'الزوجات'} <small>(${female ? 'زوج واحد' : 'يمكن إضافة أكثر من زوجة'})</small></label>
+              ${spouseEditorHtml(p, 'self')}
+            </div>
           </div>
-
-          <label class="rc-label">الحالة الاجتماعية</label>
-          <div class="rc-toggle" id="rc-marital">
-            <button type="button" data-v="single" class="${married ? '' : 'on'}">${female ? 'غير متزوجة' : 'غير متزوج'}</button>
-            <button type="button" data-v="married" class="${married ? 'on' : ''}">${female ? 'متزوجة' : 'متزوج'}</button>
-          </div>
-          <div id="rc-spouse-block" style="${married ? '' : 'display:none;'}">
-            <label class="rc-label">${female ? 'الزوج' : 'الزوجات'} <small>(${female ? 'زوج واحد' : 'يمكن إضافة أكثر من زوجة'})</small></label>
-            ${spouseEditorHtml(p, 'self')}
-          </div>
-
-          ${father ? `
-          <label class="rc-label" for="rc-mother">الأم <small>(من زوجات الأب ${esc(father.firstName)})</small></label>
-          ${motherSelectHtml('rc-mother', father, p.motherId, p.motherName)}
-          <div class="rc-note">إن لم تجد الأم في القائمة فأضِفها في «زوجات الأب» بالأسفل، ثم اخترها هنا.</div>` : ''}
-
           <button type="button" class="rc-btn rc-btn-primary rc-save" id="rc-save">💾 حفظ بيانات ${esc(p.firstName)}</button>
         </section>
 
         ${female ? '' : `
         <section class="rc-box" id="rc-kids-box" style="${married || kids.length ? '' : 'display:none;'}">
-          <h3>👨‍👩‍👧 الأبناء والبنات <small>(${kids.length})</small></h3>
+          <h3><span class="rc-num"></span> أبناء ${esc(p.firstName)} وبناته <small>(${kids.length})</small></h3>
           ${`${kids.length ? `<div class="rc-kids">${kidChips(kids)}</div>` : '<div class="rc-note">لا يوجد أبناء مسجّلون بعد.</div>'}
               <div class="rc-addkid">
                 <input type="text" id="rc-kid-name" class="rc-input" placeholder="اسم الابن أو البنت">
@@ -319,32 +312,32 @@
         </section>`}
 
         <section class="rc-box rc-box-wide">
-          <h3>👪 الوالد والإخوة</h3>
+          <h3><span class="rc-num"></span> الوالد والأم</h3>
           ${father ? `
           <div class="rc-father">
             <div class="rc-father-line">الأب:
               <button type="button" class="rc-chip" data-goto="${Number(father.displayId)}">${esc(shortName(father))} <i>${Number(father.displayId)}</i></button>
               <button type="button" class="rc-link" data-goto="${Number(father.displayId)}">فتح صفحة الأب كاملة ←</button>
             </div>
-            <div class="rc-two">
-              <div>
-                <label class="rc-label" for="rc-father-phone">جوال الأب</label>
-                <input type="tel" id="rc-father-phone" class="rc-input" dir="ltr" placeholder="05xxxxxxxx" value="${esc(father.phone || '')}">
-                <label class="rc-label">حالة الأب</label>
+            <div class="rc-form">
+              <div><label class="rc-label" for="rc-father-phone">جوال الأب</label>
+                <input type="tel" id="rc-father-phone" class="rc-input" dir="ltr" placeholder="05xxxxxxxx" value="${esc(father.phone || '')}"></div>
+              <div><label class="rc-label">حالة الأب</label>
                 <div class="rc-toggle" id="rc-father-status">
                   <button type="button" data-v="alive" class="${father.status === 'death' ? '' : 'on'}">على قيد الحياة</button>
                   <button type="button" data-v="death" class="${father.status === 'death' ? 'on' : ''}">متوفى</button>
-                </div>
-              </div>
-              <div>
-                <label class="rc-label">زوجات الأب</label>
-                ${spouseEditorHtml(father, 'father')}
-              </div>
+                </div></div>
+              <div class="rc-field-wide"><label class="rc-label">زوجات الأب <small>(من العائلة بالبحث، أو من خارجها باسم العائلة)</small></label>
+                ${spouseEditorHtml(father, 'father')}</div>
+              <div class="rc-field-wide"><label class="rc-label" for="rc-mother">أم ${esc(p.firstName)} <small>(تُختار من زوجات الأب أعلاه)</small></label>
+                ${motherSelectHtml('rc-mother', father, p.motherId, p.motherName)}</div>
             </div>
-            <button type="button" class="rc-btn rc-btn-primary rc-save" id="rc-father-save">💾 حفظ بيانات الأب وزوجاته</button>
+            <button type="button" class="rc-btn rc-btn-primary rc-save" id="rc-father-save">💾 حفظ بيانات الأب والأم</button>
           </div>
+        </section>
 
-          <h4 class="rc-sub">الإخوان والأخوات <small>(${siblings.length})</small></h4>
+        <section class="rc-box">
+          <h3><span class="rc-num"></span> إخوان ${esc(p.firstName)} وأخواته <small>(${siblings.length})</small></h3>
           ${siblings.length ? `<div class="rc-kids">${kidChips(siblings)}</div>` : '<div class="rc-note">لا يوجد إخوة مسجّلون.</div>'}
           <div class="rc-addkid">
             <input type="text" id="rc-sib-name" class="rc-input" placeholder="اسم الأخ أو الأخت">
@@ -430,8 +423,6 @@
     const links = married ? st.links.slice() : [];
     const fams = married ? st.fams.slice() : [];
     const bd = birthPicker ? birthPicker.getValue() : null;
-    const mother = $('rc-mother') ? readMother('rc-mother') : null;
-
     const updates = {
       phoneLast4: phoneLast4Of(phone), status,
       maritalStatus: married ? 'married' : 'single',
@@ -439,7 +430,6 @@
       phone: firebase.firestore.FieldValue.delete()
     };
     if (bd && bd.birthDate) { updates.birthDate = bd.birthDate; updates.birthDateHijri = bd.birthDateHijri || ''; updates.birthDateCal = bd.birthDateCal || ''; }
-    if (mother) { updates.motherId = mother.motherId; updates.motherName = mother.motherName; }
 
     btn.disabled = true; btn.textContent = 'جارٍ الحفظ...';
     try {
@@ -456,7 +446,6 @@
       if (status !== p.status) ch.push('الحالة');
       if (married !== isMarriedAdmin(p)) ch.push('الحالة الاجتماعية');
       if (describeSpouses(links, fams) !== describeSpouses(oldLinks, personFamiliesAdmin(p))) ch.push((isFemale(p) ? 'الزوج: ' : 'الزوجات: ') + (describeSpouses(links, fams) || '—'));
-      if (mother && (mother.motherId !== (p.motherId == null ? null : Number(p.motherId)) || mother.motherName !== (p.motherName || ''))) ch.push('الأم: ' + (mother.motherName || '—'));
       logAdminAction('edit', `الاستقبال: تحديث بيانات ${p.firstName || ''} (#${p.displayId})${ch.length ? ' — ' + ch.join('، ') : ''}`);
       flash('✅ تم الحفظ');
     } catch (err) {
@@ -484,12 +473,18 @@
       await batch.commit();
       await syncReciprocal(f, oldLinks, links);
       delete pendingSpouses[String(f.displayId)];
+      // أم الشخص (تُختار من زوجات الأب)
+      const mother = $('rc-mother') ? readMother('rc-mother') : null;
+      if (mother && (mother.motherId !== (p.motherId == null || p.motherId === '' ? null : Number(p.motherId)) || mother.motherName !== (p.motherName || ''))) {
+        await db.collection('persons').doc(p.id).update({ motherId: mother.motherId, motherName: mother.motherName });
+        logAdminAction('edit', `الاستقبال: تحديد أم ${p.firstName || ''} (#${p.displayId}) — ${mother.motherName || 'غير محددة'}`);
+      }
       logAdminAction('edit', `الاستقبال: تحديث بيانات الأب ${f.firstName || ''} (#${f.displayId}) — الحالة: ${status === 'death' ? 'متوفى' : 'حي'}${fPhone !== String(f.phone || '') ? '، الجوال' : ''}، الزوجات: ${describeSpouses(links, fams) || '—'}`);
       flash('✅ تم حفظ بيانات الأب');
     } catch (err) {
       console.error(err); alert('تعذّر الحفظ: ' + err.message);
     } finally {
-      const b = $('rc-father-save'); if (b) { b.disabled = false; b.textContent = '💾 حفظ بيانات الأب وزوجاته'; }
+      const b = $('rc-father-save'); if (b) { b.disabled = false; b.textContent = '💾 حفظ بيانات الأب والأم'; }
     }
   }
 
