@@ -139,7 +139,7 @@ function openFamilyMembersModal(displayName, key) {
     const rel = p.gender === 'female' ? 'عائلة الزوج' : 'عائلة الزوجة';
     return `
       <div class="search-result-item" data-goto="${p.displayId}">
-        <img src="${p.photoURL || defaultAvatar(p.gender)}" alt="">
+        <img src="${safeImgSrc(p.photoURL, defaultAvatar(p.gender))}" alt="">
         <span class="sr-name">
           <b class="sr-id">(${p.displayId})</b> ${escapeHtmlLocal(shortLineage(p, 2))}
           <span class="sr-rel">${rel}</span>
@@ -508,7 +508,7 @@ function personSuggestionHtml(p, attr) {
   const rest = ancestorsOf(p, 2).map(a => a.firstName).filter(Boolean).join(' ');
   return `
     <div class="search-result-item" ${attr}="${p.displayId}">
-      <img src="${p.photoURL || defaultAvatar(p.gender)}" alt="">
+      <img src="${safeImgSrc(p.photoURL, defaultAvatar(p.gender))}" alt="">
       <span class="sr-name"><b>${escapeHtmlLocal(p.firstName || '')}</b>${rest ? ' <span class="sr-rest">' + escapeHtmlLocal(rest) + '</span>' : ''}</span>
       <span class="sr-id">${p.displayId}</span>
     </div>`;
@@ -1118,7 +1118,7 @@ function createSpouseLinkList(inputId, sugId, chipsId, canAddFn) {
       if (!matches.length) { hide(); return; }
       sug.innerHTML = matches.map(p => `
         <div class="search-result-item" data-id="${p.displayId}">
-          <img src="${p.photoURL || defaultAvatar(p.gender)}" alt="">
+          <img src="${safeImgSrc(p.photoURL, defaultAvatar(p.gender))}" alt="">
           <span class="sr-name"><b class="sr-id">(${p.displayId})</b> ${escapeHtmlLocal(shortLineage(p, 2))}</span>
         </div>`).join('');
       sug.style.display = 'block';
@@ -1713,6 +1713,15 @@ function handleRelationFinder(evt) {
   resultBox.style.display = 'block';
 }
 
+// يقبل مصدر الصورة فقط إذا كان صورة حقيقية (data:image بترميز base64، أو رابط https عادي)
+// ويمنع أي نص قد يحمل كوداً خبيثاً داخل وسم <img> (حماية من XSS)
+function safeImgSrc(u, fallback) {
+  const s = String(u || '');
+  if (/^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(s)) return s;
+  if (/^https?:\/\/[^\s"'<>`]+$/.test(s)) return s;
+  return fallback || '';
+}
+
 function escapeHtmlLocal(str) {
   if (!str) return '';
   return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -2005,7 +2014,7 @@ function renderBusinessGrid() {
   }
   grid.innerHTML = bizList.map((b, i) => `
     <div class="biz-item" data-biz="${i}">
-      <img class="biz-logo" src="${b.logoURL || ''}" alt="${escapeHtmlLocal(b.bizName || '')}" onerror="this.style.visibility='hidden'">
+      <img class="biz-logo" src="${safeImgSrc(b.logoURL)}" alt="${escapeHtmlLocal(b.bizName || '')}" onerror="this.style.visibility='hidden'">
       <div class="biz-name">${escapeHtmlLocal(b.bizName || '')}</div>
       <span class="biz-cat">${escapeHtmlLocal(b.category || '')}</span>
     </div>
@@ -2174,7 +2183,7 @@ function openBizDetails(b) {
     : escapeHtmlLocal(b.ownerRef || '—');
   const body = document.getElementById('biz-details-body');
   body.innerHTML = `
-    <img class="biz-detail-logo" src="${b.logoURL || ''}" alt="${escapeHtmlLocal(b.bizName || '')}" onerror="this.style.visibility='hidden'">
+    <img class="biz-detail-logo" src="${safeImgSrc(b.logoURL)}" alt="${escapeHtmlLocal(b.bizName || '')}" onerror="this.style.visibility='hidden'">
     <div class="biz-detail-name">${escapeHtmlLocal(b.bizName || '')}</div>
     <div style="margin-top:14px;">
       <div class="biz-detail-row"><span class="biz-detail-label">المجال</span><span>${escapeHtmlLocal(b.category || '—')}</span></div>

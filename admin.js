@@ -74,13 +74,13 @@ function logAdminAction(action, text) {
 }
 function describeRequestForLog(r) {
   if (!r) return 'طلب';
-  if (r.requestType === 'update') return `طلب تحديث بيانات: ${r.targetPersonName || ''} (#${r.targetPersonId})`;
+  if (r.requestType === 'update') return `طلب تحديث بيانات: ${r.targetPersonName || ''} (#${escapeHtml(String(r.targetPersonId))})`;
   if (r.requestType === 'addBatch') {
     const names = (r.members || []).map(m => m.firstName).filter(Boolean).join('، ');
-    return `طلب إضافة ${(r.members || []).length} فرد (${names}) لـ ${r.targetPersonName || ''} (#${r.targetPersonId})`;
+    return `طلب إضافة ${(r.members || []).length} فرد (${names}) لـ ${r.targetPersonName || ''} (#${escapeHtml(String(r.targetPersonId))})`;
   }
   if (r.requestType === 'business') return `طلب علامة تجارية: ${r.bizName || ''}`;
-  return `طلب إضافة: ${r.firstName || ''} لـ ${r.targetPersonName || ''} (#${r.targetPersonId})`;
+  return `طلب إضافة: ${r.firstName || ''} لـ ${r.targetPersonName || ''} (#${escapeHtml(String(r.targetPersonId))})`;
 }
 
 // ---------------------------------------------------------------------
@@ -299,7 +299,7 @@ function protoNodeHtml(p, childrenOf, depth, descOf) {
   // مطويّة من الأعلى: كل من له أبناء يبدأ مطويّاً ويظهر أبناؤه بالضغط
   const collapsed = kids.length ? ' collapsed' : '';
   const av = p.photoURL
-    ? `<img class="pnode-av" src="${p.photoURL}" alt="">`
+    ? `<img class="pnode-av" src="${safeImgSrc(p.photoURL)}" alt="">`
     : `<span class="pnode-av pnode-av-ph ${female ? 'f' : 'm'}">${escapeHtml((p.firstName || '؟').slice(0, 1))}</span>`;
   const total = descOf(p.displayId);           // إجمالي من تحته (كل الذريّة)
   const married = p.maritalStatus === 'married';
@@ -677,9 +677,9 @@ function renderRequests() {
 
     if (r.requestType === 'update') {
       row.innerHTML = `
-        <img class="req-photo" src="${r.photoURL || ''}" onerror="this.style.visibility='hidden'">
+        <img class="req-photo" src="${safeImgSrc(r.photoURL)}" onerror="this.style.visibility='hidden'">
         <div class="req-info">
-          <div class="req-name">✏️ طلب تحديث بيانات: <b>${escapeHtml(r.targetPersonName || '')}</b> (#${r.targetPersonId})</div>
+          <div class="req-name">✏️ طلب تحديث بيانات: <b>${escapeHtml(r.targetPersonName || '')}</b> (#${escapeHtml(String(r.targetPersonId))})</div>
           <div class="req-diff-title">تفاصيل التغييرات المطلوبة (قبل ← بعد):</div>
           ${renderUpdateDiff(r)}
         </div>
@@ -691,11 +691,11 @@ function renderRequests() {
     } else if (r.requestType === 'addBatch') {
       const members = r.members || [];
       const membersHtml = members.map(m =>
-        `<div class="req-meta">• ${escapeHtml(m.firstName)}${dupBadgeAdmin(m.parentKey, m.firstName)} — ${RELATION_LABELS_AR[m.relationType] || m.relationType} (${GENDER_LABELS_AR[m.gender] || ''})${m.phone ? ' — ' + escapeHtml(m.phone) : ''}${(m.birthDate || m.birthDateHijri) ? ' — 🎂 ' + escapeHtml(window.Birthdate ? window.Birthdate.formatBoth(m) : (m.birthDate || '')) : ''} —${escapeHtml(maritalLabel(m.maritalStatus, m.gender, m.spouseFamilies || m.spouseFamily) + spouseLinksLabel(m.gender, m.spouseLinks))}${(m.motherId || m.motherName) ? ' — الأم: ' + escapeHtml(m.motherId ? ('(' + m.motherId + ') ' + ((allPersonsAdmin.find(p => p.displayId === Number(m.motherId)) || {}).firstName || '')) : m.motherName) : ''}</div>`
+        `<div class="req-meta">• ${escapeHtml(m.firstName)}${dupBadgeAdmin(m.parentKey, m.firstName)} — ${escapeHtml(RELATION_LABELS_AR[m.relationType] || m.relationType)} (${GENDER_LABELS_AR[m.gender] || ''})${m.phone ? ' — ' + escapeHtml(m.phone) : ''}${(m.birthDate || m.birthDateHijri) ? ' — 🎂 ' + escapeHtml(window.Birthdate ? window.Birthdate.formatBoth(m) : (m.birthDate || '')) : ''} —${escapeHtml(maritalLabel(m.maritalStatus, m.gender, m.spouseFamilies || m.spouseFamily) + spouseLinksLabel(m.gender, m.spouseLinks))}${(m.motherId || m.motherName) ? ' — الأم: ' + escapeHtml(m.motherId ? ('(' + m.motherId + ') ' + ((allPersonsAdmin.find(p => p.displayId === Number(m.motherId)) || {}).firstName || '')) : m.motherName) : ''}</div>`
       ).join('');
       row.innerHTML = `
         <div class="req-info">
-          <div class="req-name">➕ طلب إضافة ${members.length} فرد لـ <b>${escapeHtml(r.targetPersonName || '')}</b> (#${r.targetPersonId})</div>
+          <div class="req-name">➕ طلب إضافة ${members.length} فرد لـ <b>${escapeHtml(r.targetPersonName || '')}</b> (#${escapeHtml(String(r.targetPersonId))})</div>
           ${membersHtml}
         </div>
         <div class="req-actions">
@@ -708,7 +708,7 @@ function renderRequests() {
         ? (personsByDisplayIdAdmin[String(r.ownerId)].firstName + ' (#' + r.ownerId + ')')
         : (r.ownerRef || '—');
       row.innerHTML = `
-        <img class="req-photo" src="${r.logoURL || ''}" style="border-radius:10px;" onerror="this.style.visibility='hidden'">
+        <img class="req-photo" src="${safeImgSrc(r.logoURL)}" style="border-radius:10px;" onerror="this.style.visibility='hidden'">
         <div class="req-info">
           <div class="req-name">🏷️ علامة تجارية جديدة: <b>${escapeHtml(r.bizName || '')}</b></div>
           <div class="req-meta">المجال: ${escapeHtml(r.category || '—')}</div>
@@ -723,10 +723,10 @@ function renderRequests() {
       `;
     } else {
       row.innerHTML = `
-        <img class="req-photo" src="${r.photoURL || ''}" onerror="this.style.visibility='hidden'">
+        <img class="req-photo" src="${safeImgSrc(r.photoURL)}" onerror="this.style.visibility='hidden'">
         <div class="req-info">
           <div class="req-name">${escapeHtml(r.firstName)} <span class="req-gender">(${GENDER_LABELS_AR[r.gender] || ''})</span>${dupBadgeAdmin(r.parentKey, r.firstName)}</div>
-          <div class="req-meta">${RELATION_LABELS_AR[r.relationType] || r.relationType} لِـ <b>${escapeHtml(r.targetPersonName || '')}</b> (#${r.targetPersonId})</div>
+          <div class="req-meta">${escapeHtml(RELATION_LABELS_AR[r.relationType] || r.relationType)} لِـ <b>${escapeHtml(r.targetPersonName || '')}</b> (#${escapeHtml(String(r.targetPersonId))})</div>
           <div class="req-meta">الهاتف: ${escapeHtml(r.phone || '—')} | الحالة: ${STATUS_LABELS_AR[r.status] || r.status}</div>
         </div>
         <div class="req-actions">
@@ -778,7 +778,7 @@ async function approveRequest(requestId, btnEl) {
         displayId: newId,
         firstName: reqData.firstName,
         gender: reqData.gender,
-        photoURL: reqData.photoURL || '',
+        photoURL: safeImgSrc(reqData.photoURL),
         phoneLast4: phoneLast4Of(reqData.phone),
         birthDate: reqData.birthDate || '',
         birthDateHijri: reqData.birthDateHijri || '',
@@ -832,7 +832,7 @@ async function approveBatchRequest(requestId, btnEl) {
           displayId: lastId,
           firstName: m.firstName,
           gender: m.gender,
-          photoURL: m.photoURL || '',
+          photoURL: safeImgSrc(m.photoURL),
           phoneLast4: phoneLast4Of(m.phone),
           birthDate: m.birthDate || '',
           birthDateHijri: m.birthDateHijri || '',
@@ -912,7 +912,7 @@ async function approveUpdateRequest(requestId, btnEl) {
         updates.birthDateHijri = reqData.birthDateHijri || '';
         updates.birthDateCal = reqData.birthDateCal || '';
       }
-      if (reqData.photoURL) updates.photoURL = reqData.photoURL;
+      if (safeImgSrc(reqData.photoURL)) updates.photoURL = safeImgSrc(reqData.photoURL);
       if (reqData.status) updates.status = reqData.status;
       if (reqData.maritalStatus) {
         updates.maritalStatus = reqData.maritalStatus;
@@ -976,7 +976,7 @@ async function approveBusinessRequest(requestId, btnEl) {
       const bizRef = db.collection('businesses').doc();
       tx.set(bizRef, {
         bizName: r.bizName || '',
-        logoURL: r.logoURL || '',
+        logoURL: safeImgSrc(r.logoURL),
         ownerRef: r.ownerRef || '',
         ownerId: (typeof r.ownerId === 'number') ? r.ownerId : null,
         bizPhone: r.bizPhone || '',
@@ -1048,7 +1048,7 @@ function renderAdminBizList() {
       ? (shortLineageAdmin(personsByDisplayIdAdmin[String(b.ownerId)], 2) + ' (#' + b.ownerId + ')')
       : (b.ownerRef || '—');
     return `<div class="admin-biz-row">
-      <img class="admin-biz-thumb" src="${b.logoURL || ''}" onerror="this.style.visibility='hidden'">
+      <img class="admin-biz-thumb" src="${safeImgSrc(b.logoURL)}" onerror="this.style.visibility='hidden'">
       <div class="admin-biz-info">
         <div class="admin-biz-name">${escapeHtml(b.bizName || '')}</div>
         <div class="admin-biz-meta">${escapeHtml(b.category || '')} — المالك: ${escapeHtml(owner)}${b.bizPhone ? ' — 📞 ' + escapeHtml(b.bizPhone) : ''}${(window.BizExtras && BizExtras.summary(b.extras)) ? ' — ' + escapeHtml(BizExtras.summary(b.extras)) : ''}</div>
@@ -1525,6 +1525,15 @@ function confirmNotDuplicateAdmin(parentKey, firstName) {
   const d = findDuplicateAdmin(parentKey, firstName);
   if (!d) return true;
   return confirm(`تنبيه: يوجد في الشجرة مسبقاً تحت نفس الأب:\n(${d.displayId}) ${shortLineageAdmin(d, 2)}\n\nهل تريد إضافته كشخص مختلف رغم ذلك؟`);
+}
+
+// يقبل مصدر الصورة فقط إذا كان صورة حقيقية (data:image بترميز base64، أو رابط https عادي)
+// ويمنع أي نص قد يحمل كوداً خبيثاً داخل وسم <img> (حماية من XSS)
+function safeImgSrc(u, fallback) {
+  const s = String(u || '');
+  if (/^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(s)) return s;
+  if (/^https?:\/\/[^\s"'<>`]+$/.test(s)) return s;
+  return fallback || '';
 }
 
 function normalizeArabic(s) {
@@ -2318,7 +2327,7 @@ function handleAdminTreeSearch(evt) {
   // نفس شكل الصفحة الرئيسية: (المعرّف) الاسم - الأب - الجد
   box.innerHTML = matches.map(p => `
     <div class="search-result-item" data-goto="${p.displayId}">
-      <img src="${p.photoURL || defaultAvatarAdmin(p.gender)}" alt="">
+      <img src="${safeImgSrc(p.photoURL, defaultAvatarAdmin(p.gender))}" alt="">
       <span class="sr-name"><b class="sr-id">(${p.displayId})</b> ${escapeHtml(shortLineageAdmin(p, 2))}</span>
     </div>
   `).join('');
