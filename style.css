@@ -2244,17 +2244,23 @@ header.site-header p.hdr-tagline { color: var(--muted); font-size: 1rem; font-we
 }
 
 
-/* رأس الصفحة على الشاشات العريضة: موزّع على عرض محتوى الموقع (1060px)
-   الشعار عند الحافة اليمنى، العنوان والبطاقة عند الحافة اليسرى، والفاصل الذهبي في المنتصف */
+/* رأس الصفحة على الشاشات العريضة: شبكة من 12 عموداً بنفس عرض محتوى الموقع (1060px)
+   (كل بطاقة إحصائيات في الأسفل = عمودان). الأعمدة تُعدّ من اليمين:
+   الشعار يبدأ من العمود 2، والفاصل الذهبي في العمودين 6–7، و«عائلة الماجد» يبدأ من العمود 8 */
 @media (min-width: 1100px) {
   header.site-header {
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
     justify-content: stretch;
+    column-gap: 0;
     padding-inline: max(20px, calc((100% - 1060px) / 2));
     padding-top: 26px; padding-bottom: 32px;
   }
-  header.site-header .site-logo { max-width: 360px; }
-  .hdr-divider { justify-self: center; height: 200px; }
+  header.site-header .logo-wrap { grid-column: 2 / span 4; justify-self: start; }
+  header.site-header .site-logo { max-width: 340px; }
+  .hdr-divider { grid-column: 6 / span 2; justify-self: center; height: 200px; }
+  .hdr-kicker, header.site-header h1, header.site-header p.hdr-tagline, header.site-header .prepared-wrap {
+    grid-column: 8 / span 5; justify-self: start;
+  }
   header.site-header h1 { font-size: 62px; }
   header.site-header p.hdr-tagline { font-size: 1.12rem; }
   .hdr-kicker { font-size: .9rem; }
