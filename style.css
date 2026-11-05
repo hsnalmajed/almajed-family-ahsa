@@ -2536,20 +2536,23 @@ header.site-header p.hdr-tagline { color: var(--muted); font-size: 1rem; font-we
 .rc-prow-more { margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--border); }
 .rc-prow-more .rc-label { font-size: .82rem; margin: 8px 0 4px; }
 @media (max-width: 760px) {
-  .rc-prow { grid-template-columns: auto minmax(0, 1fr) auto; }
-  .rc-prow .rc-prow-name { grid-column: 1 / -1; }
-  .rc-prow > .rc-select { grid-column: 1 / -1; grid-row: 3; }
-  .rc-prow-father { grid-template-columns: auto minmax(0, 1fr); }
   .rc-prow-self { grid-template-columns: minmax(0, 1fr) auto; }
 }
 @media (max-width: 520px) { .rc-savebar { flex-wrap: wrap; } .rc-savebar .rc-pending { width: 100%; text-align: center; } }
 #persons-list { overflow-x: auto; }
-/* الأبناء فوق الأب، والإخوة تحته (داخل العمود) — السطر يتكيّف مع عرض العمود */
+/* الأبناء فوق الأب، والإخوة تحته — كل شخص في سطر واحد */
 .rc-col .rc-sibs { margin-top: 0; }
-.rc-col > .rc-box { container-type: inline-size; }
-@container (max-width: 620px) {
+.rc-prow { grid-template-columns: auto auto minmax(90px, 1fr) auto minmax(100px, 1fr); gap: 6px; }
+.rc-prow-father { grid-template-columns: auto auto minmax(110px, 1fr) auto; }
+.rc-prow .rc-input, .rc-prow .rc-select { padding: 8px 8px; font-size: .9rem; min-width: 0; }
+.rc-prow-name .rc-chip { font-size: .92rem; padding: 4px 9px; }
+.rc-prow-name .rc-chip i { margin-inline-start: 2px; }
+.rc-chk { min-width: 34px; font-size: .72rem; }
+.rc-chk input { width: 20px; height: 20px; }
+.rc-sib-card { padding: 8px 8px; }
+@media (max-width: 520px) {
   .rc-prow { grid-template-columns: auto minmax(0, 1fr) auto; }
   .rc-prow .rc-prow-name { grid-column: 1 / -1; }
   .rc-prow > .rc-select { grid-column: 1 / -1; grid-row: 3; }
-  .rc-prow-father { grid-template-columns: auto minmax(0, 1fr); }
+  .rc-prow-father { grid-template-columns: auto minmax(0, 1fr) auto; }
 }

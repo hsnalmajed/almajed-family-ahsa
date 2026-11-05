@@ -294,7 +294,7 @@
       </div>`;
   }
 
-  // سطر واحد لكل شخص: الاسم | متوفى | الجوال | الأم | متزوج — وتحته حقول الزواج إن كان متزوجاً
+  // سطر واحد لكل شخص: الاسم | متوفى | الجوال | متزوج | الأم — وتحته حقول الزواج إن كان متزوجاً
   function siblingCard(sb, father) {
     const id = Number(sb.displayId);
     const female = isFemale(sb);
@@ -305,8 +305,8 @@
           <div class="rc-prow-name">${kidChips([sb])}</div>
           ${deadCheck(sb)}
           ${phoneInput(sb, 'الجوال')}
-          ${motherSelect(`data-p="${id}" data-f="mother"`, father, val(sb, 'mother'), 'الأم غير محددة')}
           ${marriedCheck(sb)}
+          ${motherSelect(`data-p="${id}" data-f="mother"`, father, val(sb, 'mother'), 'الأم')}
         </div>
         ${married ? `
         <div class="rc-prow-more">
@@ -374,9 +374,10 @@
               <div class="rc-prow-name"><button type="button" class="rc-chip" data-goto="${Number(father.displayId)}">${esc(shortName(father))} <i>${Number(father.displayId)}</i></button></div>
               ${deadCheck(father)}
               ${phoneInput(father, 'جوال الأب')}
+              ${marriedCheck(father)}
             </div>
-            <label class="rc-label">زوجات الأب</label>
-            ${spouseEditorHtml(father)}
+            ${val(father, 'married') ? `<label class="rc-label">زوجات الأب</label>
+            ${spouseEditorHtml(father)}` : ''}
             <label class="rc-label">أم ${esc(p.firstName)}</label>
             ${motherSelect(`data-p="${Number(p.displayId)}" data-f="mother"`, father, val(p, 'mother'), '— غير محددة —')}
             ` : '<h3>👤 الأب</h3><div class="rc-note">رأس فرع — لا يوجد أب مسجّل له في الشجرة.</div>'}
