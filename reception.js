@@ -446,6 +446,7 @@
   function wirePanel(p) {
     const panel = $('rc-panel');
     // الحقول المرتبطة بالأشخاص
+    panel.querySelectorAll('.rc-sp-fam, [data-addname]').forEach(i => i.addEventListener('input', updateBar));
     panel.querySelectorAll('input[data-f="phone"]').forEach(i => i.addEventListener('input', () => { setVal(byId(i.dataset.p), 'phone', i.value.trim()); updateBar(); }));
     panel.querySelectorAll('select[data-f="mother"]').forEach(s => s.addEventListener('change', () => { setVal(byId(s.dataset.p), 'mother', s.value); updateBar(); }));
     panel.querySelectorAll('input[data-cf]').forEach(c => c.addEventListener('change', () => {
@@ -486,6 +487,8 @@
         list.push({ name, gender: g && g.dataset.v === 'female' ? 'female' : 'male', mother,
           dead: chk('data-adddead'), married: chk('data-addmarried'), phone: phEl ? phEl.value.trim() : '' });
         nameEl.value = '';
+        if (phEl) phEl.value = '';
+        ['data-adddead', 'data-addmarried'].forEach(a => { const e = panel.querySelector(`[${a}="${pid}"]`); if (e) e.checked = false; });
         rerender(`[data-addname="${pid}"]`);
       };
       btn.addEventListener('click', add);
@@ -519,11 +522,25 @@
   // إعادة الرسم مع الحفاظ على مكان الشاشة والنصوص المكتوبة في خانات الإضافة
   function rerender(focusSel) {
     if (saving || !currentId) return;
-    const typed = {};
-    document.querySelectorAll('#rc-panel [data-addname]').forEach(i => { if (i.value) typed[i.dataset.addname] = i.value; });
+    // نحفظ كل ما كُتب في خانات الإضافة (ولم يُضف بعد) ونعيده بعد إعادة الرسم
+    const keep = [];
+    ['data-addname', 'data-addphone', 'data-adddead', 'data-addmarried', 'data-addm'].forEach(a => {
+      document.querySelectorAll(`#rc-panel [${a}]`).forEach(i => keep.push({ sel: `[${a}="${i.getAttribute(a)}"]`, v: i.type === 'checkbox' ? i.checked : i.value, chk: i.type === 'checkbox' }));
+    });
+    document.querySelectorAll('#rc-panel [data-addg] .on').forEach(b => keep.push({ sel: `[data-addg="${b.parentElement.dataset.addg}"]`, g: b.dataset.v }));
+    document.querySelectorAll('#rc-panel .rc-sp').forEach(sp => {
+      const f = sp.querySelector('.rc-sp-fam'), q = sp.querySelector('.rc-sp-q');
+      if (f && f.value) keep.push({ sel: `.rc-sp[data-pid="${sp.dataset.pid}"] .rc-sp-fam`, v: f.value });
+      if (q && q.value) keep.push({ sel: `.rc-sp[data-pid="${sp.dataset.pid}"] .rc-sp-q`, v: q.value, origin: 'in', pid: sp.dataset.pid });
+    });
     const scroll = window.scrollY;
     renderPanel();
-    Object.keys(typed).forEach(k => { const i = document.querySelector(`#rc-panel [data-addname="${k}"]`); if (i && !focusSel) i.value = typed[k]; });
+    keep.forEach(k => {
+      const el = document.querySelector('#rc-panel ' + k.sel); if (!el) return;
+      if (k.g) { el.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === k.g)); return; }
+      if (k.origin) { const ob = document.querySelector(`#rc-panel .rc-sp[data-pid="${k.pid}"] .rc-sp-origin [data-v="in"]`); if (ob) ob.click(); }
+      if (k.chk) el.checked = k.v; else if (k.v !== '' && (el.tagName !== 'SELECT' || Array.from(el.options).some(o => o.value === k.v))) el.value = k.v;
+    });
     window.scrollTo(0, scroll);
     if (focusSel) { const el = document.querySelector('#rc-panel ' + focusSel); if (el) el.focus({ preventScroll: true }); }
   }
@@ -583,6 +600,8 @@
     peopleInView().forEach(per => { if (!toDelete.has(String(per.displayId))) n += changesOf(per).texts.length; });
     n += toDelete.size;
     Object.keys(queue).forEach(k => { n += (queue[k] || []).length; });
+    // نصوص مكتوبة في خانات الإضافة ولم تُضف بعد (تُضاف تلقائياً عند الحفظ)
+    document.querySelectorAll('#rc-panel .rc-sp-fam, #rc-panel [data-addname]').forEach(i => { if (i.value.trim()) n++; });
     return n;
   }
 
@@ -635,7 +654,22 @@
     return createdId;
   }
 
+  // ما كُتب في خانات الإضافة ولم يُضغط «إضافة» له — يُضاف تلقائياً قبل الحفظ حتى لا يضيع
+  function commitTypedInputs() {
+    document.querySelectorAll('#rc-panel .rc-sp-fam').forEach(i => {
+      const v = i.value.trim(); if (!v) return;
+      const per = byId(i.closest('.rc-sp').dataset.pid); if (!per) return;
+      const st = editSpouses(per);
+      if (!st.fams.some(f => normalizeArabic(f) === normalizeArabic(v))) st.fams.push(v);
+      setVal(per, 'married', true);
+      i.value = '';
+    });
+    const pids = Array.from(document.querySelectorAll('#rc-panel [data-addname]')).filter(i => i.value.trim()).map(i => i.dataset.addname);
+    pids.forEach(pid => { const b = document.querySelector(`#rc-panel [data-add="${pid}"]`); if (b) b.click(); });
+  }
+
   async function saveAll() {
+    commitTypedInputs();
     const btn = $('rc-save-all');
     const people = peopleInView();
     // تُحسب كل التغييرات والأمهات قبل أي حفظ (من الزوجات كما هي الآن)
