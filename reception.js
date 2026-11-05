@@ -362,19 +362,16 @@
         </section>
 
         <div class="rc-col">
-          ${!female && married ? `
-          <section class="rc-box">
-            <h3>👨‍👩‍👧 الأبناء والبنات <small>(${childrenOf(p).length + (queue[p.displayId] || []).length})</small></h3>
-            ${kidsBlock(p, { existing: childrenOf(p), ph: 'اسم الابن أو البنت', m: 'ابن', f: 'ابنة' })}
-          </section>` : ''}
-
           <section class="rc-box">
             ${father ? `
-            <h3>👤 الأب: <button type="button" class="rc-chip" data-goto="${Number(father.displayId)}">${esc(shortName(father))} <i>${Number(father.displayId)}</i></button></h3>
-            <div class="rc-row2">
+            <h3>👤 الأب</h3>
+            <div class="rc-sib-top rc-father-top">
+              <button type="button" class="rc-chip" data-goto="${Number(father.displayId)}">${esc(shortName(father))} <i>${Number(father.displayId)}</i></button>
               ${statusToggle(father)}
               ${val(father, 'status') === 'death' ? '' : phoneInput(father, 'جوال الأب')}
             </div>
+            <label class="rc-label">تاريخ ميلاد الأب</label>
+            ${birthMount(father)}
             <label class="rc-label">زوجات الأب</label>
             ${spouseEditorHtml(father)}
             <label class="rc-label">أم ${esc(p.firstName)}</label>
@@ -383,6 +380,14 @@
           </section>
         </div>
       </div>
+
+      ${!female && married ? `
+      <section class="rc-box rc-sibs">
+        <h3>👨‍👩‍👧 الأبناء والبنات <small>(${childrenOf(p).length + (queue[p.displayId] || []).length})</small></h3>
+        ${childrenOf(p).length ? `<div class="rc-sib-list">${childrenOf(p).map(k => siblingCard(k, p)).join('')}</div>` : '<div class="rc-note">لا يوجد أبناء مسجّلون بعد.</div>'}
+        <div class="rc-label" style="margin-top:14px;">إضافة ابن أو ابنة</div>
+        ${kidsBlock(p, { existing: [], ph: 'اسم الابن أو البنت', m: 'ابن', f: 'ابنة' })}
+      </section>` : ''}
 
       ${father ? `
       <section class="rc-box rc-sibs">
@@ -493,7 +498,8 @@
     const p = byId(currentId); if (!p) return [];
     const f = fatherOf(p);
     const sibs = f ? childrenOf(f).filter(s => String(s.displayId) !== String(p.displayId)) : [];
-    return [p, f, ...sibs].filter(Boolean);
+    const kids = !isFemale(p) ? childrenOf(p) : [];
+    return [p, f, ...sibs, ...kids].filter(Boolean);
   }
 
   // تغييرات شخص واحد: { upd, texts, phone(إن تغيّر), spouses: {old,new} }

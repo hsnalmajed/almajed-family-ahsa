@@ -2521,3 +2521,5 @@ header.site-header p.hdr-tagline { color: var(--muted); font-size: 1rem; font-we
 .rc-savebar .rc-btn:disabled { background: #cfd8d2; border-color: #cfd8d2; cursor: default; opacity: 1; }
 .rc-pending { font-weight: 800; font-size: .9rem; color: #8a4b00; background: #fff4e0; border: 1px solid #f0c890; border-radius: 999px; padding: 6px 12px; white-space: nowrap; }
 .rc-pending.none { color: var(--muted); background: #f3f1ec; border-color: var(--border); }
+.rc-father-top { margin-top: 4px; }
+.rc-father-top .rc-input { flex: 1 1 150px; min-width: 0; width: auto; padding: 9px 12px; }
