@@ -2419,3 +2419,28 @@ header.site-header p.hdr-tagline { color: var(--muted); font-size: 1rem; font-we
 .rc-two { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0 20px; align-items: start; }
 @media (max-width: 700px) { .rc-two { grid-template-columns: minmax(0, 1fr); } }
 .rc-addkid .rc-select { flex: 1 1 160px; width: auto; }
+.rc-grid.solo { grid-template-columns: minmax(0, 1fr); }
+
+/* ===== تبويب الحضور ===== */
+.at-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.at-date-label { font-weight: 800; color: var(--primary-dark); display: inline-flex; align-items: center; gap: 8px; }
+.at-select { font-family: inherit; font-size: .95rem; font-weight: 700; padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+.at-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+@media (max-width: 700px) { .at-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.at-stat { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 12px; text-align: center; }
+.at-stat b { display: block; font-size: 1.5rem; color: var(--primary-dark); }
+.at-stat span { font-size: .82rem; color: var(--muted); font-weight: 700; }
+.at-stat.ok { border-top: 3px solid #2e8b57; }
+.at-stat.no { border-top: 3px solid #c9772b; }
+.at-bar { grid-column: 1 / -1; height: 8px; background: #efe9dc; border-radius: 999px; overflow: hidden; }
+.at-bar i { display: block; height: 100%; background: linear-gradient(90deg, #175939, #2e8b57); border-radius: 999px; }
+.at-search { flex: 1 1 200px; max-width: 320px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 10px; font-family: inherit; }
+.at-count { font-size: .88rem; font-weight: 700; color: var(--muted); margin: 4px 0 6px; }
+.at-wa { color: #128c3e; font-weight: 800; text-decoration: none; background: #eafaf0; border: 1px solid #b7e6c8; border-radius: 999px; padding: 3px 10px; font-size: .82rem; }
+@media (max-width: 700px) { .at-table th:nth-child(3), .at-table td:nth-child(3) { display: none; } }
+#at-list { overflow-x: auto; }
+@media (max-width: 700px) {
+  .at-table th, .at-table td { padding: 8px 6px; font-size: .85rem; }
+  .at-table .btn-sm { padding: 6px 8px; font-size: .78rem; white-space: nowrap; }
+  .at-table td:nth-child(2) { min-width: 120px; }
+}

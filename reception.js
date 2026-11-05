@@ -269,7 +269,7 @@
         <button type="button" class="rc-btn" id="rc-full-edit">✏️ تعديل كامل</button>
       </div>
 
-      <div class="rc-grid">
+      <div class="rc-grid${female || !(married || kids.length) ? ' solo' : ''}" id="rc-grid">
         <section class="rc-box">
           <h3>📝 بيانات ${esc(p.firstName)}</h3>
           <label class="rc-label" for="rc-phone">رقم الجوال</label>
@@ -302,11 +302,10 @@
           <button type="button" class="rc-btn rc-btn-primary rc-save" id="rc-save">💾 حفظ بيانات ${esc(p.firstName)}</button>
         </section>
 
-        <section class="rc-box">
+        ${female ? '' : `
+        <section class="rc-box" id="rc-kids-box" style="${married || kids.length ? '' : 'display:none;'}">
           <h3>👨‍👩‍👧 الأبناء والبنات <small>(${kids.length})</small></h3>
-          ${female
-            ? '<div class="rc-note">أبناء المرأة يُضافون من صفحة زوجها (الشجرة تتبع نسب الأب).</div>'
-            : `${kids.length ? `<div class="rc-kids">${kidChips(kids)}</div>` : '<div class="rc-note">لا يوجد أبناء مسجّلون بعد.</div>'}
+          ${`${kids.length ? `<div class="rc-kids">${kidChips(kids)}</div>` : '<div class="rc-note">لا يوجد أبناء مسجّلون بعد.</div>'}
               <div class="rc-addkid">
                 <input type="text" id="rc-kid-name" class="rc-input" placeholder="اسم الابن أو البنت">
                 <div class="rc-toggle" id="rc-kid-gender">
@@ -316,8 +315,8 @@
                 ${motherSelectHtml('rc-kid-mother', p, null, '', 'الأم غير محددة')}
                 <button type="button" class="rc-btn rc-btn-primary" id="rc-kid-add">➕ إضافة</button>
               </div>
-              <div class="rc-note">يُضاف مباشرة إلى الشجرة تحت ${esc(p.firstName)}. الأم تُختار من زوجاته.</div>`}
-        </section>
+              <div class="rc-note">يُضاف مباشرة إلى الشجرة تحت ${esc(p.firstName)}. إذا كان له أكثر من زوجة فاختر أمّ كل ابن من القائمة.</div>`}
+        </section>`}
 
         <section class="rc-box rc-box-wide">
           <h3>👪 الوالد والإخوة</h3>
@@ -329,6 +328,8 @@
             </div>
             <div class="rc-two">
               <div>
+                <label class="rc-label" for="rc-father-phone">جوال الأب</label>
+                <input type="tel" id="rc-father-phone" class="rc-input" dir="ltr" placeholder="05xxxxxxxx" value="${esc(father.phone || '')}">
                 <label class="rc-label">حالة الأب</label>
                 <div class="rc-toggle" id="rc-father-status">
                   <button type="button" data-v="alive" class="${father.status === 'death' ? '' : 'on'}">على قيد الحياة</button>
@@ -367,7 +368,7 @@
     panel.querySelectorAll('.rc-toggle:not(.rc-sp-origin)').forEach(t => t.addEventListener('click', e => {
       const b = e.target.closest('button'); if (!b) return;
       t.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
-      if (t.id === 'rc-marital') $('rc-spouse-block').style.display = b.dataset.v === 'married' ? '' : 'none';
+      if (t.id === 'rc-marital') applyMaritalVisibility(b.dataset.v === 'married');
     }));
     panel.querySelectorAll('.rc-sp').forEach(wireSpouseEditor);
     panel.querySelectorAll('.rc-kids [data-goto], .rc-father-line [data-goto]').forEach(b => b.addEventListener('click', () => select(b.dataset.goto)));
@@ -379,6 +380,18 @@
     if ($('rc-kid-add')) wireAdd('rc-kid', () => ({ parent: byId(currentId), relation: 'child' }));
     if ($('rc-sib-add')) wireAdd('rc-sib', () => ({ parent: fatherOf(byId(currentId)), relation: 'sibling' }));
     updateCheckinButton();
+  }
+
+  // «متزوج» يُظهر الزوجات وقسم الأبناء (للذكور)، و«غير متزوج» يخفيهما
+  function applyMaritalVisibility(married) {
+    if ($('rc-spouse-block')) $('rc-spouse-block').style.display = married ? '' : 'none';
+    const box = $('rc-kids-box');
+    if (box) {
+      const hasKids = !!box.querySelector('.rc-kids');
+      const show = married || hasKids;
+      box.style.display = show ? '' : 'none';
+      $('rc-grid').classList.toggle('solo', !show);
+    }
   }
 
   function wireAdd(prefix, ctx) {
@@ -460,14 +473,18 @@
     const status = $('rc-father-status').querySelector('.on')?.dataset.v === 'death' ? 'death' : 'alive';
     const links = st.links.slice(), fams = st.fams.slice();
     const oldLinks = Array.isArray(f.spouseLinks) ? f.spouseLinks : [];
+    const fPhone = $('rc-father-phone') ? $('rc-father-phone').value.trim() : String(f.phone || '');
     btn.disabled = true; btn.textContent = 'جارٍ الحفظ...';
     try {
-      const upd = { spouseLinks: links, spouseFamilies: fams, status };
+      const upd = { spouseLinks: links, spouseFamilies: fams, status, phoneLast4: phoneLast4Of(fPhone), phone: firebase.firestore.FieldValue.delete() };
       if (links.length + fams.length > 0) upd.maritalStatus = 'married';
-      await db.collection('persons').doc(f.id).update(upd);
+      const batch = db.batch();
+      batch.update(db.collection('persons').doc(f.id), upd);
+      setPrivatePhone(batch, f.id, fPhone);
+      await batch.commit();
       await syncReciprocal(f, oldLinks, links);
       delete pendingSpouses[String(f.displayId)];
-      logAdminAction('edit', `الاستقبال: تحديث بيانات الأب ${f.firstName || ''} (#${f.displayId}) — الحالة: ${status === 'death' ? 'متوفى' : 'حي'}، الزوجات: ${describeSpouses(links, fams) || '—'}`);
+      logAdminAction('edit', `الاستقبال: تحديث بيانات الأب ${f.firstName || ''} (#${f.displayId}) — الحالة: ${status === 'death' ? 'متوفى' : 'حي'}${fPhone !== String(f.phone || '') ? '، الجوال' : ''}، الزوجات: ${describeSpouses(links, fams) || '—'}`);
       flash('✅ تم حفظ بيانات الأب');
     } catch (err) {
       console.error(err); alert('تعذّر الحفظ: ' + err.message);
@@ -595,7 +612,7 @@
   // إعادة الرسم مع الحفاظ على كل ما كتبه المستخدم ولم يحفظه بعد
   // (تعديلات الزوجات محفوظة في pendingSpouses فلا تضيع أصلاً)
   function renderPanelKeepInputs() {
-    const inputs = ['rc-phone', 'rc-kid-name', 'rc-sib-name'];
+    const inputs = ['rc-phone', 'rc-father-phone', 'rc-kid-name', 'rc-sib-name'];
     const toggles = ['rc-marital', 'rc-status', 'rc-father-status', 'rc-kid-gender', 'rc-sib-gender'];
     const selects = ['rc-mother', 'rc-kid-mother', 'rc-sib-mother'];
     const state = {};
@@ -611,7 +628,7 @@
       toggles.forEach(i => {
         if (!(i in state) || !$(i)) return;
         $(i).querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === state[i]));
-        if (i === 'rc-marital') $('rc-spouse-block').style.display = state[i] === 'married' ? '' : 'none';
+        if (i === 'rc-marital') applyMaritalVisibility(state[i] === 'married');
       });
       selects.forEach(i => { if (state[i] && $(i) && Array.from($(i).options).some(o => o.value === state[i])) $(i).value = state[i]; });
       if (bd && bd.birthDate && birthPicker) birthPicker.setValue(bd);
@@ -640,6 +657,8 @@
       listenAttendance();
       setTimeout(() => $('rc-search').focus(), 50);
     },
+    // فتح شخص مباشرة (من تبويب الحضور مثلاً)
+    open(id) { this.onShow(); select(id); },
     onPersonsUpdated() {
       if (currentId && $('tab-panel-reception') && $('tab-panel-reception').classList.contains('active')) renderPanelKeepInputs();
     }

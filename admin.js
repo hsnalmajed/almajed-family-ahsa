@@ -203,6 +203,7 @@ function switchTab(tabName) {
   if (tabName === 'biz') { setupAdminBizCategoryCombo(); getAdminBizExtrasEditor(); renderAdminBizList(); }
   if (tabName === 'log') listenToAdminLog();
   if (tabName === 'reception' && window.Reception) window.Reception.onShow();
+  if (tabName === 'attendance' && window.Attendance) window.Attendance.onShow();
 }
 
 // ---------------------------------------------------------------------
@@ -1163,6 +1164,7 @@ function rebuildAdminPersons() {
   renderIdCards();
   renderCollectPreview();
   if (window.Reception) window.Reception.onPersonsUpdated();
+  if (window.Attendance) window.Attendance.onPersonsUpdated();
 }
 
 // نقل تلقائي لمرة واحدة: أي شخص ما زال رقمه الكامل محفوظاً في persons (البيانات القديمة)
@@ -2984,6 +2986,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('tab-btn-biz').addEventListener('click', () => switchTab('biz'));
   document.getElementById('tab-btn-log').addEventListener('click', () => switchTab('log'));
   document.getElementById('tab-btn-reception').addEventListener('click', () => switchTab('reception'));
+  document.getElementById('tab-btn-attendance').addEventListener('click', () => switchTab('attendance'));
   document.getElementById('admin-log-filter').addEventListener('input', renderAdminLog);
   document.getElementById('backup-reminder-btn').addEventListener('click', (e) => downloadBackup(e.currentTarget));
   // العلامات التجارية: نموذج الإضافة/التعديل المباشر
