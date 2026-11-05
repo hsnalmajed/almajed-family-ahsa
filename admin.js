@@ -211,7 +211,7 @@ let adminLogEntries = [];
 let adminLogListening = false;
 const LOG_ICONS = {
   login: '🔑', approve: '✅', reject: '❌', add: '➕', edit: '✏️', delete: '🗑️',
-  'biz-add': '🏷️', 'biz-edit': '🏷️', 'biz-delete': '🗑️', renumber: '🔢', backup: '💾', migrate: '🔒'
+  'biz-add': '🏷️', 'biz-edit': '🏷️', 'biz-delete': '🗑️', renumber: '🔢', backup: '💾', migrate: '🔒', export: '📥'
 };
 function listenToAdminLog() {
   if (adminLogListening) { renderAdminLog(); return; }
@@ -2113,11 +2113,72 @@ function isMarriedAdmin(p) {
     || (Array.isArray(p.spouseLinks) && p.spouseLinks.length > 0)
     || (Array.isArray(p.spouseFamilies) && p.spouseFamilies.filter(Boolean).length > 0);
 }
+// وصف التصفية الحالية (لاسم الملف وسجل النشاط)
+function describePersonsFilter() {
+  const parts = [];
+  const q = (document.getElementById('pf-search')?.value || '').trim();
+  const sel = id => { const el = document.getElementById(id); return el && el.value ? el.options[el.selectedIndex].text : ''; };
+  if (q) parts.push(q);
+  [sel('pf-gender'), sel('pf-marital'), sel('pf-status')].forEach(t => { if (t) parts.push(t); });
+  return parts.join(' - ');
+}
+async function exportFilteredPersonsXlsx(btnEl) {
+  const list = filteredPersonsAdmin;
+  if (!list.length) { alert('لا يوجد أشخاص في الجدول لتصديرهم.'); return; }
+  const original = btnEl ? btnEl.textContent : '';
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'جارٍ التجهيز...'; }
+  try {
+    await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+    const XLSX = window.XLSX;
+    const B = window.Birthdate;
+    const header = ['المعرّف', 'الاسم الأول', 'اسم الأب', 'اسم الجد', 'الاسم الكامل', 'الجنس', 'الحالة الاجتماعية',
+                    'عائلة الزوج/الزوجة', 'الزوج/الزوجة من العائلة', 'الأم', 'رقم التواصل', 'تاريخ الميلاد', 'الحالة'];
+    const rows = list.map(p => {
+      const anc = ancestorsOfAdmin(p, 2);
+      const female = p.gender === 'female';
+      return {
+        'المعرّف': p.displayId,
+        'الاسم الأول': p.firstName || '',
+        'اسم الأب': (anc[0] && anc[0].firstName) || '',
+        'اسم الجد': (anc[1] && anc[1].firstName) || '',
+        'الاسم الكامل': [p.firstName].concat(ancestorsOfAdmin(p).map(a => a.firstName)).filter(Boolean).join(' '),
+        'الجنس': GENDER_LABELS_AR[p.gender] || '',
+        'الحالة الاجتماعية': isMarriedAdmin(p) ? (female ? 'متزوجة' : 'متزوج') : (female ? 'غير متزوجة' : 'غير متزوج'),
+        'عائلة الزوج/الزوجة': (Array.isArray(p.spouseFamilies) ? p.spouseFamilies.filter(Boolean) : []).join('، '),
+        'الزوج/الزوجة من العائلة': (Array.isArray(p.spouseLinks) ? p.spouseLinks : []).map(l => `(${l.id}) ${l.name || ''}`.trim()).join('، '),
+        'الأم': motherDisplay(p.motherId, p.motherName) === 'لا يوجد' ? '' : motherDisplay(p.motherId, p.motherName),
+        'رقم التواصل': p.phone || '',
+        'تاريخ الميلاد': p.birthDate || p.birthDateHijri ? (B ? B.formatBoth(p) : (p.birthDate || '')) : '',
+        'الحالة': STATUS_LABELS_AR[p.status] || p.status || ''
+      };
+    });
+    const ws = XLSX.utils.json_to_sheet(rows, { header });
+    ws['!cols'] = [{ wch: 8 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 40 }, { wch: 7 }, { wch: 14 },
+                   { wch: 22 }, { wch: 24 }, { wch: 20 }, { wch: 15 }, { wch: 22 }, { wch: 14 }];
+    ws['!views'] = [{ RTL: true }];
+    ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length, c: header.length - 1 } }) };
+    const wb = XLSX.utils.book_new();
+    wb.Workbook = { Views: [{ RTL: true }] };
+    XLSX.utils.book_append_sheet(wb, ws, 'الأشخاص');
+    const filt = describePersonsFilter();
+    const stamp = new Date().toISOString().slice(0, 10);
+    // اسم الملف بالإنجليزية لأن بعض المتصفحات تستبدل الأسماء العربية بـ «download»
+    XLSX.writeFile(wb, `almajed-persons_${stamp}${filt ? '_filtered' : ''}.xlsx`);
+    logAdminAction('export', `تصدير Excel لـ ${rows.length} فرد${filt ? ' (تصفية: ' + filt + ')' : ''}`);
+  } catch (err) {
+    console.error(err);
+    alert('تعذّر إنشاء ملف Excel: ' + err.message);
+  } finally {
+    if (btnEl) { btnEl.disabled = false; btnEl.textContent = original; }
+  }
+}
+
 // الاسم الأول ثم الأب ثم الجد (مثل: «حسن علي أحمد»)
 function matchNameTokensAdmin(p, tokens) {
   const names = [p.firstName].concat(ancestorsOfAdmin(p, tokens.length - 1).map(a => a.firstName));
   return tokens.every((t, i) => names[i] && normalizeArabic(names[i]).includes(t));
 }
+let filteredPersonsAdmin = [];   // ما يظهر حالياً في الجدول بعد التصفية (يُصدَّر إلى Excel)
 function applyPersonsFilter() {
   const q = (document.getElementById('pf-search')?.value || '').trim();
   const g = document.getElementById('pf-gender')?.value || '';
@@ -2134,6 +2195,7 @@ function applyPersonsFilter() {
   if (g) list = list.filter(p => p.gender === g);
   if (m) list = list.filter(p => (m === 'married') === isMarriedAdmin(p));
   if (st) list = list.filter(p => p.status === st);
+  filteredPersonsAdmin = list;
   const countEl = document.getElementById('pf-count');
   if (countEl) countEl.textContent = (list.length === allPersonsAdmin.length)
     ? `عدد الأفراد: ${allPersonsAdmin.length}`
@@ -2971,6 +3033,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   ['pf-search'].forEach(id => document.getElementById(id).addEventListener('input', applyPersonsFilter));
   ['pf-gender', 'pf-marital', 'pf-status'].forEach(id => document.getElementById(id).addEventListener('change', applyPersonsFilter));
+  document.getElementById('pf-export').addEventListener('click', (e) => exportFilteredPersonsXlsx(e.currentTarget));
   document.getElementById('pf-reset').addEventListener('click', () => {
     ['pf-search', 'pf-gender', 'pf-marital', 'pf-status'].forEach(id => { document.getElementById(id).value = ''; });
     applyPersonsFilter();
