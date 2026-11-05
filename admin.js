@@ -39,6 +39,7 @@ const PRIVATE_COLLECTION = 'personsPrivate';
 let privatePhonesAdmin = {};          // docId -> phone
 let rawPersonsAdmin = [];             // آخر نسخة من persons كما وصلت من القاعدة
 let phonesMigrationStarted = false;
+let birthPurgeStarted = false;
 
 function phoneLast4Of(phone) {
   const d = String(phone || '').replace(/\D/g, '');
@@ -1116,6 +1117,7 @@ function listenToPersonsAdmin() {
     snapshot.forEach(doc => rawPersonsAdmin.push({ id: doc.id, ...doc.data() }));
     rebuildAdminPersons();
     migrateLegacyPhones();
+    purgeBirthDates();
   }, err => console.error(err));
 
   // الأرقام الكاملة (للمدير فقط)
@@ -1147,6 +1149,47 @@ function rebuildAdminPersons() {
 
 // نقل تلقائي لمرة واحدة: أي شخص ما زال رقمه الكامل محفوظاً في persons (البيانات القديمة)
 // يُنقل رقمه إلى المنطقة الخاصة ويُحذف من persons ويُترك آخر 4 أرقام فقط.
+// حذف تواريخ الميلاد نهائياً (قرار العائلة: لا يُجمع تاريخ الميلاد في الموقع)
+// يعمل مرة عند دخول المدير: يمسح حقول الميلاد من كل الأشخاص ومن الطلبات القديمة
+const BIRTH_FIELDS = ['birthDate', 'birthDateHijri', 'birthDateCal'];
+const hasBirthFields = d => BIRTH_FIELDS.some(f => Object.prototype.hasOwnProperty.call(d || {}, f));
+async function purgeBirthDates() {
+  if (birthPurgeStarted) return;
+  birthPurgeStarted = true;
+  const people = rawPersonsAdmin.filter(hasBirthFields);
+  const del = {}; BIRTH_FIELDS.forEach(f => { del[f] = firebase.firestore.FieldValue.delete(); });
+  try {
+    const CHUNK = 400;
+    for (let i = 0; i < people.length; i += CHUNK) {
+      const batch = db.batch();
+      people.slice(i, i + CHUNK).forEach(p => batch.update(db.collection('persons').doc(p.id), del));
+      await batch.commit();
+    }
+    // الطلبات القديمة التي فيها تاريخ ميلاد (لشخص أو لأفراد طلب جماعي)
+    const reqs = await db.collection('requests').get();
+    const reqDocs = reqs.docs.filter(d => {
+      const x = d.data();
+      return hasBirthFields(x) || (Array.isArray(x.members) && x.members.some(hasBirthFields));
+    });
+    for (let i = 0; i < reqDocs.length; i += CHUNK) {
+      const batch = db.batch();
+      reqDocs.slice(i, i + CHUNK).forEach(d => {
+        const x = d.data(); const upd = Object.assign({}, del);
+        if (Array.isArray(x.members)) upd.members = x.members.map(m => { const c = Object.assign({}, m); BIRTH_FIELDS.forEach(f => delete c[f]); return c; });
+        batch.update(d.ref, upd);
+      });
+      await batch.commit();
+    }
+    if (people.length || reqDocs.length) {
+      logAdminAction('migrate', `حذف تواريخ الميلاد نهائياً: ${people.length} شخص${reqDocs.length ? ' و' + reqDocs.length + ' طلب' : ''}`);
+      alert(`🗑️ تم حذف تواريخ الميلاد نهائياً من ${people.length} شخص${reqDocs.length ? ' و' + reqDocs.length + ' طلب قديم' : ''}.`);
+    }
+  } catch (err) {
+    birthPurgeStarted = false;
+    console.error('تعذّر حذف تواريخ الميلاد:', err);
+  }
+}
+
 async function migrateLegacyPhones() {
   if (phonesMigrationStarted) return;
   const legacy = rawPersonsAdmin.filter(p => Object.prototype.hasOwnProperty.call(p, 'phone'));

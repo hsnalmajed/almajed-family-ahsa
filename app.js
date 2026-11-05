@@ -876,10 +876,6 @@ async function submitUpdateInfo(evt) {
   const phoneEl = document.getElementById('update-phone');
   const phoneTouched = phoneChangeRequested || phoneEl.style.display !== 'none';
   const phone = phoneTouched ? phoneEl.value.trim() : null;
-  // تاريخ الميلاد أُزيل من نافذة التحديث — تُرسل قيم فارغة فلا تُغيّر المسجَّل
-  const birthDate = '';
-  const birthDateHijri = '';
-  const birthDateCal = '';
   const status = document.querySelector('input[name="update-status"]:checked')?.value;
 
   // جميع الحقول إجبارية عدا «الأم»
@@ -940,9 +936,6 @@ async function submitUpdateInfo(evt) {
       targetPersonId: selectedTargetPerson.displayId,
       targetPersonName: selectedTargetPerson.firstName,
       photoURL: photoURL || '',
-      birthDate,
-      birthDateHijri,
-      birthDateCal,
       status,
       maritalStatus: (document.querySelector('input[name="update-marital"]:checked')?.value) || 'single',
       spouseFamilies: spouseFamilyVals,
@@ -1393,9 +1386,6 @@ async function stashCurrentMember(showErrors) {
       return false;
     }
   }
-  const birthDate = '';
-  const birthDateHijri = '';
-  const birthDateCal = '';
   const gender = RELATION_TO_GENDER[selectedRelationType];
 
   let photoURL = '';
@@ -1423,7 +1413,7 @@ async function stashCurrentMember(showErrors) {
   const motherName = (motherOpt && motherOpt.value) ? (motherOpt.dataset.mname || '') : '';
 
   pendingMembers.push({
-    firstName, gender, phone, birthDate, birthDateHijri, birthDateCal, photoURL,
+    firstName, gender, phone, photoURL,
     relationType: selectedRelationType, parentKey,
     maritalStatus, spouseFamilies, spouseLinks, spouseInFamily, motherId, motherName
   });
