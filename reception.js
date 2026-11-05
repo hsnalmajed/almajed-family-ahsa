@@ -359,6 +359,14 @@
         </section>
 
         <div class="rc-col">
+      ${!female && married ? `
+      <section class="rc-box rc-sibs">
+        <h3>👨‍👩‍👧 الأبناء والبنات <small>(${childrenOf(p).length + (queue[p.displayId] || []).length})</small></h3>
+        ${childrenOf(p).length ? `<div class="rc-sib-list">${childrenOf(p).map(k => siblingCard(k, p)).join('')}</div>` : '<div class="rc-note">لا يوجد أبناء مسجّلون بعد.</div>'}
+        <div class="rc-label" style="margin-top:14px;">إضافة ابن أو ابنة</div>
+        ${kidsBlock(p, { existing: [], ph: 'اسم الابن أو البنت', m: 'ابن', f: 'ابنة' })}
+      </section>` : ''}
+
           <section class="rc-box">
             ${father ? `
             <h3>👤 الأب</h3>
@@ -373,16 +381,6 @@
             ${motherSelect(`data-p="${Number(p.displayId)}" data-f="mother"`, father, val(p, 'mother'), '— غير محددة —')}
             ` : '<h3>👤 الأب</h3><div class="rc-note">رأس فرع — لا يوجد أب مسجّل له في الشجرة.</div>'}
           </section>
-        </div>
-      </div>
-
-      ${!female && married ? `
-      <section class="rc-box rc-sibs">
-        <h3>👨‍👩‍👧 الأبناء والبنات <small>(${childrenOf(p).length + (queue[p.displayId] || []).length})</small></h3>
-        ${childrenOf(p).length ? `<div class="rc-sib-list">${childrenOf(p).map(k => siblingCard(k, p)).join('')}</div>` : '<div class="rc-note">لا يوجد أبناء مسجّلون بعد.</div>'}
-        <div class="rc-label" style="margin-top:14px;">إضافة ابن أو ابنة</div>
-        ${kidsBlock(p, { existing: [], ph: 'اسم الابن أو البنت', m: 'ابن', f: 'ابنة' })}
-      </section>` : ''}
 
       ${father ? `
       <section class="rc-box rc-sibs">
@@ -391,6 +389,8 @@
         <div class="rc-label" style="margin-top:14px;">إضافة أخ أو أخت</div>
         ${kidsBlock(father, { existing: [], ph: 'اسم الأخ أو الأخت', m: 'أخ', f: 'أخت', defMother: val(p, 'mother') })}
       </section>` : ''}
+        </div>
+      </div>
 
       <div class="rc-savebar">
         <span class="rc-pending" id="rc-pending"></span>
