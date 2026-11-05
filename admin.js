@@ -454,14 +454,13 @@ function renderIdCards() {
   const cards = list.map(p => {
     const name = idCardName(p);
     const dead = p.status === 'death';
-    const sizeCls = name.length > 28 ? ' xlong' : (name.length > 19 ? ' long' : '');
     const photo = idCardPhotoOf(p);
     return `
     <div class="id-card${dead ? ' dead' : ''}${photo ? ' with-photo' : ''}">
       <div class="idc-top"></div>
       <img class="idc-logo" src="logo-header.webp?v=1" alt="">
       ${photo ? `<img class="idc-photo" src="${photo}" alt="">` : '<div class="idc-family">عائلة الماجد</div>'}
-      <div class="idc-name${sizeCls}"><span>${escapeHtml(name)}</span>${dead ? `<small>${p.gender === 'female' ? 'رحمها الله' : 'رحمه الله'}</small>` : ''}</div>
+      <div class="idc-name"><span>${escapeHtml(name)}</span>${dead ? `<small>${p.gender === 'female' ? 'رحمها الله' : 'رحمه الله'}</small>` : ''}</div>
       <div class="idc-id">الرقم التعريفي<b>${Number(p.displayId)}</b></div>
       <div class="idc-bottom"></div>
     </div>`;
