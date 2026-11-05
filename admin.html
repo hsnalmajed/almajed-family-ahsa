@@ -93,6 +93,16 @@
           <option value="alive">على قيد الحياة</option>
           <option value="death">متوفى</option>
         </select>
+        <select id="pf-phone" aria-label="رقم الجوال">
+          <option value="">رقم الجوال: الكل</option>
+          <option value="yes">لديه رقم جوال</option>
+          <option value="no">بدون رقم جوال</option>
+        </select>
+        <select id="pf-birth" aria-label="تاريخ الميلاد">
+          <option value="">تاريخ الميلاد: الكل</option>
+          <option value="yes">لديه تاريخ ميلاد</option>
+          <option value="no">بدون تاريخ ميلاد</option>
+        </select>
         <button type="button" class="btn btn-secondary btn-sm" id="pf-reset">مسح التصفية</button>
         <button type="button" class="btn btn-primary btn-sm" id="pf-export">📥 تصدير Excel</button>
       </div>
@@ -559,6 +569,6 @@
 <script src="firebase-config.js?v=6"></script>
 <script src="birthdate.js?v=1"></script>
 <script src="bizextras.js?v=2"></script>
-<script src="admin.js?v=105"></script>
+<script src="admin.js?v=106"></script>
 </body>
 </html>

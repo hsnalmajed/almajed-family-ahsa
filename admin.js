@@ -2108,6 +2108,8 @@ function renderPersonsList(list) {
 // ---------------------------------------------------------------------
 // تصفية جدول «كل الأشخاص»: بحث بالمعرّف أو الاسم + الجنس + الحالة الاجتماعية + الحالة
 // ---------------------------------------------------------------------
+function hasPhoneAdmin(p) { return String(p.phone || '').replace(/\D/g, '').length >= 5; }
+function hasBirthAdmin(p) { return !!(String(p.birthDate || '').trim() || String(p.birthDateHijri || '').trim()); }
 function isMarriedAdmin(p) {
   return p.maritalStatus === 'married'
     || (Array.isArray(p.spouseLinks) && p.spouseLinks.length > 0)
@@ -2119,7 +2121,7 @@ function describePersonsFilter() {
   const q = (document.getElementById('pf-search')?.value || '').trim();
   const sel = id => { const el = document.getElementById(id); return el && el.value ? el.options[el.selectedIndex].text : ''; };
   if (q) parts.push(q);
-  [sel('pf-gender'), sel('pf-marital'), sel('pf-status')].forEach(t => { if (t) parts.push(t); });
+  [sel('pf-gender'), sel('pf-marital'), sel('pf-status'), sel('pf-phone'), sel('pf-birth')].forEach(t => { if (t) parts.push(t); });
   return parts.join(' - ');
 }
 async function exportFilteredPersonsXlsx(btnEl) {
@@ -2184,6 +2186,8 @@ function applyPersonsFilter() {
   const g = document.getElementById('pf-gender')?.value || '';
   const m = document.getElementById('pf-marital')?.value || '';
   const st = document.getElementById('pf-status')?.value || '';
+  const ph = document.getElementById('pf-phone')?.value || '';
+  const bd = document.getElementById('pf-birth')?.value || '';
   let list = allPersonsAdmin;
   if (q) {
     if (/^\d+$/.test(q)) list = list.filter(p => String(p.displayId) === q);
@@ -2195,6 +2199,8 @@ function applyPersonsFilter() {
   if (g) list = list.filter(p => p.gender === g);
   if (m) list = list.filter(p => (m === 'married') === isMarriedAdmin(p));
   if (st) list = list.filter(p => p.status === st);
+  if (ph) list = list.filter(p => (ph === 'yes') === hasPhoneAdmin(p));
+  if (bd) list = list.filter(p => (bd === 'yes') === hasBirthAdmin(p));
   filteredPersonsAdmin = list;
   const countEl = document.getElementById('pf-count');
   if (countEl) countEl.textContent = (list.length === allPersonsAdmin.length)
@@ -3032,10 +3038,10 @@ document.addEventListener('DOMContentLoaded', () => {
   enforceArabicOnly(document.getElementById('root-first-name'));
 
   ['pf-search'].forEach(id => document.getElementById(id).addEventListener('input', applyPersonsFilter));
-  ['pf-gender', 'pf-marital', 'pf-status'].forEach(id => document.getElementById(id).addEventListener('change', applyPersonsFilter));
+  ['pf-gender', 'pf-marital', 'pf-status', 'pf-phone', 'pf-birth'].forEach(id => document.getElementById(id).addEventListener('change', applyPersonsFilter));
   document.getElementById('pf-export').addEventListener('click', (e) => exportFilteredPersonsXlsx(e.currentTarget));
   document.getElementById('pf-reset').addEventListener('click', () => {
-    ['pf-search', 'pf-gender', 'pf-marital', 'pf-status'].forEach(id => { document.getElementById(id).value = ''; });
+    ['pf-search', 'pf-gender', 'pf-marital', 'pf-status', 'pf-phone', 'pf-birth'].forEach(id => { document.getElementById(id).value = ''; });
     applyPersonsFilter();
   });
 
