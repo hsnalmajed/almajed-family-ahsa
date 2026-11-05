@@ -379,6 +379,7 @@
       </div>
 
       <div class="rc-grid" id="rc-grid">
+        <div class="rc-col">
         <section class="rc-box">
           <h3>📝 إكمال البيانات</h3>
           <div class="rc-prow rc-prow-self">
@@ -387,14 +388,15 @@
           </div>
           ${married ? spouseField(p, female ? 'الزوج' : 'الزوجة / الزوجات') : ''}
         </section>
-
-        <div class="rc-col">
       ${!female && married ? `
       <section class="rc-box rc-sibs">
         <h3>👨‍👩‍👧 الأبناء والبنات <small>(${childrenOf(p).length + (queue[p.displayId] || []).length})</small>${plusBtn('kids:' + Number(p.displayId))}</h3>
         ${childrenOf(p).length ? `<div class="rc-sib-list">${childrenOf(p).map(k => siblingCard(k, p)).join('')}</div>` : ((queue[p.displayId] || []).length ? '' : '<div class="rc-note">لا يوجد أبناء مسجّلون — اضغط + للإضافة.</div>')}
         ${kidsBlock(p, { existing: [], ph: 'اسم الابن أو البنت', m: 'ابن', f: 'ابنة' })}
       </section>` : ''}
+        </div>
+
+        <div class="rc-col">
 
           <section class="rc-box">
             ${father ? `
