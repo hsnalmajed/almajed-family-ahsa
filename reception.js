@@ -13,10 +13,9 @@
   let attendance = {};               // displayId -> { at, by } لتسليم البطاقات اليوم
   let attendanceUnsub = null;
   // كل التعديلات غير المحفوظة (تُحفظ كلها بزر واحد في الأسفل):
-  const ov = {};                     // displayId -> { phone, birth, status, married, mother } الحقول المعدّلة فقط
+  const ov = {};                     // displayId -> { phone, status, married, mother } الحقول المعدّلة فقط
   const pendingSpouses = {};         // displayId -> { links: [{id,name}], fams: [name] } بعد أي تعديل على الزوجات
   const queue = {};                  // displayId للأب -> [{ name, gender, mother }] أبناء جدد يُضافون عند الحفظ
-  const pickers = {};                // displayId -> منتقي تاريخ الميلاد
   let saving = false;
 
   const todayKey = () => new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD بتوقيت الجهاز
@@ -113,7 +112,6 @@
   function base(p, f) {
     switch (f) {
       case 'phone': return String(p.phone || '');
-      case 'birth': return (p.birthDate || p.birthDateHijri) ? { birthDate: p.birthDate || '', birthDateHijri: p.birthDateHijri || '', birthDateCal: p.birthDateCal || '' } : null;
       case 'status': return p.status === 'death' ? 'death' : 'alive';
       case 'married': { const s = savedSpouses(p); return isMarriedAdmin(p) || s.links.length + s.fams.length > 0; }
       case 'mother': return motherValueOf(p, fatherOf(p));
@@ -257,7 +255,6 @@
   function missingHints(p) {
     const out = [];
     if (!hasPhoneAdmin(p)) out.push('📞 بدون رقم جوال');
-    if (!hasBirthAdmin(p)) out.push('🎂 بدون تاريخ ميلاد');
     if (isMarriedAdmin(p) && !personFamiliesAdmin(p).length && !(p.spouseLinks || []).length) {
       out.push(isFemale(p) ? '💍 الزوج غير مسجّل' : '💍 الزوجة غير مسجّلة');
     }
@@ -271,10 +268,11 @@
   }
 
   const toggleHtml = (p, f, opts) => `<div class="rc-toggle" data-p="${Number(p.displayId)}" data-f="${f}">${opts.map(([v, l]) => `<button type="button" data-v="${v}" class="${String(val(p, f)) === String(v) ? 'on' : ''}">${l}</button>`).join('')}</div>`;
-  const statusToggle = p => toggleHtml(p, 'status', [['alive', 'حي'], ['death', isFemale(p) ? 'متوفاة' : 'متوفى']]);
-  const maritalToggle = p => toggleHtml(p, 'married', [['false', isFemale(p) ? 'غير متزوجة' : 'غير متزوج'], ['true', isFemale(p) ? 'متزوجة' : 'متزوج']]);
   const phoneInput = (p, ph) => `<input type="tel" class="rc-input" dir="ltr" data-p="${Number(p.displayId)}" data-f="phone" placeholder="${ph || '05xxxxxxxx'}" value="${esc(val(p, 'phone'))}">`;
-  const birthMount = p => `<div class="rc-bd" data-bd="${Number(p.displayId)}"></div>`;
+  // مربع اختيار: الكلمة فوق والمربع تحتها (غير محدد = حي / غير متزوج)
+  const checkHtml = (p, f, word, on) => `<label class="rc-chk"><span>${word}</span><input type="checkbox" data-p="${Number(p.displayId)}" data-cf="${f}" ${on ? 'checked' : ''}></label>`;
+  const deadCheck = p => checkHtml(p, 'status', isFemale(p) ? 'متوفاة' : 'متوفى', val(p, 'status') === 'death');
+  const marriedCheck = p => checkHtml(p, 'married', isFemale(p) ? 'متزوجة' : 'متزوج', val(p, 'married'));
 
   // الأبناء (المسجّلون + الجدد في القائمة) وسطر الإضافة — للأب p
   function kidsBlock(p, relWords) {
@@ -296,28 +294,29 @@
       </div>`;
   }
 
+  // سطر واحد لكل شخص: الاسم | متوفى | الجوال | الأم | متزوج — وتحته حقول الزواج إن كان متزوجاً
   function siblingCard(sb, father) {
     const id = Number(sb.displayId);
     const female = isFemale(sb);
     const married = val(sb, 'married');
-    const dead = val(sb, 'status') === 'death';
     return `
       <div class="rc-sib-card">
-        <div class="rc-sib-top">
-          ${kidChips([sb])}
-          ${statusToggle(sb)}
+        <div class="rc-prow">
+          <div class="rc-prow-name">${kidChips([sb])}</div>
+          ${deadCheck(sb)}
+          ${phoneInput(sb, 'الجوال')}
           ${motherSelect(`data-p="${id}" data-f="mother"`, father, val(sb, 'mother'), 'الأم غير محددة')}
+          ${marriedCheck(sb)}
         </div>
-        <div class="rc-sib-grid">
-          <div style="${dead ? 'display:none;' : ''}"><label class="rc-label">الجوال</label>${phoneInput(sb)}</div>
-          <div><label class="rc-label">الحالة الاجتماعية</label>${maritalToggle(sb)}</div>
-          <div class="rc-field-wide"><label class="rc-label">تاريخ الميلاد</label>${birthMount(sb)}</div>
-          ${married ? `<div class="rc-field-wide"><label class="rc-label">${female ? 'الزوج' : 'الزوجة / الزوجات'}</label>${spouseEditorHtml(sb)}</div>` : ''}
-          ${married && !female ? `<div class="rc-field-wide"><label class="rc-label">أبناء ${esc(sb.firstName)} <small>(${childrenOf(sb).length + (queue[id] || []).length})</small></label>
-            ${kidsBlock(sb, { existing: childrenOf(sb), ph: 'اسم الابن أو البنت', m: 'ابن', f: 'ابنة' })}</div>` : ''}
-        </div>
+        ${married ? `
+        <div class="rc-prow-more">
+          <label class="rc-label">${female ? 'الزوج' : 'الزوجة / الزوجات'}</label>${spouseEditorHtml(sb)}
+          ${!female ? `<label class="rc-label">أبناء ${esc(sb.firstName)} <small>(${childrenOf(sb).length + (queue[id] || []).length})</small></label>
+            ${kidsBlock(sb, { existing: childrenOf(sb), ph: 'اسم الابن أو البنت', m: 'ابن', f: 'ابنة' })}` : ''}
+        </div>` : ''}
       </div>`;
   }
+
 
   // ------------------------------------------------------------------
   // لوحة الشخص
@@ -352,12 +351,10 @@
       <div class="rc-grid" id="rc-grid">
         <section class="rc-box">
           <h3>📝 إكمال البيانات</h3>
-          <label class="rc-label">رقم الجوال</label>
-          ${phoneInput(p)}
-          <label class="rc-label">تاريخ الميلاد</label>
-          ${birthMount(p)}
-          <label class="rc-label">الحالة الاجتماعية</label>
-          ${maritalToggle(p)}
+          <div class="rc-prow rc-prow-self">
+            <div><label class="rc-label">رقم الجوال</label>${phoneInput(p)}</div>
+            ${marriedCheck(p)}
+          </div>
           ${married ? `<label class="rc-label">${female ? 'الزوج' : 'الزوجة / الزوجات'}</label>${spouseEditorHtml(p)}` : ''}
         </section>
 
@@ -365,13 +362,11 @@
           <section class="rc-box">
             ${father ? `
             <h3>👤 الأب</h3>
-            <div class="rc-sib-top rc-father-top">
-              <button type="button" class="rc-chip" data-goto="${Number(father.displayId)}">${esc(shortName(father))} <i>${Number(father.displayId)}</i></button>
-              ${statusToggle(father)}
-              ${val(father, 'status') === 'death' ? '' : phoneInput(father, 'جوال الأب')}
+            <div class="rc-prow rc-prow-father">
+              <div class="rc-prow-name"><button type="button" class="rc-chip" data-goto="${Number(father.displayId)}">${esc(shortName(father))} <i>${Number(father.displayId)}</i></button></div>
+              ${deadCheck(father)}
+              ${phoneInput(father, 'جوال الأب')}
             </div>
-            <label class="rc-label">تاريخ ميلاد الأب</label>
-            ${birthMount(father)}
             <label class="rc-label">زوجات الأب</label>
             ${spouseEditorHtml(father)}
             <label class="rc-label">أم ${esc(p.firstName)}</label>
@@ -413,20 +408,15 @@
 
   function wirePanel(p) {
     const panel = $('rc-panel');
-    // منتقيات تاريخ الميلاد
-    panel.querySelectorAll('.rc-bd').forEach(m => {
-      const per = byId(m.dataset.bd); if (!per || !window.Birthdate) return;
-      m.id = 'rc-bd-' + m.dataset.bd;
-      const picker = window.Birthdate.create(m.id);
-      pickers[m.dataset.bd] = picker;
-      const v = val(per, 'birth'); if (v) picker.setValue(v);
-      const read = () => { const g = picker.getValue(); if (g && (g.birthDate || g.birthDateHijri)) { setVal(per, 'birth', g); updateBar(); } };
-      m.addEventListener('change', read);
-      m.addEventListener('click', () => setTimeout(read, 0));
-    });
     // الحقول المرتبطة بالأشخاص
     panel.querySelectorAll('input[data-f="phone"]').forEach(i => i.addEventListener('input', () => { setVal(byId(i.dataset.p), 'phone', i.value.trim()); updateBar(); }));
     panel.querySelectorAll('select[data-f="mother"]').forEach(s => s.addEventListener('change', () => { setVal(byId(s.dataset.p), 'mother', s.value); updateBar(); }));
+    panel.querySelectorAll('input[data-cf]').forEach(c => c.addEventListener('change', () => {
+      const per = byId(c.dataset.p);
+      if (c.dataset.cf === 'status') setVal(per, 'status', c.checked ? 'death' : 'alive');
+      else setVal(per, 'married', c.checked);
+      if (c.dataset.cf === 'married') rerender(); else updateBar();
+    }));
     panel.querySelectorAll('.rc-toggle[data-f]').forEach(t => t.addEventListener('click', e => {
       const b = e.target.closest('button'); if (!b) return;
       const per = byId(t.dataset.p);
@@ -511,11 +501,6 @@
       out.phone = phone; out.upd.phoneLast4 = phoneLast4Of(phone); out.upd.phone = firebase.firestore.FieldValue.delete();
       out.texts.push('الجوال' + (phone ? '' : ' (حذف)'));
     }
-    const b = val(per, 'birth');
-    if (b && b.birthDate && b.birthDate !== (per.birthDate || '')) {
-      Object.assign(out.upd, { birthDate: b.birthDate, birthDateHijri: b.birthDateHijri || '', birthDateCal: b.birthDateCal || '' });
-      out.texts.push('الميلاد');
-    }
     const status = val(per, 'status');
     if (status !== base(per, 'status')) { out.upd.status = status; out.texts.push('الحالة: ' + (status === 'death' ? (female ? 'متوفاة' : 'متوفى') : 'حي')); }
     const sp = spouseState(per), old = savedSpouses(per);
@@ -586,7 +571,7 @@
       const ref = db.collection('persons').doc();
       setPrivatePhone(tx, ref.id, '');
       tx.set(ref, {
-        displayId: newId, firstName: name, gender, phoneLast4: '', birthDate: '', birthDateHijri: '', birthDateCal: '',
+        displayId: newId, firstName: name, gender, phoneLast4: '',
         status: 'alive', photoURL: '', maritalStatus: 'single', spouseFamilies: [], spouseLinks: [],
         motherId: mother.motherId, motherName: mother.motherName, parentKey: String(parent.displayId),
         createdAt: firebase.firestore.FieldValue.serverTimestamp()

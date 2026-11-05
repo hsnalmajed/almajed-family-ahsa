@@ -13,10 +13,6 @@ let selectedAdminRelationType = null;
 let selectedAdminEditPhotoFile = null;
 let selectedAdminAddPhotoFile = null;
 let adminAddedMembersThisSession = [];
-// منتقيات تاريخ الميلاد (هجري/ميلادي)
-let adminEditBirthPicker = null;
-let adminAddBirthPicker = null;
-let rootBirthPicker = null;
 // العلامات التجارية (لوحة المدير)
 let allBusinessesAdmin = [];
 let selectedAdminBizLogoFile = null;
@@ -321,7 +317,7 @@ function renderCollectPreview() {
     branches.map(b => `<div class="collect-branch-row"><b>فرع ${escapeHtml(b.head.firstName)} (#${b.head.displayId})</b><span>${b.members.length} فرد</span></div>`).join('');
 }
 
-const COLLECT_COLS = ['الرقم التعريفي', 'الاسم الأول', 'اسم الأب', 'اسم الجد', 'الجنس', 'رقم التواصل', 'تاريخ الميلاد', 'الحالة', 'الحالة الاجتماعية', 'اسم عائلة الزوجة', 'معرّف الأب (للربط)'];
+const COLLECT_COLS = ['الرقم التعريفي', 'الاسم الأول', 'اسم الأب', 'اسم الجد', 'الجنس', 'رقم التواصل', 'الحالة', 'الحالة الاجتماعية', 'اسم عائلة الزوجة', 'معرّف الأب (للربط)'];
 
 function collectPersonRow(p) {
   const anc = ancestorsOfAdmin(p, 2);
@@ -334,7 +330,6 @@ function collectPersonRow(p) {
     'اسم الجد': grandfather ? grandfather.firstName : '',
     'الجنس': p.gender === 'female' ? 'أنثى' : 'ذكر',
     'رقم التواصل': p.phone || '',
-    'تاريخ الميلاد': (window.Birthdate && (p.birthDate || p.birthDateHijri)) ? window.Birthdate.formatBoth(p) : (p.birthDate || ''),
     'الحالة': p.status === 'death' ? 'متوفى' : 'على قيد الحياة',
     'الحالة الاجتماعية': p.maritalStatus === 'married'
       ? (p.gender === 'female' ? 'متزوجة' : 'متزوج')
@@ -370,11 +365,10 @@ async function downloadCollectionXlsx(btnEl) {
       ['تعليمات جمع البيانات — عائلة الماجد'],
       [''],
       ['• كل ورقة في هذا الملف تمثّل «فرعاً» من العائلة. وزّع كل ورقة على الشخص المسؤول عن ذلك الفرع.'],
-      ['• الهدف: التأكّد من البيانات الحالية وتعبئة الناقص (مثل تاريخ الميلاد ورقم التواصل).'],
+      ['• الهدف: التأكّد من البيانات الحالية وتعبئة الناقص (مثل رقم التواصل والحالة الاجتماعية).'],
       ['• لا تُغيّر عمودَي «الرقم التعريفي» و«معرّف الأب (للربط)» — يُستخدمان لربط الأشخاص في الموقع.'],
       ['• عبّئ الأعمدة الفارغة وصحّح أي خطأ في الأسماء أو الحالة.'],
       ['• الجنس: ذكر / أنثى. الحالة: على قيد الحياة / متوفى. الحالة الاجتماعية: متزوج / غير متزوج.'],
-      ['• تاريخ الميلاد: اكتبه بصيغة يوم/شهر/سنة (اتفقوا على هجري أو ميلادي).'],
       ['• بعد التعبئة أعِد الملف للمدير لإدخال/تحديث البيانات في الموقع.'],
       [''],
       ['راجع ورقة «ملخّص الفروع» لتوزيع المسؤوليات.']
@@ -392,7 +386,7 @@ async function downloadCollectionXlsx(btnEl) {
 
     // ورقة لكل فرع
     const used = new Set(['تعليمات', 'ملخّص الفروع']);
-    const widths = [{ wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 7 }, { wch: 15 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 20 }, { wch: 14 }];
+    const widths = [{ wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 7 }, { wch: 15 }, { wch: 14 }, { wch: 16 }, { wch: 20 }, { wch: 14 }];
     branches.forEach(b => {
       const rows = b.members.map(collectPersonRow);
       const ws = XLSX.utils.json_to_sheet(rows, { header: COLLECT_COLS });
@@ -531,12 +525,7 @@ function renderUpdateDiff(r) {
     lines.push(row('رقم التواصل', person.phone || 'لا يوجد', r.phone || 'حُذف'));
   }
   // تاريخ الميلاد (يُطبَّق فقط إن أُرسلت قيمة جديدة) — يُعرض بالهجري والميلادي
-  if (typeof r.birthDate === 'string' && r.birthDate.trim() && String(person.birthDate || '') !== String(r.birthDate.trim())) {
-    const B = window.Birthdate;
-    const bBefore = person.birthDate ? (B ? B.formatBoth(person) : person.birthDate) : 'غير مسجّل';
-    const bAfter = B ? B.formatBoth({ birthDate: r.birthDate, birthDateHijri: r.birthDateHijri }) : r.birthDate.trim();
-    lines.push(row('تاريخ الميلاد', bBefore, bAfter));
-  }
+
   // الحالة
   if (r.status && r.status !== person.status) {
     lines.push(row('الحالة', STATUS_LABELS_AR[person.status] || person.status || '—', STATUS_LABELS_AR[r.status] || r.status));
@@ -594,7 +583,7 @@ function renderRequests() {
     } else if (r.requestType === 'addBatch') {
       const members = r.members || [];
       const membersHtml = members.map(m =>
-        `<div class="req-meta">• ${escapeHtml(m.firstName)}${dupBadgeAdmin(m.parentKey, m.firstName)} — ${escapeHtml(RELATION_LABELS_AR[m.relationType] || m.relationType)} (${GENDER_LABELS_AR[m.gender] || ''})${m.phone ? ' — ' + escapeHtml(m.phone) : ''}${(m.birthDate || m.birthDateHijri) ? ' — 🎂 ' + escapeHtml(window.Birthdate ? window.Birthdate.formatBoth(m) : (m.birthDate || '')) : ''} —${escapeHtml(maritalLabel(m.maritalStatus, m.gender, m.spouseFamilies || m.spouseFamily) + spouseLinksLabel(m.gender, m.spouseLinks))}${(m.motherId || m.motherName) ? ' — الأم: ' + escapeHtml(m.motherId ? ('(' + m.motherId + ') ' + ((allPersonsAdmin.find(p => p.displayId === Number(m.motherId)) || {}).firstName || '')) : m.motherName) : ''}</div>`
+        `<div class="req-meta">• ${escapeHtml(m.firstName)}${dupBadgeAdmin(m.parentKey, m.firstName)} — ${escapeHtml(RELATION_LABELS_AR[m.relationType] || m.relationType)} (${GENDER_LABELS_AR[m.gender] || ''})${m.phone ? ' — ' + escapeHtml(m.phone) : ''} —${escapeHtml(maritalLabel(m.maritalStatus, m.gender, m.spouseFamilies || m.spouseFamily) + spouseLinksLabel(m.gender, m.spouseLinks))}${(m.motherId || m.motherName) ? ' — الأم: ' + escapeHtml(m.motherId ? ('(' + m.motherId + ') ' + ((allPersonsAdmin.find(p => p.displayId === Number(m.motherId)) || {}).firstName || '')) : m.motherName) : ''}</div>`
       ).join('');
       row.innerHTML = `
         <div class="req-info">
@@ -683,9 +672,6 @@ async function approveRequest(requestId, btnEl) {
         gender: reqData.gender,
         photoURL: safeImgSrc(reqData.photoURL),
         phoneLast4: phoneLast4Of(reqData.phone),
-        birthDate: reqData.birthDate || '',
-        birthDateHijri: reqData.birthDateHijri || '',
-        birthDateCal: reqData.birthDateCal || '',
         status: reqData.status,
         maritalStatus: reqData.maritalStatus || 'single',
         spouseFamilies: reqData.spouseFamilies || (reqData.spouseFamily ? [reqData.spouseFamily] : []),
@@ -737,9 +723,6 @@ async function approveBatchRequest(requestId, btnEl) {
           gender: m.gender,
           photoURL: safeImgSrc(m.photoURL),
           phoneLast4: phoneLast4Of(m.phone),
-          birthDate: m.birthDate || '',
-          birthDateHijri: m.birthDateHijri || '',
-          birthDateCal: m.birthDateCal || '',
           status: 'alive',
           maritalStatus: m.maritalStatus || 'single',
           spouseFamilies: married ? (m.spouseFamilies || (m.spouseFamily ? [m.spouseFamily] : [])) : [],
@@ -810,11 +793,6 @@ async function approveUpdateRequest(requestId, btnEl) {
         setPrivatePhone(tx, personRef.id, reqData.phone);
       }
       // تاريخ الميلاد: نطبّقه فقط إن أرسل المستخدم قيمة (حتى لا نمسح ما سجّلته الإدارة سابقاً)
-      if (typeof reqData.birthDate === 'string' && reqData.birthDate.trim()) {
-        updates.birthDate = reqData.birthDate.trim();
-        updates.birthDateHijri = reqData.birthDateHijri || '';
-        updates.birthDateCal = reqData.birthDateCal || '';
-      }
       if (safeImgSrc(reqData.photoURL)) updates.photoURL = safeImgSrc(reqData.photoURL);
       if (reqData.status) updates.status = reqData.status;
       if (reqData.maritalStatus) {
@@ -1365,9 +1343,6 @@ function renderAdminNodeRelatives(person) {
   const chip = (p, label) => `<button type="button" class="rel-jump" data-jump="${p.displayId}">${label}: ${escapeHtml(p.firstName || '')} <b>#${p.displayId}</b></button>`;
   let rows = '';
   // كل بيانات الشخص تظهر للإدارة
-  const _B = window.Birthdate;
-  const birthTxt = (person.birthDate || person.birthDateHijri)
-    ? (_B ? _B.formatBoth(person) : (person.birthDate || '')) : 'غير مسجّل';
   const maritalFull = (maritalLabel(person.maritalStatus, person.gender, person.spouseFamilies) +
     spouseLinksLabel(person.gender, person.spouseLinks)) || '—';
   const dRow = (icon, label, val, muted) =>
@@ -1377,7 +1352,6 @@ function renderAdminNodeRelatives(person) {
     ${dRow('👤', 'الجنس', GENDER_LABELS_AR[person.gender] || '—')}
     ${dRow('❤️', 'الحالة', STATUS_LABELS_AR[person.status] || person.status || '—')}
     ${dRow('📞', 'رقم التواصل', person.phone || 'غير مسجّل', !person.phone)}
-    ${dRow('🎂', 'تاريخ الميلاد', birthTxt, birthTxt === 'غير مسجّل')}
     ${dRow('💍', 'الحالة الاجتماعية', maritalFull)}
   </div>`;
   const father = byId[String(person.parentKey || '')];
@@ -1802,14 +1776,7 @@ function openAdminEditModal(person) {
   document.getElementById('admin-edit-modal-title').textContent = `تعديل: ${person.firstName} (#${person.displayId})`;
   document.getElementById('admin-edit-name').value = person.firstName || '';
   document.getElementById('admin-edit-phone').value = person.phone || '';
-  if (window.Birthdate) {
-    if (!adminEditBirthPicker) adminEditBirthPicker = window.Birthdate.create('admin-edit-birthdate-mount');
-    if (adminEditBirthPicker) {
-      if (person.birthDate || person.birthDateHijri) {
-        adminEditBirthPicker.setValue({ birthDate: person.birthDate, birthDateHijri: person.birthDateHijri, birthDateCal: person.birthDateCal });
-      } else { adminEditBirthPicker.clear(); }
-    }
-  }
+
   document.getElementById('admin-edit-photo-preview').style.display = 'none';
   document.querySelectorAll('input[name="admin-edit-gender"]').forEach(r => { r.checked = (r.value === person.gender); });
   document.querySelectorAll('input[name="admin-edit-status"]').forEach(r => { r.checked = (r.value === person.status); });
@@ -1851,10 +1818,6 @@ async function submitAdminEdit(evt) {
   const firstName = document.getElementById('admin-edit-name').value.trim();
   const gender = document.querySelector('input[name="admin-edit-gender"]:checked')?.value;
   const phone = document.getElementById('admin-edit-phone').value.trim();
-  const _ebd = (adminEditBirthPicker && adminEditBirthPicker.getValue()) || null;
-  const birthDate = _ebd ? _ebd.birthDate : '';
-  const birthDateHijri = _ebd ? _ebd.birthDateHijri : '';
-  const birthDateCal = _ebd ? _ebd.birthDateCal : '';
   const status = document.querySelector('input[name="admin-edit-status"]:checked')?.value;
 
   if (!firstName || !gender || !status) {
@@ -1875,7 +1838,7 @@ async function submitAdminEdit(evt) {
     const motherName = (motherOpt && motherOpt.value) ? (motherOpt.dataset.mname || '') : '';
 
     const updates = {
-      firstName, gender, phoneLast4: phoneLast4Of(phone), birthDate, birthDateHijri, birthDateCal, status,
+      firstName, gender, phoneLast4: phoneLast4Of(phone), status,
       maritalStatus: married ? 'married' : 'single',
       spouseFamilies, spouseLinks, motherId, motherName,
       phone: firebase.firestore.FieldValue.delete()   // الرقم الكامل لا يُحفظ في البيانات العامة
@@ -1970,10 +1933,7 @@ function chooseAdminRelationType(type, btnEl) {
   document.querySelectorAll('#admin-quick-add-modal .relation-choices button').forEach(b => b.classList.remove('selected'));
   btnEl.classList.add('selected');
   document.getElementById('admin-quick-add-form').style.display = 'block';
-  if (window.Birthdate) {
-    if (!adminAddBirthPicker) adminAddBirthPicker = window.Birthdate.create('admin-add-birthdate-mount');
-    else adminAddBirthPicker.clear();
-  }
+
   const female = RELATION_TO_GENDER_ADMIN[type] === 'female';
   applyMaritalLabelsAdmin(document.getElementById('admin-quick-add-modal'), RELATION_TO_GENDER_ADMIN[type]);
   setSpouseSectionTexts('admin-add-spouse-section-label', 'admin-add-spouse-multi-hint', female);
@@ -2010,10 +1970,6 @@ async function submitAdminQuickAdd(evt) {
   }
   const firstName = document.getElementById('admin-add-name').value.trim();
   const phone = document.getElementById('admin-add-phone').value.trim();
-  const _abd = (adminAddBirthPicker && adminAddBirthPicker.getValue()) || null;
-  const birthDate = _abd ? _abd.birthDate : '';
-  const birthDateHijri = _abd ? _abd.birthDateHijri : '';
-  const birthDateCal = _abd ? _abd.birthDateCal : '';
   const status = document.querySelector('input[name="admin-add-status"]:checked')?.value || 'alive';
   const gender = RELATION_TO_GENDER_ADMIN[selectedAdminRelationType];
 
@@ -2059,7 +2015,7 @@ async function submitAdminQuickAdd(evt) {
       setPrivatePhone(tx, personRef.id, phone);
       tx.set(personRef, {
         displayId: newId,
-        firstName, gender, phoneLast4: phoneLast4Of(phone), birthDate, birthDateHijri, birthDateCal, status, photoURL,
+        firstName, gender, phoneLast4: phoneLast4Of(phone), status, photoURL,
         maritalStatus: married ? 'married' : 'single',
         spouseFamilies, spouseLinks, motherId, motherName,
         parentKey,
@@ -2076,7 +2032,6 @@ async function submitAdminQuickAdd(evt) {
 
     document.getElementById('admin-add-name').value = '';
     document.getElementById('admin-add-phone').value = '';
-    if (adminAddBirthPicker) adminAddBirthPicker.clear();
     document.getElementById('admin-add-photo-input').value = '';
     document.getElementById('admin-add-photo-preview').style.display = 'none';
     if (adminAddFamilyList) adminAddFamilyList.clear();
@@ -2104,15 +2059,9 @@ function renderPersonsList(list) {
   }
   container.innerHTML = `
     <table class="persons-table">
-      <thead><tr><th>المعرّف</th><th>الاسم</th><th>الجنس</th><th>الحالة الاجتماعية</th><th>الهاتف</th><th>تاريخ الميلاد (هجري / ميلادي)</th><th>الحالة</th><th>إجراء</th></tr></thead>
+      <thead><tr><th>المعرّف</th><th>الاسم</th><th>الجنس</th><th>الحالة الاجتماعية</th><th>الهاتف</th><th>الحالة</th><th>إجراء</th></tr></thead>
       <tbody>
         ${list.map(p => {
-          const B = window.Birthdate;
-          const hj = p.birthDateHijri ? (B ? B.formatHijri(p.birthDateHijri) : p.birthDateHijri) : '';
-          const gr = p.birthDate ? (B ? B.formatGreg(p.birthDate) : p.birthDate) : '';
-          const birthCell = (hj || gr)
-            ? `<div style="font-size:.82rem; line-height:1.5;">${hj ? '<span>🌙 ' + escapeHtml(hj) + '</span><br>' : ''}${gr ? '<span style="color:var(--muted);">☀️ ' + escapeHtml(gr) + '</span>' : ''}</div>`
-            : '<span style="color:var(--muted);">—</span>';
           return `
           <tr>
             <td>#${p.displayId}</td>
@@ -2122,7 +2071,6 @@ function renderPersonsList(list) {
               ? `<span class="pf-badge pf-married">${p.gender === 'female' ? 'متزوجة' : 'متزوج'}</span>`
               : `<span class="pf-badge pf-single">${p.gender === 'female' ? 'غير متزوجة' : 'غير متزوج'}</span>`}</td>
             <td>${escapeHtml(p.phone || '—')}</td>
-            <td>${birthCell}</td>
             <td>${STATUS_LABELS_AR[p.status] || p.status}</td>
             <td><button class="btn btn-secondary btn-sm" data-edit-person="${p.id}">✏️ تعديل</button></td>
           </tr>
@@ -2154,7 +2102,7 @@ function describePersonsFilter() {
   const q = (document.getElementById('pf-search')?.value || '').trim();
   const sel = id => { const el = document.getElementById(id); return el && el.value ? el.options[el.selectedIndex].text : ''; };
   if (q) parts.push(q);
-  [sel('pf-gender'), sel('pf-marital'), sel('pf-status'), sel('pf-phone'), sel('pf-birth')].forEach(t => { if (t) parts.push(t); });
+  [sel('pf-gender'), sel('pf-marital'), sel('pf-status'), sel('pf-phone')].forEach(t => { if (t) parts.push(t); });
   return parts.join(' - ');
 }
 async function exportFilteredPersonsXlsx(btnEl) {
@@ -2165,9 +2113,8 @@ async function exportFilteredPersonsXlsx(btnEl) {
   try {
     await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
     const XLSX = window.XLSX;
-    const B = window.Birthdate;
     const header = ['المعرّف', 'الاسم الأول', 'اسم الأب', 'اسم الجد', 'الاسم الكامل', 'الجنس', 'الحالة الاجتماعية',
-                    'عائلة الزوج/الزوجة', 'الزوج/الزوجة من العائلة', 'الأم', 'رقم التواصل', 'تاريخ الميلاد', 'الحالة'];
+                    'عائلة الزوج/الزوجة', 'الزوج/الزوجة من العائلة', 'الأم', 'رقم التواصل', 'الحالة'];
     const rows = list.map(p => {
       const anc = ancestorsOfAdmin(p, 2);
       const female = p.gender === 'female';
@@ -2183,7 +2130,6 @@ async function exportFilteredPersonsXlsx(btnEl) {
         'الزوج/الزوجة من العائلة': (Array.isArray(p.spouseLinks) ? p.spouseLinks : []).map(l => `(${l.id}) ${l.name || ''}`.trim()).join('، '),
         'الأم': motherDisplay(p.motherId, p.motherName) === 'لا يوجد' ? '' : motherDisplay(p.motherId, p.motherName),
         'رقم التواصل': p.phone || '',
-        'تاريخ الميلاد': p.birthDate || p.birthDateHijri ? (B ? B.formatBoth(p) : (p.birthDate || '')) : '',
         'الحالة': STATUS_LABELS_AR[p.status] || p.status || ''
       };
     });
@@ -2220,7 +2166,6 @@ function applyPersonsFilter() {
   const m = document.getElementById('pf-marital')?.value || '';
   const st = document.getElementById('pf-status')?.value || '';
   const ph = document.getElementById('pf-phone')?.value || '';
-  const bd = document.getElementById('pf-birth')?.value || '';
   let list = allPersonsAdmin;
   if (q) {
     if (/^\d+$/.test(q)) list = list.filter(p => String(p.displayId) === q);
@@ -2233,7 +2178,6 @@ function applyPersonsFilter() {
   if (m) list = list.filter(p => (m === 'married') === isMarriedAdmin(p));
   if (st) list = list.filter(p => p.status === st);
   if (ph) list = list.filter(p => (ph === 'yes') === hasPhoneAdmin(p));
-  if (bd) list = list.filter(p => (bd === 'yes') === hasBirthAdmin(p));
   filteredPersonsAdmin = list;
   const countEl = document.getElementById('pf-count');
   if (countEl) countEl.textContent = (list.length === allPersonsAdmin.length)
@@ -2356,10 +2300,7 @@ function openRootModal() {
   document.getElementById('root-add-form').reset();
   document.getElementById('root-photo-preview').style.display = 'none';
   selectedRootPhotoFile = null;
-  if (window.Birthdate) {
-    if (!rootBirthPicker) rootBirthPicker = window.Birthdate.create('root-birthdate-mount');
-    else rootBirthPicker.clear();
-  }
+
   // إعادة ضبط قسم الأزواج والأم
   if (rootFamilyList) rootFamilyList.clear();
   if (rootSpouseLinkList) rootSpouseLinkList.clear();
@@ -2414,10 +2355,6 @@ async function submitRootPerson(evt) {
   const firstName = document.getElementById('root-first-name').value.trim();
   const gender = document.querySelector('input[name="root-gender"]:checked')?.value;
   const phone = document.getElementById('root-phone').value.trim();
-  const _rbd = (rootBirthPicker && rootBirthPicker.getValue()) || null;
-  const birthDate = _rbd ? _rbd.birthDate : '';
-  const birthDateHijri = _rbd ? _rbd.birthDateHijri : '';
-  const birthDateCal = _rbd ? _rbd.birthDateCal : '';
   const status = document.querySelector('input[name="root-status"]:checked')?.value;
   const parentIdRaw = document.getElementById('root-parent-id').value.trim();
 
@@ -2463,7 +2400,7 @@ async function submitRootPerson(evt) {
       setPrivatePhone(tx, personRef.id, phone);
       tx.set(personRef, {
         displayId: newId,
-        firstName, gender, phoneLast4: phoneLast4Of(phone), birthDate, birthDateHijri, birthDateCal, status, photoURL, parentKey,
+        firstName, gender, phoneLast4: phoneLast4Of(phone), status, photoURL, parentKey,
         maritalStatus: married ? 'married' : 'single',
         spouseFamilies, spouseLinks, motherId, motherName,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -3086,10 +3023,10 @@ document.addEventListener('DOMContentLoaded', () => {
   enforceArabicOnly(document.getElementById('root-first-name'));
 
   ['pf-search'].forEach(id => document.getElementById(id).addEventListener('input', applyPersonsFilter));
-  ['pf-gender', 'pf-marital', 'pf-status', 'pf-phone', 'pf-birth'].forEach(id => document.getElementById(id).addEventListener('change', applyPersonsFilter));
+  ['pf-gender', 'pf-marital', 'pf-status', 'pf-phone'].forEach(id => document.getElementById(id).addEventListener('change', applyPersonsFilter));
   document.getElementById('pf-export').addEventListener('click', (e) => exportFilteredPersonsXlsx(e.currentTarget));
   document.getElementById('pf-reset').addEventListener('click', () => {
-    ['pf-search', 'pf-gender', 'pf-marital', 'pf-status', 'pf-phone', 'pf-birth'].forEach(id => { document.getElementById(id).value = ''; });
+    ['pf-search', 'pf-gender', 'pf-marital', 'pf-status', 'pf-phone'].forEach(id => { document.getElementById(id).value = ''; });
     applyPersonsFilter();
   });
 
