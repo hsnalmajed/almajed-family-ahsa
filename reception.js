@@ -17,6 +17,7 @@
   const pendingSpouses = {};         // displayId -> { links: [{id,name}], fams: [name] } بعد أي تعديل على الزوجات
   const queue = {};                  // displayId للأب -> [{ name, gender, mother }] أبناء جدد يُضافون عند الحفظ
   let saving = false;
+  const toDelete = new Set();        // displayId لأشخاص سيُحذفون عند الحفظ (أُضيفوا بالخطأ)
   const openAdd = new Set();         // خانات الإضافة المفتوحة بزر «+» (sp:رقم، kids:رقم)
 
   const todayKey = () => new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD بتوقيت الجهاز
@@ -90,6 +91,7 @@
 
   function clearAllPending() {
     [ov, pendingSpouses, queue].forEach(o => Object.keys(o).forEach(k => delete o[k]));
+    toDelete.clear();
   }
 
   // ------------------------------------------------------------------
@@ -308,7 +310,7 @@
           <label class="rc-chk"><span>متزوج</span><input type="checkbox" data-addmarried="${pid}"></label>
         </div>
         <div class="rc-addform-bottom">
-          ${opts.length ? motherSelect(`data-addm="${pid}"`, p, relWords.defMother || '', 'الأم') : ''}
+          ${opts.length ? motherSelect(`data-addm="${pid}"`, p, relWords.defMother || (opts.length === 1 ? opts[0].value : ''), 'الأم') : ''}
           <button type="button" class="rc-btn rc-btn-primary" data-add="${pid}">➕ إضافة</button>
         </div>
       </div>` : `
@@ -329,10 +331,15 @@
     const id = Number(sb.displayId);
     const female = isFemale(sb);
     const married = val(sb, 'married');
+    if (toDelete.has(String(id))) return `
+      <div class="rc-sib-card rc-del">
+        <div class="rc-del-row"><span>🗑️ <b>${esc(sb.firstName)}</b> <i>${id}</i> — سيُحذف من الشجرة عند الحفظ</span>
+          <button type="button" class="rc-btn" data-undel="${id}">↩️ تراجع</button></div>
+      </div>`;
     return `
       <div class="rc-sib-card">
         <div class="rc-prow">
-          <div class="rc-prow-name">${kidChips([sb])}</div>
+          <div class="rc-prow-name"><button type="button" class="rc-delbtn" data-del="${id}" title="حذف (أُضيف بالخطأ)">✕</button>${kidChips([sb])}</div>
           ${deadCheck(sb)}
           ${phoneInput(sb, 'الجوال')}
           ${marriedCheck(sb)}
@@ -342,7 +349,7 @@
         <div class="rc-prow-more">
           ${spouseField(sb, female ? 'الزوج' : 'الزوجة / الزوجات')}
           ${!female ? `<div class="rc-lblrow"><span class="rc-label">أبناء ${esc(sb.firstName)} <small>(${childrenOf(sb).length + (queue[id] || []).length})</small></span>${plusBtn('kids:' + id)}</div>
-            ${kidsBlock(sb, { existing: childrenOf(sb), ph: 'اسم الابن أو البنت', m: 'ابن', f: 'ابنة' })}` : ''}
+            ${kidsBlock(sb, { existing: childrenOf(sb), ph: 'اسم الابن أو البنت', m: 'ابن', f: 'ابنة', rich: true })}` : ''}
         </div>` : ''}
       </div>`;
   }
@@ -392,7 +399,7 @@
       <section class="rc-box rc-sibs">
         <h3>👨‍👩‍👧 الأبناء والبنات <small>(${childrenOf(p).length + (queue[p.displayId] || []).length})</small>${plusBtn('kids:' + Number(p.displayId))}</h3>
         ${childrenOf(p).length ? `<div class="rc-sib-list">${childrenOf(p).map(k => siblingCard(k, p)).join('')}</div>` : ((queue[p.displayId] || []).length ? '' : '<div class="rc-note">لا يوجد أبناء مسجّلون — اضغط + للإضافة.</div>')}
-        ${kidsBlock(p, { existing: [], ph: 'اسم الابن أو البنت', m: 'ابن', f: 'ابنة' })}
+        ${kidsBlock(p, { existing: [], ph: 'اسم الابن أو البنت', m: 'ابن', f: 'ابنة', rich: true })}
       </section>` : ''}
         </div>
 
@@ -490,6 +497,12 @@
       const [type, id] = k.split(':');
       rerender(openAdd.has(k) ? (type === 'sp' ? `.rc-sp[data-pid="${id}"] .rc-sp-fam` : `[data-addname="${id}"]`) : null);
     }));
+    panel.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => {
+      const per = byId(b.dataset.del); if (!per) return;
+      if (childrenOf(per).length) { alert(`لا يمكن حذف ${per.firstName} لأن له أبناء مسجّلين في الشجرة.\nاحذف أبناءه أولاً، أو صحّح اسمه من «الصورة وتصحيح الاسم».`); return; }
+      toDelete.add(String(per.displayId)); rerender();
+    }));
+    panel.querySelectorAll('[data-undel]').forEach(b => b.addEventListener('click', () => { toDelete.delete(String(b.dataset.undel)); rerender(); }));
     panel.querySelectorAll('[data-unq]').forEach(b => b.addEventListener('click', () => {
       const [pid, i] = b.dataset.unq.split(':'); (queue[pid] || []).splice(Number(i), 1); rerender();
     }));
@@ -567,7 +580,8 @@
   function pendingCount() {
     if (!currentId) return 0;
     let n = 0;
-    peopleInView().forEach(per => { n += changesOf(per).texts.length; });
+    peopleInView().forEach(per => { if (!toDelete.has(String(per.displayId))) n += changesOf(per).texts.length; });
+    n += toDelete.size;
     Object.keys(queue).forEach(k => { n += (queue[k] || []).length; });
     return n;
   }
@@ -625,12 +639,14 @@
     const btn = $('rc-save-all');
     const people = peopleInView();
     // تُحسب كل التغييرات والأمهات قبل أي حفظ (من الزوجات كما هي الآن)
-    const plan = people.map(per => ({ per, ch: changesOf(per) })).filter(x => x.ch.texts.length);
+    const plan = people.filter(per => !toDelete.has(String(per.displayId))).map(per => ({ per, ch: changesOf(per) })).filter(x => x.ch.texts.length);
+    const dels = Array.from(toDelete).map(byId).filter(Boolean);
     const adds = [];
     Object.keys(queue).forEach(pid => (queue[pid] || []).forEach(k => {
       const parent = byId(pid); if (parent) adds.push({ pid, parent, k, m: resolveMother(parent, k.mother) });
     }));
-    if (!plan.length && !adds.length) return;
+    if (!plan.length && !adds.length && !dels.length) return;
+    if (dels.length && !confirm(`سيتم حذف ${dels.map(d => d.firstName).join('، ')} نهائياً من الشجرة. متأكد؟`)) return;
     btn.disabled = true; btn.textContent = 'جارٍ الحفظ...';
     saving = true;
     let done = 0;
@@ -643,6 +659,22 @@
         if (ch.spouses) await syncReciprocal(per, ch.spouses.old, ch.spouses.links);
         delete ov[String(per.displayId)]; delete pendingSpouses[String(per.displayId)];
         logAdminAction('edit', `الاستقبال: تحديث بيانات ${per.firstName || ''} (#${per.displayId}) — ${ch.texts.join('، ')}`);
+        done++;
+      }
+      for (const d of dels) {
+        if (childrenOf(d).length) continue;
+        const delId = Number(d.displayId);
+        // تنظيف الإشارات: روابط الأزواج، والأم عند من يشير إليها
+        for (const o of allPersonsAdmin.filter(x => x.id !== d.id && ((Array.isArray(x.spouseLinks) && x.spouseLinks.some(l => Number(l.id) === delId)) || Number(x.motherId) === delId))) {
+          const upd = {};
+          if (Array.isArray(o.spouseLinks) && o.spouseLinks.some(l => Number(l.id) === delId)) upd.spouseLinks = o.spouseLinks.filter(l => Number(l.id) !== delId);
+          if (Number(o.motherId) === delId) { upd.motherId = null; upd.motherName = ''; }
+          await db.collection('persons').doc(o.id).update(upd);
+        }
+        await db.collection('persons').doc(d.id).delete();
+        try { await db.collection('personsPrivate').doc(d.id).delete(); } catch (e) { console.error('تعذّر حذف الرقم الخاص', e); }
+        logAdminAction('delete', `الاستقبال: حذف ${d.firstName || ''} (#${delId}) — أُضيف بالخطأ`);
+        toDelete.delete(String(delId)); delete ov[String(delId)]; delete pendingSpouses[String(delId)];
         done++;
       }
       for (const a of adds) {

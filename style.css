@@ -2568,3 +2568,10 @@ header.site-header p.hdr-tagline { color: var(--muted); font-size: 1rem; font-we
 .rc-addform-bottom { display: flex; gap: 8px; align-items: center; }
 .rc-addform-bottom .rc-select { flex: 1; min-width: 0; padding: 8px; font-size: .9rem; }
 @media (max-width: 520px) { .rc-prow-add { grid-template-columns: minmax(0, 1fr) auto; } .rc-prow-add > input[type=tel] { grid-column: 1 / -1; } }
+.rc-prow-name { display: flex; align-items: center; gap: 4px; }
+.rc-delbtn { width: 22px; height: 22px; flex: none; border: none; border-radius: 50%; background: #f6e3e3; color: #8a2a2a; font-size: .72rem; cursor: pointer; padding: 0; line-height: 1; }
+.rc-delbtn:hover { background: #e9c4c4; }
+.rc-sib-card.rc-del { background: #fbefef; border-color: #e6bcbc; }
+.rc-del-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #8a2a2a; font-size: .9rem; }
+.rc-del-row i { font-style: normal; color: var(--gold-dark); }
+.rc-del-row .rc-btn { padding: 6px 12px; font-size: .85rem; }
