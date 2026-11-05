@@ -200,7 +200,6 @@ function switchTab(tabName) {
   }
   if (tabName === 'cards') renderIdCards();
   if (tabName === 'collect') renderCollectPreview();
-  if (tabName === 'proto') renderProtoTree();
   if (tabName === 'biz') { setupAdminBizCategoryCombo(); getAdminBizExtrasEditor(); renderAdminBizList(); }
   if (tabName === 'log') listenToAdminLog();
 }
@@ -276,127 +275,6 @@ async function checkBackupReminder() {
 }
 
 // ---------------------------------------------------------------------
-// نموذج شجرة العائلة: تصميم عمودي أنيق قابل للطيّ (معاينة فقط)
-// ---------------------------------------------------------------------
-function protoRootsAndChildren() {
-  const childrenOf = {};
-  const roots = [];
-  allPersonsAdmin.forEach(p => {
-    const pk = String(p.parentKey || '');
-    if (!pk || pk.startsWith('v') || !personsByDisplayIdAdmin[pk]) roots.push(p);
-    else { (childrenOf[pk] = childrenOf[pk] || []).push(p); }
-  });
-  const byId = (a, b) => (Number(a.displayId) || 0) - (Number(b.displayId) || 0);
-  roots.sort(byId);
-  Object.values(childrenOf).forEach(list => list.sort(byId));
-  return { roots, childrenOf };
-}
-
-function protoNodeHtml(p, childrenOf, depth, descOf) {
-  const kids = childrenOf[String(p.displayId)] || [];
-  const female = p.gender === 'female';
-  const dead = p.status === 'death';
-  // مطويّة من الأعلى: كل من له أبناء يبدأ مطويّاً ويظهر أبناؤه بالضغط
-  const collapsed = kids.length ? ' collapsed' : '';
-  const av = p.photoURL
-    ? `<img class="pnode-av" src="${safeImgSrc(p.photoURL)}" alt="">`
-    : `<span class="pnode-av pnode-av-ph ${female ? 'f' : 'm'}">${escapeHtml((p.firstName || '؟').slice(0, 1))}</span>`;
-  const total = descOf(p.displayId);           // إجمالي من تحته (كل الذريّة)
-  const married = p.maritalStatus === 'married';
-  const metaTxt = married ? (female ? 'متزوجة' : 'متزوج') : '';   // بدون الجنس وبدون كلمة متوفى
-  const countBadge = total > 0 ? `<span class="pnode-count" title="إجمالي الذرية (أبناء وأحفاد)">👥 ${total}</span>` : '';
-  const death = dead ? '<i class="pnode-death" aria-hidden="true"></i>' : '';
-  let html =
-    `<li class="${collapsed.trim()}">` +
-      `<div class="pnode ${female ? 'female' : 'male'}${dead ? ' dead' : ''}" data-pid="${p.displayId}"${dead ? ' title="متوفى — رحمه الله"' : ''}>` +
-        `<span class="pnode-avwrap">` + av + death + `</span>` +
-        `<span class="pnode-name">${escapeHtml(p.firstName || '')}</span>` +
-        `<span class="pnode-id">ID: ${p.displayId}</span>` +
-        (metaTxt ? `<span class="pnode-meta">${metaTxt}</span>` : '') +
-        `<span class="pnode-actions">` + countBadge +
-          `<button class="pnode-gear" title="تحديث البيانات أو إضافة فرد" aria-label="تحديث أو إضافة">✎</button>` +
-        `</span>` +
-      `</div>`;
-  if (kids.length) {
-    html += '<ul>' + protoSortSiblings(kids).map(k => protoNodeHtml(k, childrenOf, depth + 1, descOf)).join('') + '</ul>';
-  }
-  html += '</li>';
-  return html;
-}
-
-function renderProtoTree() {
-  const box = document.getElementById('proto-tree');
-  if (!box) return;
-  if (!allPersonsAdmin.length) { box.innerHTML = '<div class="empty-state">لا توجد بيانات بعد.</div>'; return; }
-  const { roots, childrenOf } = protoRootsAndChildren();
-  // عدّاد إجمالي الذريّة تحت كل شخص (مع تخزين مؤقّت)
-  const memo = {};
-  const descOf = (id) => {
-    id = String(id);
-    if (memo[id] != null) return memo[id];
-    const kids = childrenOf[id] || [];
-    let c = kids.length;
-    for (const k of kids) c += descOf(k.displayId);
-    memo[id] = c; return c;
-  };
-  box.innerHTML = '<ul class="ptree">' + protoSortSiblings(roots).map(r => protoNodeHtml(r, childrenOf, 0, descOf)).join('') + '</ul>';
-  applyProtoZoom();
-  setTimeout(() => { drawProtoCurves(); centerProtoOnRoot(); }, 60);
-}
-
-// الخطوط الآن عبر CSS — الدالة تُبقى كمُنظّف فقط لأي طبقة SVG قديمة
-function drawProtoCurves() {
-  const wrap = document.getElementById('proto-tree');
-  if (!wrap) return;
-  wrap.querySelectorAll('svg.ptree-links, svg.pex-links').forEach(s => s.remove());
-}
-
-// توسيط المعرّف 1 (أو أول جذر) أفقياً في وسط الإطار
-function centerProtoOnRoot() {
-  const wrap = document.getElementById('proto-tree');
-  if (!wrap) return;
-  const node = wrap.querySelector('.pnode[data-pid="1"]') || wrap.querySelector('.ptree > li > .pnode');
-  if (!node) return;
-  const wr = wrap.getBoundingClientRect();
-  const nr = node.getBoundingClientRect();
-  const centerInContent = (nr.left - wr.left) + wrap.scrollLeft + nr.width / 2;
-  wrap.scrollLeft = Math.max(0, centerInContent - wrap.clientWidth / 2);
-  wrap.scrollTop = 0;
-}
-
-// تكبير/تصغير النموذج (10% إلى 100%، الافتراضي 50%)
-let protoZoom = 0.5;
-function applyProtoZoom() {
-  const t = document.querySelector('#proto-tree .ptree');
-  if (t) t.style.zoom = protoZoom;
-  const lbl = document.getElementById('proto-zoom-level');
-  if (lbl) lbl.textContent = Math.round(protoZoom * 100) + '%';
-}
-function setProtoZoom(z) {
-  protoZoom = Math.max(0.1, Math.min(1, Math.round(z * 10) / 10));
-  applyProtoZoom();
-  setTimeout(() => { drawProtoCurves(); centerProtoOnRoot(); }, 30);
-}
-
-// ملء الشاشة للنموذج
-function toggleProtoFullscreen() {
-  const panel = document.getElementById('tab-panel-proto');
-  if (!panel) return;
-  const on = panel.classList.toggle('proto-fs');
-  const btn = document.getElementById('proto-fullscreen');
-  if (btn) btn.textContent = on ? '✕ خروج من ملء الشاشة' : '⛶ ملء الشاشة';
-  document.body.style.overflow = on ? 'hidden' : '';
-  setTimeout(() => { drawProtoCurves(); centerProtoOnRoot(); }, 80);
-}
-
-function protoSetAll(collapsed) {
-  document.querySelectorAll('#proto-tree li').forEach(li => {
-    if (li.querySelector(':scope > ul')) li.classList.toggle('collapsed', collapsed);
-  });
-  setTimeout(drawProtoCurves, 0);
-}
-
-// ---------------------------------------------------------------------
 // جمع البيانات: تقسيم الشجرة إلى فروع + تصدير Excel
 // ---------------------------------------------------------------------
 function isNumericParent(pk) { return pk != null && /^\d+$/.test(String(pk)); }
@@ -429,12 +307,6 @@ function computeBranches() {
   arr.forEach(g => g.members.sort((a, b) => (Number(a.displayId) || 0) - (Number(b.displayId) || 0)));
   arr.sort((a, b) => (Number(a.head.displayId) || 0) - (Number(b.head.displayId) || 0));
   return arr;
-}
-
-// ترتيب الأشقّاء: تنازلي بالمعرّف حتى يظهر (في هيكل LTR) الأصغر على اليمين —
-// مطابقاً لترتيب الشجرة الرئيسية RTL (الأصغر يمين)
-function protoSortSiblings(list) {
-  return list.slice().sort((a, b) => (Number(b.displayId) || 0) - (Number(a.displayId) || 0));
 }
 
 // معاينة الفروع في التبويب
@@ -1260,7 +1132,6 @@ function rebuildAdminPersons() {
   renderAdminTree();
   renderIdCards();
   renderCollectPreview();
-  renderProtoTree();
 }
 
 // نقل تلقائي لمرة واحدة: أي شخص ما زال رقمه الكامل محفوظاً في persons (البيانات القديمة)
@@ -2989,37 +2860,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const dlXlsxBtn = document.getElementById('download-collect-xlsx-btn');
   if (dlXlsxBtn) dlXlsxBtn.addEventListener('click', (e) => downloadCollectionXlsx(e.currentTarget));
 
-  // نموذج شجرة العائلة
-  document.getElementById('tab-btn-proto').addEventListener('click', () => switchTab('proto'));
-  const protoBox = document.getElementById('proto-tree');
-  if (protoBox) protoBox.addEventListener('click', (e) => {
-    const node = e.target.closest('.pnode');
-    if (!node) return;
-    const person = personsByDisplayIdAdmin[String(node.getAttribute('data-pid'))];
-    // الضغط على الأيقونة ⚙ → فتح بطاقة التحديث/الإضافة
-    if (e.target.closest('.pnode-gear')) {
-      if (person && typeof openAdminNodeModal === 'function') openAdminNodeModal(person);
-      return;
-    }
-    // الضغط على الاسم أو باقي البطاقة → إظهار/إخفاء الأبناء
-    const li = node.parentElement;
-    const hasKids = li && li.querySelector(':scope > ul');
-    if (hasKids) { li.classList.toggle('collapsed'); setTimeout(drawProtoCurves, 0); return; }
-    // شخص بلا أبناء → فتح بطاقته مباشرة
-    if (person && typeof openAdminNodeModal === 'function') openAdminNodeModal(person);
-  });
-  const pExpand = document.getElementById('proto-expand-all');
-  if (pExpand) pExpand.addEventListener('click', () => protoSetAll(false));
-  const pCollapse = document.getElementById('proto-collapse-all');
-  if (pCollapse) pCollapse.addEventListener('click', () => protoSetAll(true));
-  const pzIn = document.getElementById('proto-zoom-in');
-  if (pzIn) pzIn.addEventListener('click', () => setProtoZoom(protoZoom + 0.1));
-  const pzOut = document.getElementById('proto-zoom-out');
-  if (pzOut) pzOut.addEventListener('click', () => setProtoZoom(protoZoom - 0.1));
-  const pzReset = document.getElementById('proto-zoom-reset');
-  if (pzReset) pzReset.addEventListener('click', () => { setProtoZoom(0.5); setTimeout(centerProtoOnRoot, 30); });
-  const pFs = document.getElementById('proto-fullscreen');
-  if (pFs) pFs.addEventListener('click', toggleProtoFullscreen);
   const printCardsBtn = document.getElementById('print-id-cards-btn');
   if (printCardsBtn) printCardsBtn.addEventListener('click', () => window.print());
   document.querySelectorAll('.cards-filter-btn').forEach(b => {

@@ -52,7 +52,6 @@
       <button class="tab-btn" id="tab-btn-cards">🪪 البطاقات التعريفية</button>
       <button class="tab-btn" id="tab-btn-collect">📊 جمع البيانات</button>
       <button class="tab-btn" id="tab-btn-biz">🏷️ العلامات التجارية</button>
-      <button class="tab-btn" id="tab-btn-proto">🎨 نموذج شجرة العائلة</button>
       <button class="tab-btn" id="tab-btn-log">📜 سجل النشاط</button>
     </div>
 
@@ -195,25 +194,6 @@
       </div>
     </div>
 
-    <!-- تبويب نموذج شجرة العائلة (تصميم مقترح) -->
-    <div class="tab-panel" id="tab-panel-proto">
-      <div class="panel-toolbar">
-        <div style="font-size:.9rem; color:var(--muted);">تصميم مقترح جديد للشجرة — شجرة عمودية أنيقة قابلة للطيّ والفتح (معاينة فقط).</div>
-        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-          <div class="zoom-controls">
-            <button type="button" id="proto-zoom-out" aria-label="تصغير">−</button>
-            <span id="proto-zoom-level">50%</span>
-            <button type="button" id="proto-zoom-in" aria-label="تكبير">+</button>
-            <button type="button" id="proto-zoom-reset" aria-label="إعادة 50%">⟲</button>
-          </div>
-          <button class="btn btn-secondary btn-sm" id="proto-expand-all">فتح الكل</button>
-          <button class="btn btn-secondary btn-sm" id="proto-collapse-all">طيّ الكل</button>
-          <button class="btn btn-primary btn-sm" id="proto-fullscreen">⛶ ملء الشاشة</button>
-        </div>
-      </div>
-      <p style="font-size:.82rem; color:var(--muted); margin:6px 0 14px;">اضغط على أي بطاقة لطيّ/فتح فروعها. هذا نموذج للعرض فقط ولا يؤثر على الشجرة الحالية — أخبرني إن أعجبك لأعتمده.</p>
-      <div id="proto-tree" class="proto-tree-wrap"></div>
-    </div>
   </div>
 </div>
 
@@ -561,6 +541,6 @@
 <script src="firebase-config.js?v=6"></script>
 <script src="birthdate.js?v=1"></script>
 <script src="bizextras.js?v=2"></script>
-<script src="admin.js?v=102"></script>
+<script src="admin.js?v=103"></script>
 </body>
 </html>
