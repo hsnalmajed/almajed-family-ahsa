@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
 <meta name="googlebot" content="noindex, nofollow">
 <title>لوحة تحكم المدير - عائلة الماجد</title>
-<link rel="stylesheet" href="style.css?v=110">
+<link rel="stylesheet" href="style.css?v=111">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -72,11 +72,28 @@
     <!-- تبويب كل الأشخاص -->
     <div class="tab-panel" id="tab-panel-persons">
       <div class="panel-toolbar">
-        <form id="search-id-form" class="search-bar">
-          <input type="number" id="search-id-input" placeholder="ابحث بالمعرّف (ID)" min="1">
-          <button type="submit" class="btn btn-secondary btn-sm">بحث</button>
-        </form>
+        <div class="pf-count" id="pf-count"></div>
         <button class="btn btn-primary btn-sm" id="open-root-modal-btn">+ إضافة شخص مباشرة</button>
+      </div>
+      <!-- أدوات تصفية الجدول -->
+      <div class="persons-filters" id="persons-filters">
+        <input type="text" id="pf-search" class="pf-search" placeholder="🔍 ابحث بالمعرّف أو الاسم (مثل: حسن علي أحمد)" autocomplete="off">
+        <select id="pf-gender" aria-label="الجنس">
+          <option value="">الجنس: الكل</option>
+          <option value="male">ذكر</option>
+          <option value="female">أنثى</option>
+        </select>
+        <select id="pf-marital" aria-label="الحالة الاجتماعية">
+          <option value="">الحالة الاجتماعية: الكل</option>
+          <option value="married">متزوج / متزوجة</option>
+          <option value="single">غير متزوج / غير متزوجة</option>
+        </select>
+        <select id="pf-status" aria-label="الحالة">
+          <option value="">الحالة: الكل</option>
+          <option value="alive">على قيد الحياة</option>
+          <option value="death">متوفى</option>
+        </select>
+        <button type="button" class="btn btn-secondary btn-sm" id="pf-reset">مسح التصفية</button>
       </div>
       <div id="persons-list"></div>
     </div>
@@ -541,6 +558,6 @@
 <script src="firebase-config.js?v=6"></script>
 <script src="birthdate.js?v=1"></script>
 <script src="bizextras.js?v=2"></script>
-<script src="admin.js?v=103"></script>
+<script src="admin.js?v=104"></script>
 </body>
 </html>

@@ -1126,7 +1126,7 @@ function rebuildAdminPersons() {
   });
   personsByDisplayIdAdmin = {};
   allPersonsAdmin.forEach(p => { personsByDisplayIdAdmin[String(p.displayId)] = p; });
-  renderPersonsList(allPersonsAdmin);
+  applyPersonsFilter();
   // إعادة رسم الطلبات حتى تظهر تنبيهات التكرار بعد وصول قائمة الأشخاص
   if (typeof pendingRequests !== 'undefined' && pendingRequests.length) renderRequests();
   renderAdminTree();
@@ -2071,7 +2071,7 @@ function renderPersonsList(list) {
   }
   container.innerHTML = `
     <table class="persons-table">
-      <thead><tr><th>المعرّف</th><th>الاسم</th><th>الجنس</th><th>الهاتف</th><th>تاريخ الميلاد (هجري / ميلادي)</th><th>الحالة</th><th>إجراء</th></tr></thead>
+      <thead><tr><th>المعرّف</th><th>الاسم</th><th>الجنس</th><th>الحالة الاجتماعية</th><th>الهاتف</th><th>تاريخ الميلاد (هجري / ميلادي)</th><th>الحالة</th><th>إجراء</th></tr></thead>
       <tbody>
         ${list.map(p => {
           const B = window.Birthdate;
@@ -2083,8 +2083,11 @@ function renderPersonsList(list) {
           return `
           <tr>
             <td>#${p.displayId}</td>
-            <td>${escapeHtml(p.firstName)}</td>
+            <td><b>${escapeHtml(p.firstName)}</b> <span class="pf-lineage">${escapeHtml(ancestorsOfAdmin(p, 2).map(a => a.firstName).filter(Boolean).join(' '))}</span></td>
             <td>${GENDER_LABELS_AR[p.gender] || ''}</td>
+            <td>${isMarriedAdmin(p)
+              ? `<span class="pf-badge pf-married">${p.gender === 'female' ? 'متزوجة' : 'متزوج'}</span>`
+              : `<span class="pf-badge pf-single">${p.gender === 'female' ? 'غير متزوجة' : 'غير متزوج'}</span>`}</td>
             <td>${escapeHtml(p.phone || '—')}</td>
             <td>${birthCell}</td>
             <td>${STATUS_LABELS_AR[p.status] || p.status}</td>
@@ -2102,12 +2105,44 @@ function renderPersonsList(list) {
   });
 }
 
-function handleSearchById(evt) {
-  evt.preventDefault();
-  const id = document.getElementById('search-id-input').value.trim();
-  if (!id) { renderPersonsList(allPersonsAdmin); return; }
-  const filtered = allPersonsAdmin.filter(p => String(p.displayId) === id);
-  renderPersonsList(filtered);
+// ---------------------------------------------------------------------
+// تصفية جدول «كل الأشخاص»: بحث بالمعرّف أو الاسم + الجنس + الحالة الاجتماعية + الحالة
+// ---------------------------------------------------------------------
+function isMarriedAdmin(p) {
+  return p.maritalStatus === 'married'
+    || (Array.isArray(p.spouseLinks) && p.spouseLinks.length > 0)
+    || (Array.isArray(p.spouseFamilies) && p.spouseFamilies.filter(Boolean).length > 0);
+}
+// الاسم الأول ثم الأب ثم الجد (مثل: «حسن علي أحمد»)
+function matchNameTokensAdmin(p, tokens) {
+  const names = [p.firstName].concat(ancestorsOfAdmin(p, tokens.length - 1).map(a => a.firstName));
+  return tokens.every((t, i) => names[i] && normalizeArabic(names[i]).includes(t));
+}
+function applyPersonsFilter() {
+  const q = (document.getElementById('pf-search')?.value || '').trim();
+  const g = document.getElementById('pf-gender')?.value || '';
+  const m = document.getElementById('pf-marital')?.value || '';
+  const st = document.getElementById('pf-status')?.value || '';
+  let list = allPersonsAdmin;
+  if (q) {
+    if (/^\d+$/.test(q)) list = list.filter(p => String(p.displayId) === q);
+    else {
+      const tokens = normalizeArabic(q).split(' ').filter(Boolean).slice(0, 3);
+      list = list.filter(p => p.firstName && matchNameTokensAdmin(p, tokens));
+    }
+  }
+  if (g) list = list.filter(p => p.gender === g);
+  if (m) list = list.filter(p => (m === 'married') === isMarriedAdmin(p));
+  if (st) list = list.filter(p => p.status === st);
+  const countEl = document.getElementById('pf-count');
+  if (countEl) countEl.textContent = (list.length === allPersonsAdmin.length)
+    ? `عدد الأفراد: ${allPersonsAdmin.length}`
+    : `عرض ${list.length} من ${allPersonsAdmin.length}`;
+  if (!list.length && allPersonsAdmin.length) {
+    document.getElementById('persons-list').innerHTML = '<div class="empty-state">لا يوجد أشخاص مطابقون للتصفية.</div>';
+    return;
+  }
+  renderPersonsList(list);
 }
 
 // سلسلة الآباء في لوحة التحكم (مطابقة لمنطق الصفحة الرئيسية)
@@ -2934,7 +2969,12 @@ document.addEventListener('DOMContentLoaded', () => {
   enforceArabicOnly(document.getElementById('admin-add-name'));
   enforceArabicOnly(document.getElementById('root-first-name'));
 
-  document.getElementById('search-id-form').addEventListener('submit', handleSearchById);
+  ['pf-search'].forEach(id => document.getElementById(id).addEventListener('input', applyPersonsFilter));
+  ['pf-gender', 'pf-marital', 'pf-status'].forEach(id => document.getElementById(id).addEventListener('change', applyPersonsFilter));
+  document.getElementById('pf-reset').addEventListener('click', () => {
+    ['pf-search', 'pf-gender', 'pf-marital', 'pf-status'].forEach(id => { document.getElementById(id).value = ''; });
+    applyPersonsFilter();
+  });
 
   document.getElementById('open-root-modal-btn').addEventListener('click', openRootModal);
   document.getElementById('close-root-modal-btn').addEventListener('click', closeRootModal);

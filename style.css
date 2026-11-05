@@ -2277,3 +2277,26 @@ header.site-header p.hdr-tagline { color: var(--muted); font-size: 1rem; font-we
   header.site-header p.hdr-tagline { grid-row: 3; }
   header.site-header .prepared-wrap { grid-row: 4; }
 }
+
+/* ===== تصفية جدول «كل الأشخاص» ===== */
+.persons-filters {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px;
+  padding: 10px; margin-bottom: 12px;
+}
+.persons-filters .pf-search {
+  flex: 1 1 260px; min-width: 0; padding: 9px 12px; border: 1px solid var(--border);
+  border-radius: 10px; font-family: inherit; font-size: .92rem; background: #fcfbf8;
+}
+.persons-filters select {
+  flex: 0 1 auto; padding: 9px 10px; border: 1px solid var(--border); border-radius: 10px;
+  font-family: inherit; font-size: .88rem; background: #fff; color: var(--text);
+}
+.persons-filters .pf-search:focus, .persons-filters select:focus {
+  outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(23,89,57,.14);
+}
+.pf-count { font-size: .9rem; font-weight: 700; color: var(--primary-dark); }
+.pf-lineage { color: var(--muted); font-size: .88rem; }
+.pf-badge { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: .78rem; font-weight: 700; white-space: nowrap; }
+.pf-married { color: #0f6b3c; background: #e6f6ec; border: 1px solid #bfe5cc; }
+.pf-single { color: var(--muted); background: #f3f1ea; border: 1px solid var(--border); }
