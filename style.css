@@ -2575,3 +2575,25 @@ header.site-header p.hdr-tagline { color: var(--muted); font-size: 1rem; font-we
 .rc-del-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #8a2a2a; font-size: .9rem; }
 .rc-del-row i { font-style: normal; color: var(--gold-dark); }
 .rc-del-row .rc-btn { padding: 6px 12px; font-size: .85rem; }
+/* «كل الأشخاص» كقاعدة بيانات */
+.pt-count { font-size: .9rem; color: var(--muted); margin: 0 0 8px; }
+.pt-full { font-size: .84rem; }
+.pt-full th, .pt-full td { padding: 8px 7px; }
+@media (max-width: 900px) { .pt-full { min-width: 1000px; } }
+.pt-nowrap { white-space: nowrap; }
+.pt-full th { position: sticky; top: 0; z-index: 2; white-space: nowrap; }
+.pt-full td { vertical-align: middle; }
+.pt-photo { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; display: block; }
+.pt-id { font-style: normal; font-size: .78rem; color: var(--gold-dark); background: var(--gold-light); border-radius: 999px; padding: 0 6px; }
+.pt-empty { color: var(--muted); }
+.pt-name { min-width: 130px; }
+.pt-wrap { min-width: 80px; line-height: 1.6; }
+.pt-phone { white-space: nowrap; }
+.pt-actions { white-space: nowrap; }
+.pt-actions .btn { padding: 5px 9px; }
+.pt-del { background: #fbeaea; border: 1px solid #f0c4c4; color: #8a2a2a; }
+.pt-del:hover { background: #f6d5d5; }
+.pt-dead { background: #faf8f4; }
+.pt-badge-dead { background: #eee; color: #555; }
+.pt-badge-alive { background: #eef6f0; color: #1f6b3d; }
+#persons-list { overflow: auto; max-height: 75vh; border-radius: 10px; }

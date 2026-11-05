@@ -2100,22 +2100,53 @@ function renderPersonsList(list) {
     container.innerHTML = '<div class="empty-state">لا يوجد أشخاص بعد</div>';
     return;
   }
+  const byId = personsByDisplayIdAdmin;
+  const kidsCount = {};
+  allPersonsAdmin.forEach(k => { if (k.parentKey) kidsCount[String(k.parentKey)] = (kidsCount[String(k.parentKey)] || 0) + 1; });
+  const idTag = id => `<i class="pt-id">${Number(id)}</i>`;
+  const motherCell = p => {
+    const m = p.motherId != null && p.motherId !== '' ? byId[String(p.motherId)] : null;
+    if (m) return `${escapeHtml(m.firstName || '')} ${idTag(m.displayId)}`;
+    return p.motherName ? escapeHtml(p.motherName) : '<span class="pt-empty">—</span>';
+  };
+  const spouseCell = p => {
+    const links = (Array.isArray(p.spouseLinks) ? p.spouseLinks : []).map(l => `${escapeHtml(l.name || (byId[String(l.id)] || {}).firstName || '')} ${idTag(l.id)}`);
+    const fams = personFamiliesAdmin(p).map(f => 'من ' + escapeHtml(f));
+    const all = links.concat(fams);
+    return all.length ? all.join('<br>') : '<span class="pt-empty">—</span>';
+  };
   container.innerHTML = `
-    <table class="persons-table">
-      <thead><tr><th>المعرّف</th><th>الاسم</th><th>الجنس</th><th>الحالة الاجتماعية</th><th>الهاتف</th><th>الحالة</th><th>إجراء</th></tr></thead>
+    <div class="pt-count">عدد السجلات: <b>${list.length}</b></div>
+    <table class="persons-table pt-full">
+      <thead><tr>
+        <th>المعرّف</th><th>إجراء</th><th>الصورة</th><th>الاسم</th><th>الجنس</th><th>الحالة</th><th>الحالة الاجتماعية</th>
+        <th>الزوج / الزوجات</th><th>الأب</th><th>الأم</th><th>الأبناء</th><th>الجوال</th>
+      </tr></thead>
       <tbody>
         ${list.map(p => {
+          const female = p.gender === 'female';
+          const father = isNumericParent(p.parentKey) ? byId[String(p.parentKey)] : null;
+          const photo = safeImgSrc(p.photoURL);
+          const kids = kidsCount[String(p.displayId)] || 0;
           return `
-          <tr>
-            <td>#${p.displayId}</td>
-            <td><b>${escapeHtml(p.firstName)}</b> <span class="pf-lineage">${escapeHtml(ancestorsOfAdmin(p, 2).map(a => a.firstName).filter(Boolean).join(' '))}</span></td>
+          <tr class="${p.status === 'death' ? 'pt-dead' : ''}">
+            <td><b>${Number(p.displayId)}</b></td>
+            <td class="pt-actions">
+              <button class="btn btn-secondary btn-sm" data-edit-person="${p.id}" title="تعديل">✏️</button>
+              <button class="btn btn-sm pt-del" data-del-person="${p.id}" title="حذف">🗑️</button>
+            </td>
+            <td>${photo ? `<img class="pt-photo" src="${photo}" alt="">` : '<span class="pt-empty">—</span>'}</td>
+            <td class="pt-name"><b>${escapeHtml(p.firstName)}</b> <span class="pf-lineage">${escapeHtml(ancestorsOfAdmin(p, 3).map(a => a.firstName).filter(Boolean).join(' '))}</span></td>
             <td>${GENDER_LABELS_AR[p.gender] || ''}</td>
+            <td>${p.status === 'death' ? `<span class="pf-badge pt-badge-dead">${female ? 'متوفاة' : 'متوفى'}</span>` : `<span class="pf-badge pt-badge-alive">حي</span>`}</td>
             <td>${isMarriedAdmin(p)
-              ? `<span class="pf-badge pf-married">${p.gender === 'female' ? 'متزوجة' : 'متزوج'}</span>`
-              : `<span class="pf-badge pf-single">${p.gender === 'female' ? 'غير متزوجة' : 'غير متزوج'}</span>`}</td>
-            <td>${escapeHtml(p.phone || '—')}</td>
-            <td>${STATUS_LABELS_AR[p.status] || p.status}</td>
-            <td><button class="btn btn-secondary btn-sm" data-edit-person="${p.id}">✏️ تعديل</button></td>
+              ? `<span class="pf-badge pf-married">${female ? 'متزوجة' : 'متزوج'}</span>`
+              : `<span class="pf-badge pf-single">${female ? 'غير متزوجة' : 'غير متزوج'}</span>`}</td>
+            <td class="pt-wrap">${spouseCell(p)}</td>
+            <td class="pt-nowrap">${father ? `${escapeHtml(father.firstName || '')} ${idTag(father.displayId)}` : '<span class="pt-empty">رأس فرع</span>'}</td>
+            <td class="pt-wrap">${motherCell(p)}</td>
+            <td>${kids ? `<b>${kids}</b>` : '<span class="pt-empty">0</span>'}</td>
+            <td dir="ltr" class="pt-phone">${escapeHtml(p.phone || '—')}</td>
           </tr>
         `;}).join('')}
       </tbody>
@@ -2125,6 +2156,17 @@ function renderPersonsList(list) {
     btn.addEventListener('click', () => {
       const person = allPersonsAdmin.find(x => x.id === btn.dataset.editPerson);
       if (person) openAdminEditModal(person);
+    });
+  });
+  container.querySelectorAll('[data-del-person]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const person = allPersonsAdmin.find(x => x.id === btn.dataset.delPerson);
+      if (!person) return;
+      const kids = allPersonsAdmin.filter(k => String(k.parentKey) === String(person.displayId)).length;
+      if (kids) { alert(`لا يمكن حذف ${person.firstName} (${person.displayId}) لأن له ${kids} من الأبناء مسجّلين تحته.\nاحذف أبناءه أولاً أو انقلهم لأب آخر من «تعديل».`); return; }
+      if (!confirm(`حذف «${person.firstName}» (${person.displayId}) نهائياً من الشجرة؟\nلا يمكن التراجع عن هذا.`)) return;
+      btn.disabled = true;
+      await deleteAdminPerson(person);
     });
   });
 }
