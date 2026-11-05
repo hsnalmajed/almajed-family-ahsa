@@ -293,11 +293,6 @@
         </div>
       </div>
 
-      <div class="rc-actions">
-        <button type="button" class="rc-btn" id="rc-checkin"></button>
-        <button type="button" class="rc-btn" id="rc-print">🖨️ طباعة بطاقته</button>
-        <button type="button" class="rc-btn" id="rc-full-edit">✏️ تعديل كامل</button>
-      </div>
 
       <div class="rc-grid" id="rc-grid">
         <section class="rc-box">
@@ -372,6 +367,12 @@
             ` : '<h3>👤 الأب</h3><div class="rc-note">رأس فرع — لا يوجد أب مسجّل له في الشجرة.</div>'}
           </section>
         </div>
+      </div>
+
+      <div class="rc-actions">
+        <button type="button" class="rc-btn" id="rc-checkin"></button>
+        <button type="button" class="rc-btn" id="rc-print">🖨️ طباعة بطاقته</button>
+        <button type="button" class="rc-btn" id="rc-full-edit">📷 الصورة وتصحيح الاسم</button>
       </div>
     `;
 
