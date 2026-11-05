@@ -419,7 +419,6 @@ function idCardName(person) {
 // فلاتر البطاقات: الحالة (all | alive | death) والجنس (all | male | female)
 let idCardsGenderFilter = 'all';
 let idCardsStatusFilter = 'alive';
-const SITE_URL = 'https://hsnalmajed.github.io/almajed-family-ahsa/';
 
 function renderIdCards() {
   const box = document.getElementById('id-cards-print');
@@ -440,47 +439,29 @@ function renderIdCards() {
     .filter(p => idCardsGenderFilter === 'all' || p.gender === idCardsGenderFilter)
     .sort((a, b) => (Number(a.displayId) || 0) - (Number(b.displayId) || 0));
   setN('id-cards-count', list.length);
-  setN('id-cards-pages', Math.ceil(list.length / 10));
+  setN('id-cards-pages', Math.ceil(list.length / 9));
   if (!list.length) {
     box.innerHTML = '<div class="empty-state">لا يوجد أفراد مطابقون لعرض بطاقاتهم.</div>';
     return;
   }
-  const showQr = document.getElementById('cards-qr-toggle')?.checked !== false;
-  box.classList.toggle('no-qr', !showQr);
-  box.innerHTML = list.map(p => {
+  const cards = list.map(p => {
     const name = idCardName(p);
     const dead = p.status === 'death';
     const sizeCls = name.length > 28 ? ' xlong' : (name.length > 19 ? ' long' : '');
     return `
     <div class="id-card${dead ? ' dead' : ''}">
-      <div class="idc-frame"></div>
+      <div class="idc-top"></div>
       <img class="idc-logo" src="logo-header.webp?v=1" alt="">
-      <div class="idc-body">
-        <div class="idc-family">عائلة الماجد</div>
-        <div class="idc-name${sizeCls}">${escapeHtml(name)}</div>
-        ${dead ? `<div class="idc-rip">${p.gender === 'female' ? 'رحمها الله' : 'رحمه الله'}</div>` : ''}
-        <div class="idc-id"><span>الرقم التعريفي</span><b>${Number(p.displayId)}</b></div>
-      </div>
-      <div class="idc-qr" data-qr="${SITE_URL}?id=${Number(p.displayId)}"></div>
+      <div class="idc-family">عائلة الماجد</div>
+      <div class="idc-name${sizeCls}"><span>${escapeHtml(name)}</span>${dead ? `<small>${p.gender === 'female' ? 'رحمها الله' : 'رحمه الله'}</small>` : ''}</div>
+      <div class="idc-id">الرقم التعريفي<b>${Number(p.displayId)}</b></div>
+      <div class="idc-bottom"></div>
     </div>`;
-  }).join('');
-  if (showQr) fillIdCardQrs(box);
-}
-
-// رموز QR بصيغة SVG (واضحة جداً عند الطباعة) — المكتبة محفوظة داخل الموقع: vendor/qrcode.js
-async function fillIdCardQrs(box) {
-  try {
-    await loadScriptOnce('vendor/qrcode.js');
-    box.querySelectorAll('.idc-qr[data-qr]').forEach(el => {
-      const q = window.qrcode(0, 'M');
-      q.addData(el.dataset.qr);
-      q.make();
-      el.innerHTML = q.createSvgTag({ cellSize: 2, margin: 0, scalable: true });
-    });
-  } catch (e) {
-    console.warn('تعذّر إنشاء رموز QR:', e);
-    box.classList.add('no-qr');
-  }
+  });
+  // كل 9 بطاقات في «صفحة» مستقلة حتى ينقسم الطبع على صفحات A4 بشكل نظيف
+  const pages = [];
+  for (let i = 0; i < cards.length; i += 9) pages.push('<div class="idc-page">' + cards.slice(i, i + 9).join('') + '</div>');
+  box.innerHTML = pages.join('');
 }
 
 // ---------------------------------------------------------------------
@@ -3020,8 +3001,6 @@ document.addEventListener('DOMContentLoaded', () => {
       renderIdCards();
     });
   });
-  const qrToggle = document.getElementById('cards-qr-toggle');
-  if (qrToggle) qrToggle.addEventListener('change', renderIdCards);
 
   // حفظ الشجرة كاملة PDF
   document.getElementById('save-tree-pdf-btn').addEventListener('click', (e) => saveTreeAsPdf(e.currentTarget));
