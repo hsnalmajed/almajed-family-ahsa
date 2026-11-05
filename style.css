@@ -222,10 +222,20 @@ header.site-header .admin-link:focus-visible .admin-tip { opacity: 1; }
 .prepared-by .pb-wa:hover { background: #d6f5e2; }
 .prepared-by .pb-wa svg { color: #25D366; }
 
-@media (max-width: 640px) {
-  .header-topleft { position: static; align-items: center; margin: 0 auto 12px; }
-  .prepared-by { max-width: 290px; }
+/* البطاقة تحت عنوان «عائلة الماجد» في المنتصف، وأيقونة دخول المدير داخلها */
+.prepared-wrap { display: flex; justify-content: center; margin: 14px 0 0; }
+.prepared-by { padding-left: 52px; text-align: right; max-width: min(350px, 100%); }
+.prepared-by .pb-id-btn, .prepared-by .pb-wa { white-space: nowrap; }
+header.site-header .prepared-by .pb-admin {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 32px;
+  height: 32px;
+  box-shadow: none;
+  background: #fff;
 }
+header.site-header .prepared-by .pb-admin svg { width: 17px; height: 17px; }
 
 .container {
   max-width: 1100px;
