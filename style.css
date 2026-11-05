@@ -2498,9 +2498,26 @@ header.site-header p.hdr-tagline { color: var(--muted); font-size: 1rem; font-we
 @media (max-width: 520px) { .rc-sp-add { grid-template-columns: minmax(0, 1fr); } }
 .rc-addkid .rc-select { flex: 1 1 100%; }
 .rc-sub { border-top: 1px solid #efe9dc; padding-top: 14px; }
-.rc-sib-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
-.rc-sib-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 8px; align-items: center; padding: 6px 8px; border: 1px solid #efe9dc; border-radius: 10px; background: #fcfbf8; }
-.rc-sib-row .rc-chip { justify-self: start; white-space: nowrap; }
-.rc-sib-row .rc-select { padding: 7px 10px; font-size: .92rem; }
 #rc-panel .rc-actions { margin: 16px 0 0; padding-top: 14px; border-top: 2px dashed var(--border); }
 #rc-panel > #rc-grid { margin-top: 14px; }
+
+/* الاستقبال: الإخوة كبطاقات + زر حفظ واحد */
+.rc-sibs { margin-top: 14px; }
+.rc-sib-list { display: flex; flex-direction: column; gap: 10px; }
+.rc-sib-card { border: 1px solid var(--border); border-radius: 12px; background: #fcfbf8; padding: 10px 12px; }
+.rc-sib-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.rc-sib-top .rc-chip { font-size: 1rem; }
+.rc-sib-top .rc-toggle button { padding: 6px 12px; min-height: 36px; font-size: .9rem; }
+.rc-sib-top .rc-select { flex: 1 1 180px; width: auto; padding: 8px 10px; font-size: .92rem; }
+.rc-sib-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; }
+.rc-sib-grid .rc-label { font-size: .82rem; margin: 10px 0 4px; }
+.rc-sib-grid .rc-input { padding: 9px 12px; font-size: .98rem; }
+.rc-sib-grid .rc-toggle button { padding: 6px 12px; min-height: 36px; font-size: .9rem; }
+@media (max-width: 700px) { .rc-sib-grid { grid-template-columns: minmax(0, 1fr); } }
+.rc-chip-new { display: inline-flex; align-items: center; gap: 6px; border-style: dashed; border-color: var(--accent); background: #fffaf0; cursor: default; padding: 4px 6px 4px 12px; }
+.rc-chip-new small { color: var(--gold-dark); font-weight: 700; }
+.rc-savebar { position: sticky; bottom: 10px; z-index: 25; display: flex; align-items: center; gap: 12px; margin-top: 16px; padding: 10px 12px; background: rgba(255,255,255,.97); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 6px 24px rgba(9,42,27,.16); }
+.rc-savebar .rc-btn { flex: 1; font-size: 1.08rem; min-height: 50px; }
+.rc-savebar .rc-btn:disabled { background: #cfd8d2; border-color: #cfd8d2; cursor: default; opacity: 1; }
+.rc-pending { font-weight: 800; font-size: .9rem; color: #8a4b00; background: #fff4e0; border: 1px solid #f0c890; border-radius: 999px; padding: 6px 12px; white-space: nowrap; }
+.rc-pending.none { color: var(--muted); background: #f3f1ec; border-color: var(--border); }
