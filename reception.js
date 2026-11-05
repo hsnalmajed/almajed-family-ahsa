@@ -104,20 +104,20 @@
     ].join('');
     return `
       <div class="rc-sp" data-sp="${key}" data-pid="${Number(p.displayId)}">
-        <div class="rc-sp-chips">${chips || `<span class="rc-note" style="margin:0;">${female ? 'لا يوجد زوج مسجّل.' : 'لا توجد زوجات مسجّلات.'}</span>`}</div>
+        ${chips ? `<div class="rc-sp-chips">${chips}</div>` : ''}
         ${full ? '<div class="rc-note">للأنثى زوج واحد فقط. احذف الحالي لتغييره.</div>' : `
         <div class="rc-sp-add">
           <div class="rc-toggle rc-sp-origin">
-            <button type="button" data-v="out" class="on">من خارج العائلة</button>
-            <button type="button" data-v="in">من عائلة الماجد</button>
+            <button type="button" data-v="out" class="on">خارج العائلة</button>
+            <button type="button" data-v="in">من الماجد</button>
           </div>
           <div class="rc-sp-out">
-            <input type="text" class="rc-input rc-sp-fam" placeholder="اسم عائلة ${female ? 'الزوج' : 'الزوجة'} — مثال: العفالق">
-            <button type="button" class="rc-btn rc-sp-addfam">➕ إضافة</button>
+            <input type="text" class="rc-input rc-sp-fam" placeholder="اسم العائلة — مثال: العفالق">
+            <button type="button" class="rc-btn rc-sp-addfam">➕</button>
           </div>
           <div class="rc-sp-in" style="display:none;">
             <div class="rc-sp-search-wrap">
-              <input type="text" class="rc-input rc-sp-q" placeholder="ابحث عن ${female ? 'الزوج' : 'الزوجة'} بالرقم أو الاسم" autocomplete="off">
+              <input type="text" class="rc-input rc-sp-q" placeholder="ابحث بالاسم أو الرقم" autocomplete="off">
               <div class="rc-sp-sug"></div>
             </div>
           </div>
@@ -200,6 +200,15 @@
     if (!opt || !opt.value) return { motherId: null, motherName: '' };
     return { motherId: opt.dataset.mid ? Number(opt.dataset.mid) : null, motherName: opt.dataset.mname || '' };
   }
+  // قائمة أم الأبناء/الإخوة: تظهر فقط إذا كان للأب أكثر من زوجة، وإن كانت زوجة واحدة تُختار تلقائياً
+  function tidyMotherSelects() {
+    ['rc-kid-mother', 'rc-sib-mother'].forEach(id => {
+      const el = $(id); if (!el) return;
+      const real = Array.from(el.options).filter(o => o.value);
+      if (real.length === 1) el.value = real[0].value;
+      el.style.display = real.length > 1 ? '' : 'none';
+    });
+  }
   function refreshMotherSelects() {
     const p = byId(currentId); if (!p) return;
     const father = fatherOf(p);
@@ -213,6 +222,7 @@
       if (keep && Array.from(fresh.options).some(o => o.value === keep)) fresh.value = keep;
       el.replaceWith(fresh);
     });
+    tidyMotherSelects();
   }
 
   // ------------------------------------------------------------------
@@ -269,88 +279,75 @@
         <button type="button" class="rc-btn" id="rc-full-edit">✏️ تعديل كامل</button>
       </div>
 
-      <div class="rc-grid solo" id="rc-grid">
+      <div class="rc-grid" id="rc-grid">
         <section class="rc-box">
-          <h3><span class="rc-num"></span> بيانات ${esc(p.firstName)}</h3>
-          <div class="rc-form">
-            <div><label class="rc-label" for="rc-phone">رقم الجوال</label>
-              <input type="tel" id="rc-phone" class="rc-input" dir="ltr" placeholder="05xxxxxxxx" value="${esc(p.phone || '')}"></div>
-            <div><label class="rc-label">الحالة</label>
-              <div class="rc-toggle" id="rc-status">
-                <button type="button" data-v="alive" class="${p.status === 'death' ? '' : 'on'}">على قيد الحياة</button>
-                <button type="button" data-v="death" class="${p.status === 'death' ? 'on' : ''}">${female ? 'متوفاة' : 'متوفى'}</button>
-              </div></div>
-            <div class="rc-field-wide"><label class="rc-label">تاريخ الميلاد</label>
-              <div id="rc-birth-mount"></div></div>
-            <div class="rc-field-wide"><label class="rc-label">الحالة الاجتماعية</label>
-              <div class="rc-toggle" id="rc-marital">
-                <button type="button" data-v="single" class="${married ? '' : 'on'}">${female ? 'غير متزوجة' : 'غير متزوج'}</button>
-                <button type="button" data-v="married" class="${married ? 'on' : ''}">${female ? 'متزوجة' : 'متزوج'}</button>
-              </div></div>
-            <div class="rc-field-wide" id="rc-spouse-block" style="${married ? '' : 'display:none;'}">
-              <label class="rc-label">${female ? 'الزوج' : 'الزوجات'} <small>(${female ? 'زوج واحد' : 'يمكن إضافة أكثر من زوجة'})</small></label>
-              ${spouseEditorHtml(p, 'self')}
-            </div>
+          <h3>📝 إكمال البيانات</h3>
+          <label class="rc-label" for="rc-phone">رقم الجوال</label>
+          <input type="tel" id="rc-phone" class="rc-input" dir="ltr" placeholder="05xxxxxxxx" value="${esc(p.phone || '')}">
+
+          <label class="rc-label">تاريخ الميلاد</label>
+          <div id="rc-birth-mount"></div>
+
+          <label class="rc-label">الحالة الاجتماعية</label>
+          <div class="rc-toggle" id="rc-marital">
+            <button type="button" data-v="single" class="${married ? '' : 'on'}">${female ? 'غير متزوجة' : 'غير متزوج'}</button>
+            <button type="button" data-v="married" class="${married ? 'on' : ''}">${female ? 'متزوجة' : 'متزوج'}</button>
           </div>
-          <button type="button" class="rc-btn rc-btn-primary rc-save" id="rc-save">💾 حفظ بيانات ${esc(p.firstName)}</button>
+          <div id="rc-spouse-block" style="${married ? '' : 'display:none;'}">
+            <label class="rc-label">${female ? 'الزوج' : 'الزوجة / الزوجات'}</label>
+            ${spouseEditorHtml(p, 'self')}
+          </div>
+
+          <button type="button" class="rc-btn rc-btn-primary rc-save" id="rc-save">💾 حفظ البيانات</button>
         </section>
 
-        ${female ? '' : `
-        <section class="rc-box" id="rc-kids-box" style="${married || kids.length ? '' : 'display:none;'}">
-          <h3><span class="rc-num"></span> أبناء ${esc(p.firstName)} وبناته <small>(${kids.length})</small></h3>
-          ${`${kids.length ? `<div class="rc-kids">${kidChips(kids)}</div>` : '<div class="rc-note">لا يوجد أبناء مسجّلون بعد.</div>'}
-              <div class="rc-addkid">
-                <input type="text" id="rc-kid-name" class="rc-input" placeholder="اسم الابن أو البنت">
-                <div class="rc-toggle" id="rc-kid-gender">
-                  <button type="button" data-v="male" class="on">ابن</button>
-                  <button type="button" data-v="female">ابنة</button>
-                </div>
-                ${motherSelectHtml('rc-kid-mother', p, null, '', 'الأم غير محددة')}
-                <button type="button" class="rc-btn rc-btn-primary" id="rc-kid-add">➕ إضافة</button>
+        <div class="rc-col">
+          ${female ? '' : `
+          <section class="rc-box" id="rc-kids-box" style="${married ? '' : 'display:none;'}">
+            <h3>👨‍👩‍👧 الأبناء والبنات <small>(${kids.length})</small></h3>
+            ${kids.length ? `<div class="rc-kids">${kidChips(kids)}</div>` : ''}
+            <div class="rc-addkid">
+              <input type="text" id="rc-kid-name" class="rc-input" placeholder="اسم الابن أو البنت">
+              <div class="rc-toggle" id="rc-kid-gender">
+                <button type="button" data-v="male" class="on">ابن</button>
+                <button type="button" data-v="female">ابنة</button>
               </div>
-              <div class="rc-note">يُضاف مباشرة إلى الشجرة تحت ${esc(p.firstName)}. إذا كان له أكثر من زوجة فاختر أمّ كل ابن من القائمة.</div>`}
-        </section>`}
+              <button type="button" class="rc-btn rc-btn-primary" id="rc-kid-add">➕ إضافة</button>
+              ${motherSelectHtml('rc-kid-mother', p, null, '', 'اختر الأم')}
+            </div>
+            <div class="rc-note">يُضاف مباشرة إلى الشجرة تحت ${esc(p.firstName)}.</div>
+          </section>`}
 
-        <section class="rc-box rc-box-wide">
-          <h3><span class="rc-num"></span> الوالد والأم</h3>
-          ${father ? `
-          <div class="rc-father">
-            <div class="rc-father-line">الأب:
-              <button type="button" class="rc-chip" data-goto="${Number(father.displayId)}">${esc(shortName(father))} <i>${Number(father.displayId)}</i></button>
-              <button type="button" class="rc-link" data-goto="${Number(father.displayId)}">فتح صفحة الأب كاملة ←</button>
+          <section class="rc-box">
+            ${father ? `
+            <h3>👤 الأب: <button type="button" class="rc-chip" data-goto="${Number(father.displayId)}">${esc(shortName(father))} <i>${Number(father.displayId)}</i></button></h3>
+            <div class="rc-row2">
+              <div class="rc-toggle" id="rc-father-status">
+                <button type="button" data-v="alive" class="${father.status === 'death' ? '' : 'on'}">حي</button>
+                <button type="button" data-v="death" class="${father.status === 'death' ? 'on' : ''}">متوفى</button>
+              </div>
+              <input type="tel" id="rc-father-phone" class="rc-input" dir="ltr" placeholder="جوال الأب 05xxxxxxxx" value="${esc(father.phone || '')}" style="${father.status === 'death' ? 'visibility:hidden;' : ''}">
             </div>
-            <div class="rc-form">
-              <div><label class="rc-label" for="rc-father-phone">جوال الأب</label>
-                <input type="tel" id="rc-father-phone" class="rc-input" dir="ltr" placeholder="05xxxxxxxx" value="${esc(father.phone || '')}"></div>
-              <div><label class="rc-label">حالة الأب</label>
-                <div class="rc-toggle" id="rc-father-status">
-                  <button type="button" data-v="alive" class="${father.status === 'death' ? '' : 'on'}">على قيد الحياة</button>
-                  <button type="button" data-v="death" class="${father.status === 'death' ? 'on' : ''}">متوفى</button>
-                </div></div>
-              <div class="rc-field-wide"><label class="rc-label">زوجات الأب <small>(من العائلة بالبحث، أو من خارجها باسم العائلة)</small></label>
-                ${spouseEditorHtml(father, 'father')}</div>
-              <div class="rc-field-wide"><label class="rc-label" for="rc-mother">أم ${esc(p.firstName)} <small>(تُختار من زوجات الأب أعلاه)</small></label>
-                ${motherSelectHtml('rc-mother', father, p.motherId, p.motherName)}</div>
-            </div>
-            <button type="button" class="rc-btn rc-btn-primary rc-save" id="rc-father-save">💾 حفظ بيانات الأب والأم</button>
-          </div>
-        </section>
+            <label class="rc-label">زوجات الأب</label>
+            ${spouseEditorHtml(father, 'father')}
+            <label class="rc-label" for="rc-mother">أم ${esc(p.firstName)}</label>
+            ${motherSelectHtml('rc-mother', father, p.motherId, p.motherName)}
+            <button type="button" class="rc-btn rc-btn-primary rc-save" id="rc-father-save">💾 حفظ بيانات الأب</button>
 
-        <section class="rc-box">
-          <h3><span class="rc-num"></span> إخوان ${esc(p.firstName)} وأخواته <small>(${siblings.length})</small></h3>
-          ${siblings.length ? `<div class="rc-kids">${kidChips(siblings)}</div>` : '<div class="rc-note">لا يوجد إخوة مسجّلون.</div>'}
-          <div class="rc-addkid">
-            <input type="text" id="rc-sib-name" class="rc-input" placeholder="اسم الأخ أو الأخت">
-            <div class="rc-toggle" id="rc-sib-gender">
-              <button type="button" data-v="male" class="on">أخ</button>
-              <button type="button" data-v="female">أخت</button>
+            <h4 class="rc-sub">الإخوان والأخوات <small>(${siblings.length})</small></h4>
+            ${siblings.length ? `<div class="rc-kids">${kidChips(siblings)}</div>` : ''}
+            <div class="rc-addkid">
+              <input type="text" id="rc-sib-name" class="rc-input" placeholder="اسم الأخ أو الأخت">
+              <div class="rc-toggle" id="rc-sib-gender">
+                <button type="button" data-v="male" class="on">أخ</button>
+                <button type="button" data-v="female">أخت</button>
+              </div>
+              <button type="button" class="rc-btn rc-btn-primary" id="rc-sib-add">➕ إضافة</button>
+              ${motherSelectHtml('rc-sib-mother', father, p.motherId, p.motherName, 'اختر الأم')}
             </div>
-            ${motherSelectHtml('rc-sib-mother', father, p.motherId, p.motherName, 'الأم غير محددة')}
-            <button type="button" class="rc-btn rc-btn-primary" id="rc-sib-add">➕ إضافة</button>
-          </div>
-          <div class="rc-note">يُضاف تحت الأب ${esc(father.firstName)}. الأم افتراضياً نفس أم ${esc(p.firstName)}، ويمكن تغييرها.</div>
-          ` : '<div class="rc-note">هذا الشخص رأس فرع — لا يوجد أب مسجّل له في الشجرة.</div>'}
-        </section>
+            ` : '<h3>👤 الأب</h3><div class="rc-note">رأس فرع — لا يوجد أب مسجّل له في الشجرة.</div>'}
+          </section>
+        </div>
       </div>
     `;
 
@@ -362,6 +359,7 @@
       const b = e.target.closest('button'); if (!b) return;
       t.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
       if (t.id === 'rc-marital') applyMaritalVisibility(b.dataset.v === 'married');
+      if (t.id === 'rc-father-status' && $('rc-father-phone')) $('rc-father-phone').style.visibility = b.dataset.v === 'death' ? 'hidden' : '';
     }));
     panel.querySelectorAll('.rc-sp').forEach(wireSpouseEditor);
     panel.querySelectorAll('.rc-kids [data-goto], .rc-father-line [data-goto]').forEach(b => b.addEventListener('click', () => select(b.dataset.goto)));
@@ -372,6 +370,7 @@
     if ($('rc-father-save')) $('rc-father-save').addEventListener('click', saveFather);
     if ($('rc-kid-add')) wireAdd('rc-kid', () => ({ parent: byId(currentId), relation: 'child' }));
     if ($('rc-sib-add')) wireAdd('rc-sib', () => ({ parent: fatherOf(byId(currentId)), relation: 'sibling' }));
+    tidyMotherSelects();
     updateCheckinButton();
   }
 
@@ -380,10 +379,7 @@
     if ($('rc-spouse-block')) $('rc-spouse-block').style.display = married ? '' : 'none';
     const box = $('rc-kids-box');
     if (box) {
-      const hasKids = !!box.querySelector('.rc-kids');
-      const show = married || hasKids;
-      box.style.display = show ? '' : 'none';
-      $('rc-grid').classList.toggle('solo', !show);
+      box.style.display = married ? '' : 'none';
     }
   }
 
@@ -418,7 +414,7 @@
     const btn = $('rc-save');
     const phone = $('rc-phone').value.trim();
     const married = $('rc-marital').querySelector('.on')?.dataset.v === 'married';
-    const status = $('rc-status').querySelector('.on')?.dataset.v === 'death' ? 'death' : 'alive';
+    const status = $('rc-status') ? ($('rc-status').querySelector('.on')?.dataset.v === 'death' ? 'death' : 'alive') : (p.status === 'death' ? 'death' : 'alive');
     const st = spouseState(p);
     const links = married ? st.links.slice() : [];
     const fams = married ? st.fams.slice() : [];
