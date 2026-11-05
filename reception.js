@@ -17,6 +17,7 @@
   const pendingSpouses = {};         // displayId -> { links: [{id,name}], fams: [name] } بعد أي تعديل على الزوجات
   const queue = {};                  // displayId للأب -> [{ name, gender, mother }] أبناء جدد يُضافون عند الحفظ
   let saving = false;
+  const openAdd = new Set();         // خانات الإضافة المفتوحة بزر «+» (sp:رقم، kids:رقم)
 
   const todayKey = () => new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD بتوقيت الجهاز
   const attendanceRef = () => db.collection('meta').doc('attendance_' + todayKey());
@@ -185,8 +186,8 @@
     ].join('');
     return `
       <div class="rc-sp" data-pid="${Number(p.displayId)}">
-        ${chips ? `<div class="rc-sp-chips">${chips}</div>` : ''}
-        ${female && total >= 1 ? '' : `
+        ${chips ? `<div class="rc-sp-chips">${chips}</div>` : (openAdd.has('sp:' + Number(p.displayId)) ? '' : `<div class="rc-note" style="margin:0;">${female ? 'لا يوجد زوج مسجّل — اضغط +' : 'لا توجد زوجات مسجّلات — اضغط +'}</div>`)}
+        ${female && total >= 1 || !openAdd.has('sp:' + Number(p.displayId)) ? '' : `
         <div class="rc-sp-add">
           <div class="rc-toggle rc-sp-origin">
             <button type="button" data-v="out" class="on">خارج العائلة</button>
@@ -272,17 +273,45 @@
   // مربع اختيار: الكلمة فوق والمربع تحتها (غير محدد = حي / غير متزوج)
   const checkHtml = (p, f, word, on) => `<label class="rc-chk"><span>${word}</span><input type="checkbox" data-p="${Number(p.displayId)}" data-cf="${f}" ${on ? 'checked' : ''}></label>`;
   const deadCheck = p => checkHtml(p, 'status', isFemale(p) ? 'متوفاة' : 'متوفى', val(p, 'status') === 'death');
+  // زر «+» يفتح/يغلق خانة الإضافة
+  const plusBtn = key => `<button type="button" class="rc-plus${openAdd.has(key) ? ' on' : ''}" data-toggle-add="${key}" title="${openAdd.has(key) ? 'إغلاق' : 'إضافة'}">${openAdd.has(key) ? '−' : '+'}</button>`;
+  // عنوان الزوج/الزوجات مع «+» ثم المحرّر
+  function spouseField(p, label) {
+    const st = spouseState(p);
+    const full = isFemale(p) && st.links.length + st.fams.length >= 1;
+    return `<div class="rc-lblrow"><span class="rc-label">${label}</span>${full ? '' : plusBtn('sp:' + Number(p.displayId))}</div>${spouseEditorHtml(p)}`;
+  }
   const marriedCheck = p => checkHtml(p, 'married', isFemale(p) ? 'متزوجة' : 'متزوج', val(p, 'married'));
 
   // الأبناء (المسجّلون + الجدد في القائمة) وسطر الإضافة — للأب p
+  // الأبناء الجدد في القائمة + خانة الإضافة (تظهر بزر «+»). rich: حقول إضافية (متوفى، الجوال، متزوج)
   function kidsBlock(p, relWords) {
     const pid = Number(p.displayId);
     const q = queue[pid] || [];
     const existing = relWords.existing || [];
-    const chips = kidChips(existing) + q.map((k, i) => `<span class="rc-chip rc-chip-new">${k.gender === 'female' ? '👧' : '👦'} ${esc(k.name)} <small>جديد${k.mother ? ' · ' + esc(motherLabel(p, k.mother)) : ''}</small><button type="button" class="rc-x" data-unq="${pid}:${i}" aria-label="حذف">✕</button></span>`).join('');
+    const info = k => [k.dead ? 'متوفى' : '', k.phone || '', k.married ? 'متزوج' : '', k.mother ? motherLabel(p, k.mother) : ''].filter(Boolean).join(' · ');
+    const chips = kidChips(existing) + q.map((k, i) => `<span class="rc-chip rc-chip-new">${k.gender === 'female' ? '👧' : '👦'} ${esc(k.name)} <small>جديد${info(k) ? ' · ' + esc(info(k)) : ''}</small><button type="button" class="rc-x" data-unq="${pid}:${i}" aria-label="حذف">✕</button></span>`).join('');
     const opts = motherOptionsFor(p);
+    const open = openAdd.has('kids:' + pid);
     return `
       ${chips ? `<div class="rc-kids">${chips}</div>` : ''}
+      ${!open ? '' : relWords.rich ? `
+      <div class="rc-addform">
+        <div class="rc-prow rc-prow-add">
+          <input type="text" class="rc-input" data-addname="${pid}" placeholder="${relWords.ph}">
+          <div class="rc-toggle" data-addg="${pid}">
+            <button type="button" data-v="male" class="on">${relWords.m}</button>
+            <button type="button" data-v="female">${relWords.f}</button>
+          </div>
+          <label class="rc-chk"><span>متوفى</span><input type="checkbox" data-adddead="${pid}"></label>
+          <input type="tel" class="rc-input" dir="ltr" data-addphone="${pid}" placeholder="الجوال">
+          <label class="rc-chk"><span>متزوج</span><input type="checkbox" data-addmarried="${pid}"></label>
+        </div>
+        <div class="rc-addform-bottom">
+          ${opts.length ? motherSelect(`data-addm="${pid}"`, p, relWords.defMother || '', 'الأم') : ''}
+          <button type="button" class="rc-btn rc-btn-primary" data-add="${pid}">➕ إضافة</button>
+        </div>
+      </div>` : `
       <div class="rc-addkid">
         <input type="text" class="rc-input" data-addname="${pid}" placeholder="${relWords.ph}">
         <div class="rc-toggle" data-addg="${pid}">
@@ -291,8 +320,9 @@
         </div>
         <button type="button" class="rc-btn rc-btn-primary" data-add="${pid}">➕ إضافة</button>
         ${opts.length > 1 ? motherSelect(`data-addm="${pid}"`, p, relWords.defMother || '', 'اختر الأم') : ''}
-      </div>`;
+      </div>`}`;
   }
+
 
   // سطر واحد لكل شخص: الاسم | متوفى | الجوال | متزوج | الأم — وتحته حقول الزواج إن كان متزوجاً
   function siblingCard(sb, father) {
@@ -310,8 +340,8 @@
         </div>
         ${married ? `
         <div class="rc-prow-more">
-          <label class="rc-label">${female ? 'الزوج' : 'الزوجة / الزوجات'}</label>${spouseEditorHtml(sb)}
-          ${!female ? `<label class="rc-label">أبناء ${esc(sb.firstName)} <small>(${childrenOf(sb).length + (queue[id] || []).length})</small></label>
+          ${spouseField(sb, female ? 'الزوج' : 'الزوجة / الزوجات')}
+          ${!female ? `<div class="rc-lblrow"><span class="rc-label">أبناء ${esc(sb.firstName)} <small>(${childrenOf(sb).length + (queue[id] || []).length})</small></span>${plusBtn('kids:' + id)}</div>
             ${kidsBlock(sb, { existing: childrenOf(sb), ph: 'اسم الابن أو البنت', m: 'ابن', f: 'ابنة' })}` : ''}
         </div>` : ''}
       </div>`;
@@ -355,15 +385,14 @@
             <div><label class="rc-label">رقم الجوال</label>${phoneInput(p)}</div>
             ${marriedCheck(p)}
           </div>
-          ${married ? `<label class="rc-label">${female ? 'الزوج' : 'الزوجة / الزوجات'}</label>${spouseEditorHtml(p)}` : ''}
+          ${married ? spouseField(p, female ? 'الزوج' : 'الزوجة / الزوجات') : ''}
         </section>
 
         <div class="rc-col">
       ${!female && married ? `
       <section class="rc-box rc-sibs">
-        <h3>👨‍👩‍👧 الأبناء والبنات <small>(${childrenOf(p).length + (queue[p.displayId] || []).length})</small></h3>
-        ${childrenOf(p).length ? `<div class="rc-sib-list">${childrenOf(p).map(k => siblingCard(k, p)).join('')}</div>` : '<div class="rc-note">لا يوجد أبناء مسجّلون بعد.</div>'}
-        <div class="rc-label" style="margin-top:14px;">إضافة ابن أو ابنة</div>
+        <h3>👨‍👩‍👧 الأبناء والبنات <small>(${childrenOf(p).length + (queue[p.displayId] || []).length})</small>${plusBtn('kids:' + Number(p.displayId))}</h3>
+        ${childrenOf(p).length ? `<div class="rc-sib-list">${childrenOf(p).map(k => siblingCard(k, p)).join('')}</div>` : ((queue[p.displayId] || []).length ? '' : '<div class="rc-note">لا يوجد أبناء مسجّلون — اضغط + للإضافة.</div>')}
         ${kidsBlock(p, { existing: [], ph: 'اسم الابن أو البنت', m: 'ابن', f: 'ابنة' })}
       </section>` : ''}
 
@@ -376,8 +405,7 @@
               ${phoneInput(father, 'جوال الأب')}
               ${marriedCheck(father)}
             </div>
-            ${val(father, 'married') ? `<label class="rc-label">زوجات الأب</label>
-            ${spouseEditorHtml(father)}` : ''}
+            ${val(father, 'married') ? spouseField(father, 'زوجات الأب') : ''}
             <label class="rc-label">أم ${esc(p.firstName)}</label>
             ${motherSelect(`data-p="${Number(p.displayId)}" data-f="mother"`, father, val(p, 'mother'), '— غير محددة —')}
             ` : '<h3>👤 الأب</h3><div class="rc-note">رأس فرع — لا يوجد أب مسجّل له في الشجرة.</div>'}
@@ -385,10 +413,9 @@
 
       ${father ? `
       <section class="rc-box rc-sibs">
-        <h3>👪 الإخوان والأخوات <small>(${siblings.length + (queue[father.displayId] || []).length})</small></h3>
-        ${siblings.length ? `<div class="rc-sib-list">${siblings.map(sb => siblingCard(sb, father)).join('')}</div>` : '<div class="rc-note">لا يوجد إخوة مسجّلون.</div>'}
-        <div class="rc-label" style="margin-top:14px;">إضافة أخ أو أخت</div>
-        ${kidsBlock(father, { existing: [], ph: 'اسم الأخ أو الأخت', m: 'أخ', f: 'أخت', defMother: val(p, 'mother') })}
+        <h3>👪 الإخوان والأخوات <small>(${siblings.length + (queue[father.displayId] || []).length})</small>${plusBtn('kids:' + Number(father.displayId))}</h3>
+        ${siblings.length ? `<div class="rc-sib-list">${siblings.map(sb => siblingCard(sb, father)).join('')}</div>` : ((queue[father.displayId] || []).length ? '' : '<div class="rc-note">لا يوجد إخوة مسجّلون — اضغط + للإضافة.</div>')}
+        ${kidsBlock(father, { existing: [], ph: 'اسم الأخ أو الأخت', m: 'أخ', f: 'أخت', defMother: val(p, 'mother'), rich: true })}
       </section>` : ''}
         </div>
       </div>
@@ -445,13 +472,22 @@
         const ms = panel.querySelector(`[data-addm="${pid}"]`);
         const opts = motherOptionsFor(parent);
         const mother = ms ? ms.value : (opts.length === 1 ? opts[0].value : '');
-        list.push({ name, gender: g && g.dataset.v === 'female' ? 'female' : 'male', mother });
+        const chk = a => { const e = panel.querySelector(`[${a}="${pid}"]`); return !!(e && e.checked); };
+        const phEl = panel.querySelector(`[data-addphone="${pid}"]`);
+        list.push({ name, gender: g && g.dataset.v === 'female' ? 'female' : 'male', mother,
+          dead: chk('data-adddead'), married: chk('data-addmarried'), phone: phEl ? phEl.value.trim() : '' });
         nameEl.value = '';
         rerender(`[data-addname="${pid}"]`);
       };
       btn.addEventListener('click', add);
       nameEl.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); add(); } });
     });
+    panel.querySelectorAll('[data-toggle-add]').forEach(b => b.addEventListener('click', () => {
+      const k = b.dataset.toggleAdd;
+      if (openAdd.has(k)) openAdd.delete(k); else openAdd.add(k);
+      const [type, id] = k.split(':');
+      rerender(openAdd.has(k) ? (type === 'sp' ? `.rc-sp[data-pid="${id}"] .rc-sp-fam` : `[data-addname="${id}"]`) : null);
+    }));
     panel.querySelectorAll('[data-unq]').forEach(b => b.addEventListener('click', () => {
       const [pid, i] = b.dataset.unq.split(':'); (queue[pid] || []).splice(Number(i), 1); rerender();
     }));
@@ -562,7 +598,8 @@
     }
   }
 
-  async function createPerson(name, gender, parent, mother) {
+  async function createPerson(name, gender, parent, mother, extra) {
+    extra = extra || {};
     let createdId = null;
     const counterRef = db.collection('meta').doc('counter');
     await db.runTransaction(async tx => {
@@ -570,10 +607,10 @@
       const newId = (snap.exists ? (snap.data().lastId || 0) : 0) + 1;
       createdId = newId;
       const ref = db.collection('persons').doc();
-      setPrivatePhone(tx, ref.id, '');
+      setPrivatePhone(tx, ref.id, extra.phone || '');
       tx.set(ref, {
-        displayId: newId, firstName: name, gender, phoneLast4: '',
-        status: 'alive', photoURL: '', maritalStatus: 'single', spouseFamilies: [], spouseLinks: [],
+        displayId: newId, firstName: name, gender, phoneLast4: phoneLast4Of(extra.phone || ''),
+        status: extra.dead ? 'death' : 'alive', photoURL: '', maritalStatus: extra.married ? 'married' : 'single', spouseFamilies: [], spouseLinks: [],
         motherId: mother.motherId, motherName: mother.motherName, parentKey: String(parent.displayId),
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
@@ -607,7 +644,7 @@
         done++;
       }
       for (const a of adds) {
-        const id = await createPerson(a.k.name, a.k.gender, a.parent, a.m);
+        const id = await createPerson(a.k.name, a.k.gender, a.parent, a.m, a.k);
         const isSib = String(a.pid) === String(fatherOf(byId(currentId)) && fatherOf(byId(currentId)).displayId);
         const rel = isSib ? (a.k.gender === 'female' ? 'أخت' : 'أخ') : (a.k.gender === 'female' ? 'ابنة' : 'ابن');
         logAdminAction('add', `الاستقبال: إضافة ${rel} «${a.k.name}» (#${id}) — تحت ${a.parent.firstName || ''} (#${a.parent.displayId})${a.m.motherName ? '، الأم: ' + a.m.motherName : ''}`);
