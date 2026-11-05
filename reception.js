@@ -477,7 +477,13 @@
         if (!name) { nameEl.focus(); return; }
         const list = queue[pid] = queue[pid] || [];
         if (list.some(k => normalizeArabic(k.name) === normalizeArabic(name))) { alert('هذا الاسم مضاف في القائمة.'); return; }
-        if (!confirmNotDuplicateAdmin(String(pid), name)) return;
+        // الشخص الموجود لا يُضاف من جديد (يبقى رقمه كما هو) — تُعدَّل بياناته من سطره
+        const dup = findDuplicateAdmin(String(pid), name);
+        if (dup) {
+          alert(`«${dup.firstName}» موجود مسبقاً في الشجرة برقمه (${dup.displayId}).\nلا تُضفه من جديد — عدّل بياناته (متوفى، الجوال، متزوج، الأم) من سطره في القائمة، ورقمه يبقى كما هو.`);
+          nameEl.value = ''; updateBar();
+          return;
+        }
         const g = panel.querySelector(`[data-addg="${pid}"] .on`);
         const ms = panel.querySelector(`[data-addm="${pid}"]`);
         const opts = motherOptionsFor(parent);
