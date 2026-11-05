@@ -2242,3 +2242,16 @@ header.site-header p.hdr-tagline { color: var(--muted); font-size: 1rem; font-we
   header.site-header p.hdr-tagline { font-size: .92rem; margin: 2px auto 0; }
   header.site-header::before { opacity: .09; }
 }
+
+/* رأس الصفحة بنفس حواف محتوى الموقع (1060px): الشعار عند الحافة اليمنى، والبطاقة عند الحافة اليسرى */
+@media (min-width: 1100px) {
+  header.site-header {
+    grid-template-columns: auto auto auto 1fr;
+    justify-content: stretch;
+    padding-inline: max(20px, calc((100% - 1060px) / 2));
+  }
+  header.site-header .prepared-wrap {
+    grid-column: 4; grid-row: 1 / span 4;
+    justify-content: flex-end; align-self: center; margin: 0;
+  }
+}
