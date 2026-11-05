@@ -2444,3 +2444,42 @@ header.site-header p.hdr-tagline { color: var(--muted); font-size: 1rem; font-we
   .at-table .btn-sm { padding: 6px 8px; font-size: .78rem; white-space: nowrap; }
   .at-table td:nth-child(2) { min-width: 120px; }
 }
+
+/* ===== الاستقبال: خطوات الإدخال ===== */
+.rc-steps { display: flex; gap: 6px; margin: 4px 0 12px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.rc-steps::-webkit-scrollbar { display: none; }
+.rc-step { flex: 1 1 0; min-width: max-content; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; font-weight: 800; font-size: .95rem; color: var(--muted); background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; cursor: pointer; }
+.rc-step-n { width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: #efe9dc; color: var(--primary-dark); font-size: .85rem; flex: none; }
+.rc-step.done { color: var(--primary-dark); }
+.rc-step.done .rc-step-n { background: #d6ecdd; color: #1f6b3d; }
+.rc-step.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+.rc-step.on .rc-step-n { background: #fff; color: var(--primary); }
+.rc-stepbox { padding: 18px 20px 20px; }
+.rc-stepbox h3 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rc-h-gap { margin-top: 22px !important; padding-top: 16px; border-top: 1px solid #efe9dc; }
+.rc-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 18px; }
+.rc-field-wide { grid-column: 1 / -1; }
+@media (max-width: 700px) { .rc-form { grid-template-columns: minmax(0, 1fr); } .rc-stepbox { padding: 14px; } }
+.rc-addrow { display: grid; grid-template-columns: minmax(0, 1.4fr) auto minmax(0, 1fr) auto; gap: 8px; align-items: center; margin-top: 12px; background: #fcfbf8; border: 1px dashed var(--border); border-radius: 12px; padding: 10px; }
+@media (max-width: 700px) { .rc-addrow { grid-template-columns: minmax(0, 1fr) auto; } .rc-addrow .rc-select, .rc-addrow .rc-btn { grid-column: 1 / -1; } }
+.rc-chip-new { display: inline-flex; align-items: center; gap: 6px; border-style: dashed; border-color: var(--accent); background: #fffaf0; cursor: default; padding: 4px 6px 4px 12px; }
+.rc-chip-new small { color: var(--gold-dark); font-weight: 700; }
+.rc-nav { position: sticky; bottom: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; padding: 10px 12px; background: rgba(255,255,255,.96); backdrop-filter: blur(6px); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 -6px 20px rgba(9,42,27,.08); }
+.rc-nav .rc-btn:disabled { visibility: hidden; }
+.rc-pending { font-family: inherit; font-weight: 800; font-size: .88rem; color: #8a4b00; background: #fff4e0; border: 1px solid #f0c890; border-radius: 999px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+.rc-pending.none { color: var(--muted); background: #f3f1ec; border-color: var(--border); }
+@media (max-width: 520px) { .rc-nav { flex-wrap: wrap; } .rc-pending { order: -1; width: 100%; } .rc-nav .rc-btn { flex: 1; } }
+.rc-rev-group { border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; margin-bottom: 10px; background: #fcfbf8; }
+.rc-rev-title { font-weight: 800; color: var(--primary-dark); margin-bottom: 4px; }
+.rc-rev-group ul { margin: 0; padding-inline-start: 20px; line-height: 1.9; }
+.rc-empty-mini { text-align: center; color: var(--muted); padding: 20px; border: 1px dashed var(--border); border-radius: 12px; }
+.rc-check { display: flex; align-items: center; gap: 10px; font-weight: 800; color: var(--primary-dark); margin-top: 14px; cursor: pointer; }
+.rc-check input { width: 20px; height: 20px; accent-color: var(--primary); }
+.rc-done { text-align: center; padding: 30px 18px; }
+.rc-done-ico { font-size: 2.4rem; }
+.rc-done-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+@media (max-width: 700px) {
+  .rc-step { flex: 0 0 auto; min-width: 0; padding: 8px 10px; }
+  .rc-step:not(.on) .rc-step-l { display: none; }
+  .rc-step.on { flex: 1 1 auto; }
+}
