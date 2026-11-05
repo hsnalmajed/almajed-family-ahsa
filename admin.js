@@ -202,6 +202,7 @@ function switchTab(tabName) {
   if (tabName === 'collect') renderCollectPreview();
   if (tabName === 'biz') { setupAdminBizCategoryCombo(); getAdminBizExtrasEditor(); renderAdminBizList(); }
   if (tabName === 'log') listenToAdminLog();
+  if (tabName === 'reception' && window.Reception) window.Reception.onShow();
 }
 
 // ---------------------------------------------------------------------
@@ -211,7 +212,7 @@ let adminLogEntries = [];
 let adminLogListening = false;
 const LOG_ICONS = {
   login: '🔑', approve: '✅', reject: '❌', add: '➕', edit: '✏️', delete: '🗑️',
-  'biz-add': '🏷️', 'biz-edit': '🏷️', 'biz-delete': '🗑️', renumber: '🔢', backup: '💾', migrate: '🔒', export: '📥'
+  'biz-add': '🏷️', 'biz-edit': '🏷️', 'biz-delete': '🗑️', renumber: '🔢', backup: '💾', migrate: '🔒', export: '📥', checkin: '🎫'
 };
 function listenToAdminLog() {
   if (adminLogListening) { renderAdminLog(); return; }
@@ -1161,6 +1162,7 @@ function rebuildAdminPersons() {
   renderAdminTree();
   renderIdCards();
   renderCollectPreview();
+  if (window.Reception) window.Reception.onPersonsUpdated();
 }
 
 // نقل تلقائي لمرة واحدة: أي شخص ما زال رقمه الكامل محفوظاً في persons (البيانات القديمة)
@@ -2981,6 +2983,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('tab-btn-collect').addEventListener('click', () => switchTab('collect'));
   document.getElementById('tab-btn-biz').addEventListener('click', () => switchTab('biz'));
   document.getElementById('tab-btn-log').addEventListener('click', () => switchTab('log'));
+  document.getElementById('tab-btn-reception').addEventListener('click', () => switchTab('reception'));
   document.getElementById('admin-log-filter').addEventListener('input', renderAdminLog);
   document.getElementById('backup-reminder-btn').addEventListener('click', (e) => downloadBackup(e.currentTarget));
   // العلامات التجارية: نموذج الإضافة/التعديل المباشر
