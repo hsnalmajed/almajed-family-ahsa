@@ -419,6 +419,12 @@ function idCardName(person) {
 // فلاتر البطاقات: الحالة (all | alive | death) والجنس (all | male | female)
 let idCardsGenderFilter = 'all';
 let idCardsStatusFilter = 'alive';
+let idCardsPhotoMode = 'off';   // off: كل البطاقات بالتصميم الحالي | on: صورة للذكور الذين لديهم صورة
+// هل تظهر صورة هذا الشخص على بطاقته؟ (الذكور فقط، ولديهم صورة صالحة)
+function idCardPhotoOf(p) {
+  if (idCardsPhotoMode !== 'on' || p.gender !== 'male') return '';
+  return safeImgSrc(p.photoURL);
+}
 
 function renderIdCards() {
   const box = document.getElementById('id-cards-print');
@@ -439,6 +445,7 @@ function renderIdCards() {
     .filter(p => idCardsGenderFilter === 'all' || p.gender === idCardsGenderFilter)
     .sort((a, b) => (Number(a.displayId) || 0) - (Number(b.displayId) || 0));
   setN('id-cards-count', list.length);
+  setN('cp-on', list.filter(p => p.gender === 'male' && safeImgSrc(p.photoURL)).length);
   setN('id-cards-pages', Math.ceil(list.length / 9));
   if (!list.length) {
     box.innerHTML = '<div class="empty-state">لا يوجد أفراد مطابقون لعرض بطاقاتهم.</div>';
@@ -448,11 +455,12 @@ function renderIdCards() {
     const name = idCardName(p);
     const dead = p.status === 'death';
     const sizeCls = name.length > 28 ? ' xlong' : (name.length > 19 ? ' long' : '');
+    const photo = idCardPhotoOf(p);
     return `
-    <div class="id-card${dead ? ' dead' : ''}">
+    <div class="id-card${dead ? ' dead' : ''}${photo ? ' with-photo' : ''}">
       <div class="idc-top"></div>
       <img class="idc-logo" src="logo-header.webp?v=1" alt="">
-      <div class="idc-family">عائلة الماجد</div>
+      ${photo ? `<img class="idc-photo" src="${photo}" alt="">` : '<div class="idc-family">عائلة الماجد</div>'}
       <div class="idc-name${sizeCls}"><span>${escapeHtml(name)}</span>${dead ? `<small>${p.gender === 'female' ? 'رحمها الله' : 'رحمه الله'}</small>` : ''}</div>
       <div class="idc-id">الرقم التعريفي<b>${Number(p.displayId)}</b></div>
       <div class="idc-bottom"></div>
@@ -2991,6 +2999,13 @@ document.addEventListener('DOMContentLoaded', () => {
     b.addEventListener('click', () => {
       idCardsGenderFilter = b.dataset.cardGender || 'all';
       document.querySelectorAll('[data-card-gender]').forEach(x => x.classList.toggle('active', x === b));
+      renderIdCards();
+    });
+  });
+  document.querySelectorAll('[data-card-photo]').forEach(b => {
+    b.addEventListener('click', () => {
+      idCardsPhotoMode = b.dataset.cardPhoto || 'off';
+      document.querySelectorAll('[data-card-photo]').forEach(x => x.classList.toggle('active', x === b));
       renderIdCards();
     });
   });

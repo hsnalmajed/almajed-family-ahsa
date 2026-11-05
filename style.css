@@ -1344,6 +1344,18 @@ button.fb-name:hover { color: var(--accent); text-decoration: underline; }
 .idc-id b { font-size: 20pt; font-weight: 800; color: #092a1b; line-height: 1.1; margin-top: 1mm; }
 .idc-bottom { width: 100%; height: 3mm; flex: none; background: #175939; }
 .id-card.dead .idc-bottom { background: #6b6b6b; }
+.seg-btn:not(.active) i:empty { display: none; }
+/* بطاقة مع صورة: الشعار صغير في الأعلى وتحته الصورة في دائرة بإطار ذهبي */
+.id-card.with-photo .idc-logo { width: 20mm; margin-top: 3mm; }
+.idc-photo {
+  width: 24mm; height: 24mm; flex: none; border-radius: 50%; object-fit: cover; margin-top: 2mm;
+  border: .8mm solid #fff; box-shadow: 0 0 0 .6mm #cf9a2e, 0 1mm 2.5mm rgba(0,0,0,.18); background: #eee;
+}
+.id-card.with-photo .idc-name { font-size: 13pt; margin-top: .5mm; }
+.id-card.with-photo .idc-name.long { font-size: 11.5pt; }
+.id-card.with-photo .idc-name.xlong { font-size: 10pt; }
+.id-card.with-photo .idc-id { margin-bottom: 5mm; }
+.id-card.with-photo .idc-id b { font-size: 17pt; }
 
 /* الطباعة: A4، 3 أعمدة × 3 صفوف = 9 بطاقات، مع خطوط قص منقّطة */
 @media print {
