@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
 <meta name="googlebot" content="noindex, nofollow">
 <title>لوحة تحكم المدير - عائلة الماجد</title>
-<link rel="stylesheet" href="style.css?v=111">
+<link rel="stylesheet" href="style.css?v=112">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -141,20 +141,30 @@
       </div>
     </div>
 
-    <!-- تبويب البطاقات التعريفية (للأحياء فقط) -->
+    <!-- تبويب البطاقات التعريفية (للطباعة وتوزيعها في اجتماعات العائلة) -->
     <div class="tab-panel" id="tab-panel-cards">
       <div class="panel-toolbar no-print">
-        <div style="font-size:.9rem; color:var(--muted);">بطاقات تعريفية للأحياء فقط (<span id="id-cards-count">0</span>) — للطباعة في المناسبات العائلية.</div>
+        <div style="font-size:.9rem; color:var(--muted);">بطاقات تعريفية للطباعة — <b id="id-cards-count">0</b> بطاقة · <span id="id-cards-pages">0</span> صفحة A4</div>
         <button class="btn btn-primary btn-sm" id="print-id-cards-btn">🖨️ طباعة / حفظ PDF</button>
       </div>
-      <div class="cards-filter no-print">
-        <span class="cards-filter-label">عرض:</span>
-        <button type="button" class="cards-filter-btn active" data-card-gender="all">الكل</button>
-        <button type="button" class="cards-filter-btn" data-card-gender="male">ذكور</button>
-        <button type="button" class="cards-filter-btn" data-card-gender="female">إناث</button>
+      <div class="cards-filters no-print">
+        <div class="seg" role="group" aria-label="الحالة">
+          <span class="seg-label">الحالة</span>
+          <button type="button" class="seg-btn" data-card-status="all">الكل <i id="cs-all"></i></button>
+          <button type="button" class="seg-btn active" data-card-status="alive">على قيد الحياة <i id="cs-alive"></i></button>
+          <button type="button" class="seg-btn" data-card-status="death">متوفون <i id="cs-death"></i></button>
+        </div>
+        <div class="seg" role="group" aria-label="الجنس">
+          <span class="seg-label">الجنس</span>
+          <button type="button" class="seg-btn active" data-card-gender="all">الكل <i id="cg-all"></i></button>
+          <button type="button" class="seg-btn" data-card-gender="male">ذكور <i id="cg-male"></i></button>
+          <button type="button" class="seg-btn" data-card-gender="female">إناث <i id="cg-female"></i></button>
+        </div>
+        <label class="seg-check"><input type="checkbox" id="cards-qr-toggle" checked> رمز QR (يفتح مكان الشخص في الشجرة)</label>
       </div>
-      <p class="cards-hint no-print" style="font-size:.82rem; color:var(--muted); margin:6px 0 14px;">
-        كل بطاقة تعرض الاسم الثلاثي + «الماجد» والرقم التعريفي. اختر الجنس ثم اضغط «طباعة / حفظ PDF» — تُطبع البطاقات المعروضة فقط.
+      <p class="cards-hint no-print">
+        مقاس البطاقة 85.6 × 54 ملم (مقاس البطاقة البنكية — يناسب حاملات بطاقات الأسماء)، 10 بطاقات في كل صفحة A4 مع خطوط للقص.
+        عند الطباعة اختر «الحجم الفعلي / 100%» وألغِ «احتواء الصفحة».
       </p>
       <div id="id-cards-print" class="id-cards-grid"></div>
     </div>
@@ -569,6 +579,6 @@
 <script src="firebase-config.js?v=6"></script>
 <script src="birthdate.js?v=1"></script>
 <script src="bizextras.js?v=2"></script>
-<script src="admin.js?v=106"></script>
+<script src="admin.js?v=107"></script>
 </body>
 </html>

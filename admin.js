@@ -416,30 +416,71 @@ function idCardName(person) {
   return names.join(' ') + ' الماجد';
 }
 
-// فلتر الجنس للبطاقات: all | male | female
+// فلاتر البطاقات: الحالة (all | alive | death) والجنس (all | male | female)
 let idCardsGenderFilter = 'all';
+let idCardsStatusFilter = 'alive';
+const SITE_URL = 'https://hsnalmajed.github.io/almajed-family-ahsa/';
 
-// بطاقات تعريفية للأحياء فقط (اسم ثلاثي + معرّف) — للطباعة، مع فلتر الجنس
 function renderIdCards() {
   const box = document.getElementById('id-cards-print');
-  const countEl = document.getElementById('id-cards-count');
   if (!box) return;
-  const living = allPersonsAdmin
-    .filter(p => p.status === 'alive' && (idCardsGenderFilter === 'all' || p.gender === idCardsGenderFilter))
+  const all = allPersonsAdmin;
+  const byStatus = all.filter(p => idCardsStatusFilter === 'all' || p.status === idCardsStatusFilter);
+  const byGender = all.filter(p => idCardsGenderFilter === 'all' || p.gender === idCardsGenderFilter);
+  // أعداد الأزرار: كل فلتر يُحسب مع الفلتر الآخر المختار
+  const setN = (id, n) => { const el = document.getElementById(id); if (el) el.textContent = n; };
+  setN('cs-all', byGender.length);
+  setN('cs-alive', byGender.filter(p => p.status === 'alive').length);
+  setN('cs-death', byGender.filter(p => p.status === 'death').length);
+  setN('cg-all', byStatus.length);
+  setN('cg-male', byStatus.filter(p => p.gender === 'male').length);
+  setN('cg-female', byStatus.filter(p => p.gender === 'female').length);
+
+  const list = byStatus
+    .filter(p => idCardsGenderFilter === 'all' || p.gender === idCardsGenderFilter)
     .sort((a, b) => (Number(a.displayId) || 0) - (Number(b.displayId) || 0));
-  if (countEl) countEl.textContent = living.length;
-  if (!living.length) {
+  setN('id-cards-count', list.length);
+  setN('id-cards-pages', Math.ceil(list.length / 10));
+  if (!list.length) {
     box.innerHTML = '<div class="empty-state">لا يوجد أفراد مطابقون لعرض بطاقاتهم.</div>';
     return;
   }
-  box.innerHTML = living.map(p => `
-    <div class="id-card">
-      <img class="id-card-logo" src="logo.jpg" alt="" onerror="this.style.display='none'">
-      <div class="id-card-family">عائلة الماجد</div>
-      <div class="id-card-name">${escapeHtml(idCardName(p))}</div>
-      <div class="id-card-idrow"><span>الرقم التعريفي</span><b class="id-card-num">${p.displayId}</b></div>
-    </div>
-  `).join('');
+  const showQr = document.getElementById('cards-qr-toggle')?.checked !== false;
+  box.classList.toggle('no-qr', !showQr);
+  box.innerHTML = list.map(p => {
+    const name = idCardName(p);
+    const dead = p.status === 'death';
+    const sizeCls = name.length > 28 ? ' xlong' : (name.length > 19 ? ' long' : '');
+    return `
+    <div class="id-card${dead ? ' dead' : ''}">
+      <div class="idc-frame"></div>
+      <img class="idc-logo" src="logo-header.webp?v=1" alt="">
+      <div class="idc-body">
+        <div class="idc-family">عائلة الماجد</div>
+        <div class="idc-name${sizeCls}">${escapeHtml(name)}</div>
+        ${dead ? `<div class="idc-rip">${p.gender === 'female' ? 'رحمها الله' : 'رحمه الله'}</div>` : ''}
+        <div class="idc-id"><span>الرقم التعريفي</span><b>${Number(p.displayId)}</b></div>
+      </div>
+      <div class="idc-qr" data-qr="${SITE_URL}?id=${Number(p.displayId)}"></div>
+    </div>`;
+  }).join('');
+  if (showQr) fillIdCardQrs(box);
+}
+
+// رموز QR بصيغة SVG (واضحة جداً عند الطباعة) — المكتبة محفوظة داخل الموقع: vendor/qrcode.js
+async function fillIdCardQrs(box) {
+  try {
+    await loadScriptOnce('vendor/qrcode.js');
+    box.querySelectorAll('.idc-qr[data-qr]').forEach(el => {
+      const q = window.qrcode(0, 'M');
+      q.addData(el.dataset.qr);
+      q.make();
+      el.innerHTML = q.createSvgTag({ cellSize: 2, margin: 0, scalable: true });
+    });
+  } catch (e) {
+    console.warn('تعذّر إنشاء رموز QR:', e);
+    box.classList.add('no-qr');
+  }
 }
 
 // ---------------------------------------------------------------------
@@ -2965,14 +3006,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const printCardsBtn = document.getElementById('print-id-cards-btn');
   if (printCardsBtn) printCardsBtn.addEventListener('click', () => window.print());
-  document.querySelectorAll('.cards-filter-btn').forEach(b => {
+  document.querySelectorAll('[data-card-gender]').forEach(b => {
     b.addEventListener('click', () => {
       idCardsGenderFilter = b.dataset.cardGender || 'all';
-      document.querySelectorAll('.cards-filter-btn').forEach(x => x.classList.remove('active'));
-      b.classList.add('active');
+      document.querySelectorAll('[data-card-gender]').forEach(x => x.classList.toggle('active', x === b));
       renderIdCards();
     });
   });
+  document.querySelectorAll('[data-card-status]').forEach(b => {
+    b.addEventListener('click', () => {
+      idCardsStatusFilter = b.dataset.cardStatus || 'all';
+      document.querySelectorAll('[data-card-status]').forEach(x => x.classList.toggle('active', x === b));
+      renderIdCards();
+    });
+  });
+  const qrToggle = document.getElementById('cards-qr-toggle');
+  if (qrToggle) qrToggle.addEventListener('change', renderIdCards);
 
   // حفظ الشجرة كاملة PDF
   document.getElementById('save-tree-pdf-btn').addEventListener('click', (e) => saveTreeAsPdf(e.currentTarget));
