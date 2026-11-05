@@ -180,7 +180,7 @@
     return [
       ...st.links.map(l => {
         const nm = l.name || (byId(l.id) ? byId(l.id).firstName : '');
-        return { value: 'id:' + l.id, mid: Number(l.id), mname: nm, label: `${nm} (${l.id}) — من العائلة` };
+        return { value: 'id:' + l.id, mid: Number(l.id), mname: nm, label: `${nm} (${l.id})` };
       }),
       ...st.fams.map(f => ({ value: 'fam:' + f, mid: null, mname: 'من عائلة ' + f, label: 'من عائلة ' + f }))
     ];
@@ -222,7 +222,27 @@
       if (keep && Array.from(fresh.options).some(o => o.value === keep)) fresh.value = keep;
       el.replaceWith(fresh);
     });
+    document.querySelectorAll('select[id^="rc-sm-"]').forEach(el => {
+      const sb = byId(el.id.slice(6)); if (!sb) return;
+      const tmp = document.createElement('div'); tmp.innerHTML = motherSelectHtml(el.id, fatherOf(sb), sb.motherId, sb.motherName, 'الأم غير محددة');
+      const fresh = tmp.firstElementChild; el.replaceWith(fresh); wireSibMother(fresh);
+    });
     tidyMotherSelects();
+  }
+
+  // تغيير أم أحد الإخوة يُحفظ مباشرة
+  function wireSibMother(el) {
+    el.addEventListener('change', async () => {
+      const sb = byId(el.id.slice(6)); if (!sb) return;
+      const m = readMother(el.id);
+      el.disabled = true;
+      try {
+        await db.collection('persons').doc(sb.id).update({ motherId: m.motherId, motherName: m.motherName });
+        logAdminAction('edit', `الاستقبال: تحديد أم ${sb.firstName || ''} (#${sb.displayId}) — ${m.motherName || 'غير محددة'}`);
+        flash(`✅ حُفظت أم ${sb.firstName}`);
+      } catch (err) { console.error(err); alert('تعذّر الحفظ: ' + err.message); }
+      finally { el.disabled = false; }
+    });
   }
 
   // ------------------------------------------------------------------
@@ -326,7 +346,7 @@
                 <button type="button" data-v="alive" class="${father.status === 'death' ? '' : 'on'}">حي</button>
                 <button type="button" data-v="death" class="${father.status === 'death' ? 'on' : ''}">متوفى</button>
               </div>
-              <input type="tel" id="rc-father-phone" class="rc-input" dir="ltr" placeholder="جوال الأب 05xxxxxxxx" value="${esc(father.phone || '')}" style="${father.status === 'death' ? 'visibility:hidden;' : ''}">
+              <input type="tel" id="rc-father-phone" class="rc-input" dir="ltr" placeholder="جوال الأب" value="${esc(father.phone || '')}" style="${father.status === 'death' ? 'visibility:hidden;' : ''}">
             </div>
             <label class="rc-label">زوجات الأب</label>
             ${spouseEditorHtml(father, 'father')}
@@ -335,7 +355,11 @@
             <button type="button" class="rc-btn rc-btn-primary rc-save" id="rc-father-save">💾 حفظ بيانات الأب</button>
 
             <h4 class="rc-sub">الإخوان والأخوات <small>(${siblings.length})</small></h4>
-            ${siblings.length ? `<div class="rc-kids">${kidChips(siblings)}</div>` : ''}
+            ${siblings.length ? `<div class="rc-sib-list">${siblings.map(sb => `
+              <div class="rc-sib-row">
+                ${kidChips([sb])}
+                ${motherSelectHtml('rc-sm-' + Number(sb.displayId), father, sb.motherId, sb.motherName, 'الأم غير محددة')}
+              </div>`).join('')}</div>` : ''}
             <div class="rc-addkid">
               <input type="text" id="rc-sib-name" class="rc-input" placeholder="اسم الأخ أو الأخت">
               <div class="rc-toggle" id="rc-sib-gender">
@@ -362,7 +386,7 @@
       if (t.id === 'rc-father-status' && $('rc-father-phone')) $('rc-father-phone').style.visibility = b.dataset.v === 'death' ? 'hidden' : '';
     }));
     panel.querySelectorAll('.rc-sp').forEach(wireSpouseEditor);
-    panel.querySelectorAll('.rc-kids [data-goto], .rc-father-line [data-goto]').forEach(b => b.addEventListener('click', () => select(b.dataset.goto)));
+    panel.querySelectorAll('.rc-kids [data-goto], .rc-sib-list [data-goto], .rc-box h3 [data-goto]').forEach(b => b.addEventListener('click', () => select(b.dataset.goto)));
     $('rc-save').addEventListener('click', saveSelf);
     $('rc-checkin').addEventListener('click', toggleCheckin);
     $('rc-print').addEventListener('click', () => printCard(p));
@@ -370,6 +394,7 @@
     if ($('rc-father-save')) $('rc-father-save').addEventListener('click', saveFather);
     if ($('rc-kid-add')) wireAdd('rc-kid', () => ({ parent: byId(currentId), relation: 'child' }));
     if ($('rc-sib-add')) wireAdd('rc-sib', () => ({ parent: fatherOf(byId(currentId)), relation: 'sibling' }));
+    panel.querySelectorAll('select[id^="rc-sm-"]').forEach(wireSibMother);
     tidyMotherSelects();
     updateCheckinButton();
   }

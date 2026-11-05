@@ -2498,3 +2498,7 @@ header.site-header p.hdr-tagline { color: var(--muted); font-size: 1rem; font-we
 @media (max-width: 520px) { .rc-sp-add { grid-template-columns: minmax(0, 1fr); } }
 .rc-addkid .rc-select { flex: 1 1 100%; }
 .rc-sub { border-top: 1px solid #efe9dc; padding-top: 14px; }
+.rc-sib-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
+.rc-sib-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 8px; align-items: center; padding: 6px 8px; border: 1px solid #efe9dc; border-radius: 10px; background: #fcfbf8; }
+.rc-sib-row .rc-chip { justify-self: start; white-space: nowrap; }
+.rc-sib-row .rc-select { padding: 7px 10px; font-size: .92rem; }
